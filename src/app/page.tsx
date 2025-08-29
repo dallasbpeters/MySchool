@@ -9,6 +9,7 @@ export default async function Home() {
     redirect('/login')
   }
 
+  // Check if database is set up by trying to access the profiles table
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('role')
@@ -18,6 +19,16 @@ export default async function Home() {
   console.log('Profile data:', profile)
   console.log('Profile error:', error)
   console.log('Role:', profile?.role)
+
+  // If table doesn't exist, redirect to setup
+  if (error && error.code === 'PGRST205') {
+    redirect('/setup')
+  }
+
+  // If no profile exists for user, redirect to fix-role
+  if (error && error.code === 'PGRST116') {
+    redirect('/fix-role')
+  }
 
   if (profile && (profile as any).role === 'parent') {
     redirect('/parent')

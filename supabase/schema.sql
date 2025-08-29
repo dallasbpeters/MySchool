@@ -2,7 +2,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create profiles table for users
-CREATE TABLE profiles (
+CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   name TEXT,
@@ -13,7 +13,7 @@ CREATE TABLE profiles (
 );
 
 -- Create assignments table
-CREATE TABLE assignments (
+CREATE TABLE IF NOT EXISTS assignments (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   parent_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   title TEXT NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE assignments (
 );
 
 -- Create student_assignments table for tracking completion
-CREATE TABLE student_assignments (
+CREATE TABLE IF NOT EXISTS student_assignments (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   assignment_id UUID REFERENCES assignments(id) ON DELETE CASCADE NOT NULL,
   student_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,

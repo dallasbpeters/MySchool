@@ -58,12 +58,6 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
     } else if (data.user) {
-      // Update the profile with the role
-      await supabase
-        .from('profiles')
-        .update({ role, name })
-        .eq('id', data.user.id)
-      
       router.push('/')
     }
   }

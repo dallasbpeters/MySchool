@@ -15,7 +15,7 @@ export default async function Home() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role === 'parent') {
+  if (profile && (profile as any).role === 'parent') {
     redirect('/parent')
   } else {
     redirect('/student')

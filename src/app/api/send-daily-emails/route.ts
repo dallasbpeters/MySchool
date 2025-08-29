@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'No students found' })
     }
 
-    const emailPromises = students.map(async (student) => {
+    const emailPromises = students.map(async (student: any) => {
       if (!student.parent_id) return null
       
       // Get today's assignments for this student
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
                 <p>Hi ${student.name || 'Student'}! Here are your assignments for ${format(new Date(), 'MMMM dd, yyyy')}</p>
               </div>
               <div class="content">
-                ${assignments.map(assignment => `
+                ${assignments.map((assignment: any) => `
                   <div class="assignment">
                     <h3>${assignment.title}</h3>
                     ${assignment.links && assignment.links.length > 0 ? `

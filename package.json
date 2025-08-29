@@ -39,6 +39,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.56.0",
+    "@tailwindcss/postcss": "^4.1.12",
     "@tiptap/extension-color": "^3.3.0",
     "@tiptap/extension-highlight": "^3.3.0",
     "@tiptap/extension-link": "^3.3.0",

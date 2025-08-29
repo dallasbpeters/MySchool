@@ -97,8 +97,13 @@ CREATE POLICY "System can create student assignments" ON student_assignments
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, name)
-  VALUES (new.id, new.email, new.raw_user_meta_data->>'name');
+  INSERT INTO public.profiles (id, email, name, role)
+  VALUES (
+    new.id, 
+    new.email, 
+    new.raw_user_meta_data->>'name',
+    COALESCE(new.raw_user_meta_data->>'role', 'student')::text
+  );
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

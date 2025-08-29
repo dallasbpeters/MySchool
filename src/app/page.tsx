@@ -9,11 +9,15 @@ export default async function Home() {
     redirect('/login')
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single()
+
+  console.log('Profile data:', profile)
+  console.log('Profile error:', error)
+  console.log('Role:', profile?.role)
 
   if (profile && (profile as any).role === 'parent') {
     redirect('/parent')

@@ -58,6 +58,22 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
     } else if (data.user) {
+      // Wait a moment for the trigger to create the profile
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Update the profile with the correct role
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ 
+          role: role,
+          name: name 
+        })
+        .eq('id', data.user.id)
+      
+      if (updateError) {
+        console.error('Failed to update profile:', updateError)
+      }
+      
       router.push('/')
     }
   }

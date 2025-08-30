@@ -30,9 +30,18 @@ export default async function Home() {
     redirect('/fix-role')
   }
 
-  if (profile && (profile as any).role === 'parent') {
+  // Default to student if no profile or role
+  if (!profile || !profile.role) {
+    redirect('/student')
+  }
+  
+  // Redirect based on role
+  if (profile.role === 'parent') {
     redirect('/parent')
+  } else if (profile.role === 'student') {
+    redirect('/student')
   } else {
+    // Unknown role, default to student
     redirect('/student')
   }
 }

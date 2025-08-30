@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Trash2, Eye, EyeOff, Calendar, Link as LinkIcon } from 'lucide-react'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Plus, Trash2, Eye, Calendar, Link as LinkIcon, Users, Repeat } from 'lucide-react'
+import Link from 'next/link'
 import { format } from 'date-fns'
+import { MiniCalendar, MiniCalendarNavigation, MiniCalendarDays, MiniCalendarDay } from '@/components/ui/shadcn-io/mini-calendar'
 
 interface Link {
   title: string
@@ -22,24 +25,72 @@ interface Assignment {
   links: Link[]
   due_date: string
   created_at: string
+  is_recurring?: boolean
+  recurrence_pattern?: {
+    days: string[] // ['monday', 'wednesday', 'friday']
+    frequency?: 'weekly' | 'daily'
+  }
+  recurrence_end_date?: string
+  next_due_date?: string
+}
+
+interface Child {
+  id: string
+  name: string
+  email: string
 }
 
 export default function ParentDashboard() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [children, setChildren] = useState<Child[]>([])
   const [isCreating, setIsCreating] = useState(false)
   const [viewMode, setViewMode] = useState<'parent' | 'student'>('parent')
   const [newAssignment, setNewAssignment] = useState({
     title: '',
     content: null as any,
     links: [] as Link[],
-    due_date: format(new Date(), 'yyyy-MM-dd')
+    due_date: format(new Date(), 'yyyy-MM-dd'),
+    selectedChildren: [] as string[],
+    is_recurring: false,
+    recurrence_pattern: {
+      days: [] as string[],
+      frequency: 'weekly' as 'weekly' | 'daily'
+    },
+    recurrence_end_date: ''
   })
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(new Date())
   const [newLink, setNewLink] = useState({ title: '', url: '' })
   const supabase = createClient()
 
   useEffect(() => {
     fetchAssignments()
+    fetchChildren()
   }, [])
+
+  // Update due date when calendar date is selected
+  useEffect(() => {
+    if (selectedCalendarDate) {
+      setNewAssignment(prev => ({
+        ...prev,
+        due_date: format(selectedCalendarDate, 'yyyy-MM-dd')
+      }))
+    }
+  }, [selectedCalendarDate])
+
+  const fetchChildren = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, name, email')
+      .eq('parent_id', user.id)
+      .eq('role', 'student')
+
+    if (!error && data) {
+      setChildren(data as Child[])
+    }
+  }
 
   const fetchAssignments = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -52,7 +103,7 @@ export default function ParentDashboard() {
       .order('due_date', { ascending: false })
 
     if (!error && data) {
-      setAssignments(data)
+      setAssignments(data as unknown as Assignment[])
     }
   }
 
@@ -60,24 +111,52 @@ export default function ParentDashboard() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { error } = await supabase
+    // Create the assignment
+    const { data: assignmentData, error } = await supabase
       .from('assignments')
       .insert({
         parent_id: user.id,
         title: newAssignment.title,
         content: newAssignment.content,
-        links: newAssignment.links,
-        due_date: newAssignment.due_date
+        links: newAssignment.links as any,
+        due_date: newAssignment.due_date,
+        is_recurring: newAssignment.is_recurring,
+        recurrence_pattern: newAssignment.is_recurring ? newAssignment.recurrence_pattern as any : null,
+        recurrence_end_date: newAssignment.is_recurring && newAssignment.recurrence_end_date ? newAssignment.recurrence_end_date : null,
+        next_due_date: newAssignment.is_recurring ? newAssignment.due_date : null
       })
+      .select()
+      .single()
 
-    if (!error) {
+    if (!error && assignmentData) {
+      // Create student assignments for selected children
+      if (newAssignment.selectedChildren.length > 0) {
+        const studentAssignments = newAssignment.selectedChildren.map(childId => ({
+          assignment_id: assignmentData.id,
+          student_id: childId,
+          completed: false
+        }))
+
+        await supabase
+          .from('student_assignments')
+          .insert(studentAssignments as any)
+      }
+
       setIsCreating(false)
       setNewAssignment({
         title: '',
         content: null,
         links: [],
-        due_date: format(new Date(), 'yyyy-MM-dd')
+        due_date: format(new Date(), 'yyyy-MM-dd'),
+        selectedChildren: [],
+        is_recurring: false,
+        recurrence_pattern: {
+          days: [],
+          frequency: 'weekly'
+        },
+        recurrence_end_date: ''
       })
+      setSelectedCalendarDate(new Date())
       fetchAssignments()
     }
   }
@@ -116,36 +195,42 @@ export default function ParentDashboard() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
+    <div className="container mx-auto p-4 max-w-6xl">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Parent Dashboard</h1>
-        <Button
-          variant="outline"
-          onClick={() => setViewMode('student')}
-          className="gap-2"
-        >
-          <Eye className="h-4 w-4" />
-          Switch to Student View
-        </Button>
+        <div className="flex gap-2">
+          <Link href="/parent/children">
+            <Button variant="outline" className="gap-2">
+              <Users className="h-4 w-4" />
+              Manage Children
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            onClick={() => setViewMode('student')}
+            className="gap-2"
+          >
+            <Eye className="h-4 w-4" />
+            Switch to Student View
+          </Button>
+        </div>
       </div>
 
-      {!isCreating ? (
-        <Button
-          onClick={() => setIsCreating(true)}
-          className="mb-6 gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Create New Assignment
-        </Button>
-      ) : (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Create New Assignment</CardTitle>
-            <CardDescription>
+      <Sheet open={isCreating} onOpenChange={setIsCreating}>
+        <SheetTrigger asChild>
+          <Button className="mb-6 gap-2">
+            <Plus className="h-4 w-4" />
+            Create New Assignment
+          </Button>
+        </SheetTrigger>
+        <SheetContent className="w-[600px] sm:w-[600px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Create New Assignment</SheetTitle>
+            <SheetDescription>
               Use the WYSIWYG editor to create rich content assignments
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 mt-6">
             <div className="space-y-2">
               <Label htmlFor="title">Assignment Title</Label>
               <Input
@@ -162,8 +247,86 @@ export default function ParentDashboard() {
                 id="due_date"
                 type="date"
                 value={newAssignment.due_date}
-                onChange={(e) => setNewAssignment({ ...newAssignment, due_date: e.target.value })}
+                onChange={(e) => {
+                  setNewAssignment({ ...newAssignment, due_date: e.target.value })
+                  setSelectedCalendarDate(new Date(e.target.value))
+                }}
               />
+
+              {/* Mini Calendar */}
+              <div className="mt-2">
+                <Label className="text-sm text-muted-foreground mb-1 block">Quick Date Selection</Label>
+                <MiniCalendar
+                  value={selectedCalendarDate}
+                  onValueChange={setSelectedCalendarDate}
+                  className="w-fit"
+                >
+                  <MiniCalendarNavigation direction="prev" />
+                  <MiniCalendarDays>
+                    {(date) => <MiniCalendarDay key={date.toISOString()} date={date} />}
+                  </MiniCalendarDays>
+                  <MiniCalendarNavigation direction="next" />
+                </MiniCalendar>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="is_recurring"
+                  checked={newAssignment.is_recurring}
+                  onChange={(e) => setNewAssignment({ ...newAssignment, is_recurring: e.target.checked })}
+                  className="rounded"
+                />
+                <Label htmlFor="is_recurring" className="flex items-center gap-2 cursor-pointer">
+                  <Repeat className="h-4 w-4" />
+                  Make this a recurring assignment
+                </Label>
+              </div>
+
+              {newAssignment.is_recurring && (
+                <div className="space-y-3 p-3 border rounded-lg bg-muted/50">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Repeat on days of the week:</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+                        <label key={day} className="flex items-center gap-2 cursor-pointer text-sm">
+                          <input
+                            type="checkbox"
+                            checked={newAssignment.recurrence_pattern.days.includes(day)}
+                            onChange={(e) => {
+                              const updatedDays = e.target.checked
+                                ? [...newAssignment.recurrence_pattern.days, day]
+                                : newAssignment.recurrence_pattern.days.filter(d => d !== day)
+                              setNewAssignment({
+                                ...newAssignment,
+                                recurrence_pattern: {
+                                  ...newAssignment.recurrence_pattern,
+                                  days: updatedDays
+                                }
+                              })
+                            }}
+                            className="rounded"
+                          />
+                          <span className="capitalize">{day.slice(0, 3)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="recurrence_end_date" className="text-sm font-medium">Stop repeating after (optional):</Label>
+                    <Input
+                      id="recurrence_end_date"
+                      type="date"
+                      value={newAssignment.recurrence_end_date}
+                      onChange={(e) => setNewAssignment({ ...newAssignment, recurrence_end_date: e.target.value })}
+                      min={newAssignment.due_date}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -173,6 +336,68 @@ export default function ParentDashboard() {
                 onChange={(content) => setNewAssignment({ ...newAssignment, content })}
                 placeholder="Type your assignment instructions here..."
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Assign to Children</Label>
+              <div className="space-y-2">
+                {children.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No children added yet. <Link href="/parent/children" className="underline">Add children</Link> to assign tasks.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex gap-2 mb-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setNewAssignment({
+                          ...newAssignment,
+                          selectedChildren: children.map(c => c.id)
+                        })}
+                      >
+                        Select All
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setNewAssignment({
+                          ...newAssignment,
+                          selectedChildren: []
+                        })}
+                      >
+                        Clear All
+                      </Button>
+                    </div>
+                    {children.map((child) => (
+                      <label key={child.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={newAssignment.selectedChildren.includes(child.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setNewAssignment({
+                                ...newAssignment,
+                                selectedChildren: [...newAssignment.selectedChildren, child.id]
+                              })
+                            } else {
+                              setNewAssignment({
+                                ...newAssignment,
+                                selectedChildren: newAssignment.selectedChildren.filter(id => id !== child.id)
+                              })
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm">{child.name}</span>
+                        <span className="text-xs text-muted-foreground">({child.email})</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -221,16 +446,24 @@ export default function ParentDashboard() {
                     title: '',
                     content: null,
                     links: [],
-                    due_date: format(new Date(), 'yyyy-MM-dd')
+                    due_date: format(new Date(), 'yyyy-MM-dd'),
+                    selectedChildren: [],
+                    is_recurring: false,
+                    recurrence_pattern: {
+                      days: [],
+                      frequency: 'weekly'
+                    },
+                    recurrence_end_date: ''
                   })
+                  setSelectedCalendarDate(new Date())
                 }}
               >
                 Cancel
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Existing Assignments</h2>
@@ -239,10 +472,20 @@ export default function ParentDashboard() {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle>{assignment.title}</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    {assignment.title}
+                    {assignment.is_recurring && (
+                      <Repeat className="h-4 w-4 text-blue-500" />
+                    )}
+                  </CardTitle>
                   <CardDescription className="flex items-center gap-2 mt-1">
                     <Calendar className="h-4 w-4" />
                     Due: {format(new Date(assignment.due_date), 'MMM dd, yyyy')}
+                    {assignment.is_recurring && assignment.recurrence_pattern?.days && (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                        Repeats {assignment.recurrence_pattern.days.join(', ')}
+                      </span>
+                    )}
                   </CardDescription>
                 </div>
                 <Button

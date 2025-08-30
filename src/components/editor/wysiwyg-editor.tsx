@@ -69,6 +69,7 @@ export function WysiwygEditor({
       Color
     ],
     content,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange?.(editor.getJSON())
     },

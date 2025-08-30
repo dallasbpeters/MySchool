@@ -102,11 +102,34 @@ export async function GET(request: Request) {
       })
     })
     
-    await Promise.all(emailPromises)
+    const emailResults = await Promise.all(emailPromises)
+    const successfulEmails = emailResults.filter(result => result !== null)
+    
+    // Create notifications for successfully sent emails
+    if (successfulEmails.length > 0) {
+      const notificationPromises = students.map(async (student: any) => {
+        return supabase
+          .from('notifications')
+          .insert({
+            user_id: student.id,
+            title: 'Daily Assignment Email Sent',
+            message: `Your daily assignment email for ${format(new Date(), 'MMMM dd, yyyy')} has been sent to ${student.email}`,
+            type: 'success',
+            metadata: {
+              action: 'email_sent',
+              email: student.email,
+              date: format(new Date(), 'yyyy-MM-dd')
+            }
+          })
+      })
+      
+      await Promise.all(notificationPromises)
+    }
     
     return NextResponse.json({ 
       message: 'Daily emails sent successfully',
-      studentsCount: students.length 
+      studentsCount: students.length,
+      emailsSent: successfulEmails.length
     })
   } catch (error) {
     console.error('Error sending daily emails:', error)

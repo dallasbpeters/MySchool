@@ -14,46 +14,43 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isValidSession, setIsValidSession] = useState(false)
   const [isCheckingSession, setIsCheckingSession] = useState(true)
-  const [hasProcessedCode, setHasProcessedCode] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
 
   useEffect(() => {
     let mounted = true
 
-    const handlePasswordReset = async () => {
+    const setupPasswordReset = async () => {
+      console.log('Setting up password reset...')
+      
       try {
-        // First check if we already have a session (from a previous code exchange)
+        // Check if we already have a valid session
         const { data: { session } } = await supabase.auth.getSession()
+        console.log('Current session:', session ? 'exists' : 'none')
         
-        // If we have a session and it's a recovery session, we're good
         if (session?.user) {
-          console.log('Existing session found:', session.user.email)
+          // Already have a session - ready for password reset
+          console.log('Valid session found, enabling reset form')
           if (mounted) {
             setIsValidSession(true)
             setIsCheckingSession(false)
+            // Clear URL parameters for cleaner experience
+            window.history.replaceState({}, '', '/auth/reset-password')
           }
           return
         }
 
-        // Check for recovery parameters in URL
-        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        // Check for reset code in URL
         const urlParams = new URLSearchParams(window.location.search)
-        
-        // Check both hash and query params (Supabase can use either)
-        const accessToken = hashParams.get('access_token')
-        const type = hashParams.get('type') || urlParams.get('type')
         const code = urlParams.get('code')
-        
-        console.log('Reset params:', { accessToken, type, code, hash: window.location.hash, search: window.location.search })
-
-        // Check for error in URL (expired or invalid link)
         const error = urlParams.get('error')
         const errorCode = urlParams.get('error_code')
-        const errorDescription = urlParams.get('error_description')
         
+        console.log('URL params:', { code: code ? 'present' : 'none', error, errorCode })
+        
+        // Handle error states first
         if (error || errorCode) {
-          console.error('Reset link error:', error, errorCode, errorDescription)
+          console.log('Error in URL, showing error state')
           if (mounted) {
             setIsValidSession(false)
             setIsCheckingSession(false)
@@ -61,72 +58,57 @@ export default function ResetPasswordPage() {
           return
         }
 
-        // Check if this is a recovery link
-        if (code && !hasProcessedCode) {
-          // PKCE flow with code - most common case for password reset
+        // Exchange code for session if we have one
+        if (code) {
           console.log('Exchanging code for session...')
-          setHasProcessedCode(true) // Prevent multiple exchanges
-          
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
           
           if (exchangeError) {
-            console.error('Code exchange error:', exchangeError)
+            console.error('Failed to exchange reset code:', exchangeError.message)
             if (mounted) {
               setIsValidSession(false)
-              
-              // Clear the URL to remove the used code
-              window.history.replaceState({}, '', '/auth/reset-password')
+              setIsCheckingSession(false)
             }
           } else {
-            console.log('Recovery session established via code exchange')
-            if (mounted) {
+            console.log('Code exchange successful')
+            // Wait for auth state change event or check session again
+            const { data: { session: newSession } } = await supabase.auth.getSession()
+            if (newSession?.user && mounted) {
               setIsValidSession(true)
-              
-              // Clear the URL to remove the used code
+              setIsCheckingSession(false)
+              // Clear URL for cleaner experience
               window.history.replaceState({}, '', '/auth/reset-password')
             }
           }
-        } else if (type === 'recovery' && accessToken) {
-          // Direct token in hash (implicit flow - older method)
-          console.log('Recovery link with access token detected')
-          if (mounted) {
-            setIsValidSession(true)
-          }
-        } else if (!code) {
-          // No valid recovery params
-          console.log('No valid recovery parameters found')
+        } else {
+          // No code and no session - invalid access
+          console.log('No code or session, showing invalid state')
           if (mounted) {
             setIsValidSession(false)
+            setIsCheckingSession(false)
           }
         }
       } catch (error) {
-        console.error('Password reset check error:', error)
+        console.error('Password reset setup error:', error)
         if (mounted) {
           setIsValidSession(false)
-        }
-      } finally {
-        if (mounted) {
           setIsCheckingSession(false)
         }
       }
     }
 
-    // Set up auth state listener specifically for PASSWORD_RECOVERY event
+    // Listen for auth events
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state change:', event, session?.user?.email)
-      
-      // Only handle PASSWORD_RECOVERY event on this page
-      if (event === 'PASSWORD_RECOVERY' && mounted) {
-        console.log('PASSWORD_RECOVERY event detected')
-        setIsValidSession(true)
-        setIsCheckingSession(false)
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        if (session?.user && mounted) {
+          setIsValidSession(true)
+          setIsCheckingSession(false)
+        }
       }
     })
 
-    // Check for recovery params immediately
-    handlePasswordReset()
+    setupPasswordReset()
 
-    // Cleanup
     return () => {
       mounted = false
       authListener.subscription.unsubscribe()
@@ -145,29 +127,71 @@ export default function ResetPasswordPage() {
       return
     }
 
-    setIsLoading(true)
-
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      })
-
-      if (error) throw error
-
-      toast({
-        title: "Success",
-        description: "Password updated successfully"
-      })
-
-      // Redirect to home
-      setTimeout(() => {
-        window.location.href = '/'
-      }, 1000)
-
-    } catch (error: any) {
+    if (password.length < 6) {
       toast({
         title: "Error",
-        description: error.message,
+        description: "Password must be at least 6 characters long",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsLoading(true)
+
+    // Add timeout to prevent hanging
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false)
+      toast({
+        title: "Error", 
+        description: "Request timed out. Please try again.",
+        variant: "destructive"
+      })
+    }, 10000) // 10 second timeout
+
+    try {
+      console.log('Calling API route to update password...')
+      
+      // Use our API route which handles the Supabase call server-side
+      const response = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          password: password
+        })
+      })
+
+      clearTimeout(timeoutId)
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update password')
+      }
+
+      console.log('Password update successful via API route')
+      toast({
+        title: "Success", 
+        description: "Password updated successfully! Redirecting to login..."
+      })
+
+      // Clear form
+      setPassword('')
+      setConfirmPassword('')
+
+      // Sign out and redirect to login
+      await supabase.auth.signOut()
+      setTimeout(() => {
+        window.location.href = '/login'
+      }, 1500)
+
+    } catch (error: any) {
+      clearTimeout(timeoutId) 
+      console.error('Password update error:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update password. Please try again.",
         variant: "destructive"
       })
     } finally {

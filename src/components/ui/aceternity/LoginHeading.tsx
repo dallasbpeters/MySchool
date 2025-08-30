@@ -14,7 +14,7 @@ export function LoginHeading() {
         opacity: 1,
       }}
       className={cn(
-        "flex items-center min-h-screen flex-1 relative max-w-2xl text-left text-1xl leading-tight font-bold tracking-tight text-zinc-700 md:text-5xl dark:text-zinc-100",
+        "flex items-center min-h-screen flex-1 relative max-w-2xl text-left text-1xl leading-tight font-bold tracking-tight text-foreground md:text-7xl dark:text-zinc-100",
       )}
       layout
     >

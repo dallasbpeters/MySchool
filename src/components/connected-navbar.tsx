@@ -91,7 +91,7 @@ export function ConnectedNavbar() {
 
 
   // Don't show navbar on auth pages
-  if (['/login', '/auth/callback', '/setup'].some(path => pathname?.startsWith(path))) {
+  if (['/login', '/auth/callback', '/auth/reset-password', '/auth/test-reset', '/setup'].some(path => pathname?.startsWith(path))) {
     return null
   }
 

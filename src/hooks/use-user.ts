@@ -35,8 +35,7 @@ export function useUser(): UserData {
     const getUser = async () => {
       try {
         const { data: { user }, error } = await supabase.auth.getUser()
-        console.log('useUser getUser:', { user: !!user, error })
-        
+
         if (!mounted) return
 
         if (user) {
@@ -79,8 +78,7 @@ export function useUser(): UserData {
     const getSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        console.log('useUser getSession:', { session: !!session })
-        
+
         if (!mounted) return
 
         if (session?.user) {

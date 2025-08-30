@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Plus, Trash2, Eye, Calendar, Link as LinkIcon, Users, Repeat } from 'lucide-react'
+import { Plus, Trash2, Calendar, Link as LinkIcon, Repeat } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { MiniCalendar, MiniCalendarNavigation, MiniCalendarDays, MiniCalendarDay } from '@/components/ui/shadcn-io/mini-calendar'
+import { useToast } from '@/hooks/use-toast'
 
 interface Link {
   title: string
@@ -44,6 +45,7 @@ export default function ParentDashboard() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [children, setChildren] = useState<Child[]>([])
   const [isCreating, setIsCreating] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [viewMode, setViewMode] = useState<'parent' | 'student'>('parent')
   const [newAssignment, setNewAssignment] = useState({
     title: '',
@@ -61,6 +63,7 @@ export default function ParentDashboard() {
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(new Date())
   const [newLink, setNewLink] = useState({ title: '', url: '' })
   const supabase = createClient()
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchAssignments()
@@ -108,56 +111,124 @@ export default function ParentDashboard() {
   }
 
   const createAssignment = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    setIsSaving(true)
 
-    // Create the assignment
-    const { data: assignmentData, error } = await supabase
-      .from('assignments')
-      .insert({
-        parent_id: user.id,
-        title: newAssignment.title,
-        content: newAssignment.content,
-        links: newAssignment.links as any,
-        due_date: newAssignment.due_date,
-        is_recurring: newAssignment.is_recurring,
-        recurrence_pattern: newAssignment.is_recurring ? newAssignment.recurrence_pattern as any : null,
-        recurrence_end_date: newAssignment.is_recurring && newAssignment.recurrence_end_date ? newAssignment.recurrence_end_date : null,
-        next_due_date: newAssignment.is_recurring ? newAssignment.due_date : null
+    // Validation
+    if (!newAssignment.title.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter an assignment title",
+        variant: "destructive"
       })
-      .select()
-      .single()
+      setIsSaving(false)
+      return
+    }
 
-    if (!error && assignmentData) {
-      // Create student assignments for selected children
-      if (newAssignment.selectedChildren.length > 0) {
-        const studentAssignments = newAssignment.selectedChildren.map(childId => ({
-          assignment_id: assignmentData.id,
-          student_id: childId,
-          completed: false
-        }))
+    if (newAssignment.selectedChildren.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one child for this assignment",
+        variant: "destructive"
+      })
+      setIsSaving(false)
+      return
+    }
 
-        await supabase
-          .from('student_assignments')
-          .insert(studentAssignments as any)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create assignments",
+        variant: "destructive"
+      })
+      setIsSaving(false)
+      return
+    }
+
+    try {
+      // Create the assignment
+      const { data: assignmentData, error } = await supabase
+        .from('assignments')
+        .insert({
+          parent_id: user.id,
+          title: newAssignment.title,
+          content: newAssignment.content,
+          links: newAssignment.links as any,
+          due_date: newAssignment.due_date,
+          is_recurring: newAssignment.is_recurring,
+          recurrence_pattern: newAssignment.is_recurring ? newAssignment.recurrence_pattern as any : null,
+          recurrence_end_date: newAssignment.is_recurring && newAssignment.recurrence_end_date ? newAssignment.recurrence_end_date : null,
+          next_due_date: newAssignment.is_recurring ? newAssignment.due_date : null
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Assignment creation error:', error)
+        toast({
+          title: "Error",
+          description: `Failed to create assignment: ${error.message}`,
+          variant: "destructive"
+        })
+        setIsSaving(false)
+        return
       }
 
-      setIsCreating(false)
-      setNewAssignment({
-        title: '',
-        content: null,
-        links: [],
-        due_date: format(new Date(), 'yyyy-MM-dd'),
-        selectedChildren: [],
-        is_recurring: false,
-        recurrence_pattern: {
-          days: [],
-          frequency: 'weekly'
-        },
-        recurrence_end_date: ''
+      if (assignmentData) {
+        // Create student assignments for selected children
+        if (newAssignment.selectedChildren.length > 0) {
+          const studentAssignments = newAssignment.selectedChildren.map(childId => ({
+            assignment_id: assignmentData.id,
+            student_id: childId,
+            completed: false
+          }))
+
+          const { error: studentError } = await supabase
+            .from('student_assignments')
+            .insert(studentAssignments as any)
+
+          if (studentError) {
+            console.error('Student assignment creation error:', studentError)
+            toast({
+              title: "Warning",
+              description: "Assignment created but failed to assign to some students",
+              variant: "destructive"
+            })
+          }
+        }
+
+        // Success!
+        toast({
+          title: "Success",
+          description: `Assignment "${newAssignment.title}" created successfully`,
+        })
+
+        setIsCreating(false)
+        setNewAssignment({
+          title: '',
+          content: null,
+          links: [],
+          due_date: format(new Date(), 'yyyy-MM-dd'),
+          selectedChildren: [],
+          is_recurring: false,
+          recurrence_pattern: {
+            days: [],
+            frequency: 'weekly'
+          },
+          recurrence_end_date: ''
+        })
+        setSelectedCalendarDate(new Date())
+        fetchAssignments()
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while creating the assignment",
+        variant: "destructive"
       })
-      setSelectedCalendarDate(new Date())
-      fetchAssignments()
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -198,22 +269,6 @@ export default function ParentDashboard() {
     <div className="container mx-auto p-4 max-w-6xl">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Parent Dashboard</h1>
-        <div className="flex gap-2">
-          <Link href="/parent/children">
-            <Button variant="outline" className="gap-2">
-              <Users className="h-4 w-4" />
-              Manage Children
-            </Button>
-          </Link>
-          <Button
-            variant="outline"
-            onClick={() => setViewMode('student')}
-            className="gap-2"
-          >
-            <Eye className="h-4 w-4" />
-            Switch to Student View
-          </Button>
-        </div>
       </div>
 
       <Sheet open={isCreating} onOpenChange={setIsCreating}>
@@ -223,7 +278,7 @@ export default function ParentDashboard() {
             Create New Assignment
           </Button>
         </SheetTrigger>
-        <SheetContent className="w-[600px] sm:w-[600px] overflow-y-auto">
+        <SheetContent className="w-[700px] sm:w-[600px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Create New Assignment</SheetTitle>
             <SheetDescription>
@@ -437,7 +492,9 @@ export default function ParentDashboard() {
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={createAssignment}>Save Assignment</Button>
+              <Button onClick={createAssignment} disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save Assignment'}
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => {

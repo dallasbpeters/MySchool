@@ -2,6 +2,7 @@
 
 import { Moon, Sun } from 'lucide-react';
 import { useCallback } from 'react';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -19,24 +20,21 @@ type StartPosition =
   | 'bottom-right';
 
 export interface ThemeToggleButtonProps {
-  theme?: 'light' | 'dark';
   showLabel?: boolean;
   variant?: AnimationVariant;
   start?: StartPosition;
   url?: string; // For gif variant
   className?: string;
-  onClick?: () => void;
 }
 
 export const ThemeToggleButton = ({
-  theme = 'light',
   showLabel = false,
   variant = 'circle',
   start = 'center',
   url,
   className,
-  onClick,
 }: ThemeToggleButtonProps) => {
+  const { theme, setTheme } = useTheme();
   
   const handleClick = useCallback(() => {
     // Inject animation styles for this specific transition
@@ -177,9 +175,9 @@ export const ThemeToggleButton = ({
       }, 3000);
     }
     
-    // Call the onClick handler if provided
-    onClick?.();
-  }, [onClick, variant, start, url, theme]);
+    // Toggle the theme
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  }, [setTheme, theme, variant, start, url]);
 
   return (
     <Button

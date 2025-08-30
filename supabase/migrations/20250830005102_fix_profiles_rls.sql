@@ -17,5 +17,6 @@ CREATE POLICY "Users can insert their own profile" ON profiles
 
 -- Allow authenticated users to view all profiles (simplified approach)
 -- This avoids recursion while still allowing parents to see students
+DROP POLICY IF EXISTS "Authenticated users can view profiles" ON profiles;
 CREATE POLICY "Authenticated users can view profiles" ON profiles
   FOR SELECT USING (auth.uid() IS NOT NULL);

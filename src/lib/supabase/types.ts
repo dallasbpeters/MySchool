@@ -93,6 +93,85 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          id: string
+          title: string
+          message: string
+          type: 'info' | 'success' | 'warning' | 'error'
+          read: boolean
+          created_at: string
+          user_id: string
+          metadata: Json | null
+        }
+        Insert: {
+          id?: string
+          title: string
+          message: string
+          type: 'info' | 'success' | 'warning' | 'error'
+          read?: boolean
+          created_at?: string
+          user_id: string
+          metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          title?: string
+          message?: string
+          type?: 'info' | 'success' | 'warning' | 'error'
+          read?: boolean
+          created_at?: string
+          user_id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signup_codes: {
+        Row: {
+          id: string
+          code: string
+          parent_id: string
+          created_at: string
+          used: boolean
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          id?: string
+          code: string
+          parent_id: string
+          created_at?: string
+          used?: boolean
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          id?: string
+          code?: string
+          parent_id?: string
+          created_at?: string
+          used?: boolean
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signup_codes_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_assignments: {
         Row: {
           assignment_id: string

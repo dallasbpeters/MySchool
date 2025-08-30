@@ -16,25 +16,16 @@ export default async function Home() {
     .eq('id', user.id)
     .single()
 
-  console.log('Profile data:', profile)
-  console.log('Profile error:', error)
-  console.log('Role:', profile?.role)
-
-  // If table doesn't exist, redirect to setup
-  if (error && error.code === 'PGRST205') {
-    redirect('/setup')
-  }
-
-  // If no profile exists for user, redirect to fix-role
-  if (error && error.code === 'PGRST116') {
-    redirect('/fix-role')
+  // If no profile exists, default to student role
+  if (error) {
+    redirect('/student')
   }
 
   // Default to student if no profile or role
   if (!profile || !profile.role) {
     redirect('/student')
   }
-  
+
   // Redirect based on role
   if (profile.role === 'parent') {
     redirect('/parent')

@@ -1,6 +1,6 @@
 import { LoginForm } from "@/components/login-form"
-import { DotPattern } from "@/components/ui/shadcn-io/dot-pattern"
-import Image from "next/image"
+import { Logo } from "@/components/ui/Logo"
+import { LoginHeading } from "@/components/ui/aceternity/LoginHeading"
 
 export default function LoginPage() {
   return (
@@ -8,7 +8,7 @@ export default function LoginPage() {
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex justify-center gap-2 md:justify-start">
           <a href="/" className="flex items-center gap-2 font-medium">
-            <Image src="/logo.svg" alt="MySchool Logo" width={60} height={32} className="h-20 w-40" priority={true} />
+            <Logo />
           </a>
         </div>
         <div className="flex flex-1 items-center justify-center">
@@ -18,10 +18,10 @@ export default function LoginPage() {
         </div>
       </div>
       <div className="relative hidden bg-background lg:block">
-        <div className="min-h-screen w-full bg-[#f9fafb] relative">
+        <div className="min-h-screen w-full bg-background relative">
           {/* Diagonal Fade Grid Background - Top Left */}
           <div
-            className="absolute inset-0 z-0"
+            className="flex justify-center items-center absolute inset-0 z-0 h-full text-center"
             style={{
               backgroundImage: `
         linear-gradient(to right, #d1d5db 1px, transparent 1px),
@@ -34,6 +34,7 @@ export default function LoginPage() {
                 "radial-gradient(ellipse 80% 80% at 0% 0%, #000 50%, transparent 90%)",
             }}
           />
+          <LoginHeading />
         </div>
       </div>
     </div>

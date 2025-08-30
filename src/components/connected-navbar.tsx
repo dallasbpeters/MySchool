@@ -15,68 +15,99 @@ export function ConnectedNavbar() {
   const [user, setUser] = useState<User | null>(null)
   const [userRole, setUserRole] = useState<string>('parent') // Default to parent
   const [userName, setUserName] = useState<string>('')
+  const [isLoading, setIsLoading] = useState(true)
 
   const supabase = createClient()
 
   useEffect(() => {
     // Fast initial auth check
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        setUser(session.user)
-        setUserName(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User')
-        
-        // Fetch role in background, don't block rendering
-        supabase
-          .from('profiles')
-          .select('role, name')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data }) => {
-            if (data?.role) setUserRole(data.role)
-            if (data?.name) setUserName(data.name)
-          })
-          .catch(() => {
-            // If profile doesn't exist, keep defaults
-          })
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+
+        if (session?.user) {
+          setUser(session.user)
+          setUserName(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User')
+
+          // Fetch role in background, don't block rendering
+          const fetchProfile = async () => {
+            try {
+              const { data } = await supabase
+                .from('profiles')
+                .select('role, name')
+                .eq('id', session.user.id)
+                .single()
+
+              if (data?.role) setUserRole(data.role)
+              if (data?.name) setUserName(data.name)
+            } catch (error) {
+              // If profile doesn't exist, keep defaults
+            }
+          }
+          fetchProfile()
+        } else {
+          setUser(null)
+        }
+        setIsLoading(false)
+      } catch (error) {
+        setIsLoading(false)
       }
     }
 
     checkAuth()
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
       if (session?.user) {
         setUser(session.user)
         setUserName(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User')
         // Fetch role in background
-        supabase
-          .from('profiles')
-          .select('role, name')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data }) => {
-            if (data?.role) setUserRole(data.role)
-            if (data?.name) setUserName(data.name)
-          })
-          .catch(() => {})
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('role, name')
+            .eq('id', session.user.id)
+            .single()
+
+          if (data?.role) setUserRole(data.role)
+          if (data?.name) setUserName(data.name)
+        } catch (error) {
+          // If profile doesn't exist, keep defaults
+        }
       } else {
         setUser(null)
         setUserRole('parent')
         setUserName('')
       }
+      setIsLoading(false)
     })
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // Don't handle redirects in navbar - let middleware or page-level redirects handle this
+  // This prevents redirect loops
+
+
 
   // Don't show navbar on auth pages
   if (['/login', '/auth/callback', '/setup'].some(path => pathname?.startsWith(path))) {
     return null
   }
 
+  // Debug logging - temporarily disabled to see other logs
+  // console.log('ConnectedNavbar render:', { 
+  //   pathname, 
+  //   user: !!user, 
+  //   userId: user?.id, 
+  //   userRole, 
+  //   userName,
+  //   isLoading 
+  // })
+
   // Show navbar immediately if we have a user, don't wait for profile
   if (!user) {
+    // console.log('No user found, hiding navbar - user should be redirected to login')
     return null
   }
 
@@ -193,21 +224,38 @@ export function ConnectedNavbar() {
         })
         break
       case 'logout':
-        try {
-          await supabase.auth.signOut()
-          router.push('/login')
-          toast({
-            title: 'Logged Out',
-            description: 'You have been successfully logged out.'
+        // Immediately redirect to login page
+        window.location.href = '/login?logout=true'
+        
+        // Clean up in the background (this will run but page will already be navigating)
+        setTimeout(() => {
+          // Clear local state
+          setUser(null)
+          setUserRole('parent')
+          setUserName('')
+          
+          // Try to sign out from Supabase (fire and forget)
+          supabase.auth.signOut().catch(() => {
+            // Ignore errors - we're already redirecting
           })
-        } catch (error) {
-          console.error('Error logging out:', error)
-          toast({
-            title: 'Error',
-            description: 'Failed to log out. Please try again.',
-            variant: 'destructive'
+          
+          // Clear all Supabase cookies
+          document.cookie.split(";").forEach((c) => {
+            if (c.includes('supabase')) {
+              document.cookie = c
+                .replace(/^ +/, "")
+                .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            }
           })
-        }
+          
+          // Clear localStorage
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i)
+            if (key && key.includes('supabase')) {
+              localStorage.removeItem(key)
+            }
+          }
+        }, 0)
         break
     }
   }

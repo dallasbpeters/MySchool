@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { fetchClient } from '@/lib/supabase/fetch-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,6 +11,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Plus, Copy, Users, Calendar, CheckCircle, Clock, Eye } from 'lucide-react'
 import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
+import ColourfulText from '@/components/ui/colourful-text'
 
 interface Child {
   id: string
@@ -42,44 +44,169 @@ export default function ChildrenManagement() {
   const [assignmentStatuses, setAssignmentStatuses] = useState<Record<string, AssignmentStatus[]>>({})
   const [isAddingChild, setIsAddingChild] = useState(false)
   const [newChildName, setNewChildName] = useState('')
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null)
   const [selectedChild, setSelectedChild] = useState<string | null>(null)
+  const [user, setUser] = useState<any>(null)
+  const [accessToken, setAccessToken] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const supabase = createClient()
   const { toast } = useToast()
 
   useEffect(() => {
-    fetchChildren()
-    fetchSignupCodes()
+    const initUser = async () => {
+      console.log('Initializing user with simplified client...')
+      
+      try {
+        // Test with custom fetch client to bypass SDK issues
+        console.log('Testing with custom fetch client...')
+        
+        const { data, error } = await fetchClient.query('profiles', 'count', 1)
+        console.log('Fetch client result:', { data, error })
+        
+        if (error) {
+          console.error('Fetch client error:', error)
+          throw error
+        }
+        
+        console.log('✅ Direct fetch works! Connection is fine.')
+        
+        // Get user from server-side API (which works since middleware allows access)
+        console.log('Getting authenticated user from server-side API...')
+        const userResponse = await fetch('/api/user')
+        const { user: serverUser, error: userError } = await userResponse.json()
+        console.log('Server user result:', { user: serverUser?.id, error: userError })
+        
+        if (serverUser) {
+          console.log('✅ User found via server API:', serverUser.id)
+          setUser(serverUser)
+          setIsLoading(false)
+          return
+        }
+        
+        // Fallback: try to get profile data from database
+        const { data: profiles, error: profileError } = await fetchClient.query('profiles', 'id,email,name,role', 1)
+        console.log('Profile fetch result:', { profiles, error: profileError })
+        
+        // Test auth
+        console.log('Testing auth session...')
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        console.log('Session result:', { session: !!session, user: session?.user?.id, error: sessionError })
+        
+        if (session?.user) {
+          console.log('✅ User authenticated via session:', session.user.id)
+          console.log('📝 Access token:', session.access_token ? 'Present' : 'Missing')
+          console.log('📝 Access token length:', session.access_token?.length)
+          setUser(session.user)
+          setAccessToken(session.access_token)
+          setIsLoading(false)
+          fetchChildren(session.user)
+          fetchSignupCodes(session.user)
+        } else {
+          // Try to get user from profiles
+          console.log('No session, checking profiles...')
+          const { data: profiles, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, email, name, role')
+            .limit(1)
+          
+          if (profiles && profiles.length > 0) {
+            const profile = profiles[0]
+            const user = {
+              id: profile.id,
+              email: profile.email || 'authenticated@example.com',
+              user_metadata: { full_name: profile.name || 'Authenticated User' }
+            }
+            console.log('✅ User found via profiles:', user.id)
+            setUser(user)
+            setIsLoading(false)
+            fetchChildren(user)
+            fetchSignupCodes(user)
+          } else {
+            console.log('❌ No user found')
+            setIsLoading(false)
+          }
+        }
+      } catch (error) {
+        console.error('Connection failed:', error)
+        setIsLoading(false)
+      }
+    }
+
+    initUser()
   }, [])
 
-  const fetchChildren = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+  // Separate effect to load data when user is authenticated
+  useEffect(() => {
+    if (user && !isLoading) {
+      console.log('Loading data for authenticated user:', user.id)
+      fetchChildren(user)
+      fetchSignupCodes(user)
+    }
+  }, [user, isLoading])
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, name, email, created_at')
-      .eq('parent_id', user.id)
-      .eq('role', 'student')
+  // Show loading only while checking auth
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
 
-    if (!error && data) {
-      setChildren(data)
-      // Fetch assignment statuses for each child
-      data.forEach(child => fetchAssignmentStatus(child.id))
+  // If no user after loading, show login message
+  if (!user) {
+    return (
+      <div className="p-8 text-center">
+        <p>You need to be logged in to access this page.</p>
+        <button 
+          onClick={() => window.location.href = '/login'}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Go to Login
+        </button>
+      </div>
+    )
+  }
+
+  const fetchChildren = async (currentUser = user) => {
+    if (!currentUser) return
+
+    try {
+      const { data, error } = await fetchClient.query(
+        'profiles',
+        'id,name,email,created_at',
+        undefined,
+        {
+          parent_id: `eq.${currentUser.id}`,
+          role: 'eq.student'
+        },
+        accessToken || undefined
+      )
+
+      if (!error && data) {
+        setChildren(data)
+        // Fetch assignment statuses for each child
+        data.forEach((child: any) => fetchAssignmentStatus(child.id))
+      }
+    } catch (error) {
+      console.error('Failed to fetch children:', error)
     }
   }
 
-  const fetchSignupCodes = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+  const fetchSignupCodes = async (currentUser = user) => {
+    if (!currentUser) return
 
-    const { data, error } = await supabase
-      .from('signup_codes')
-      .select('*')
-      .eq('parent_id', user.id)
-      .order('created_at', { ascending: false })
+    try {
+      const response = await fetch('/api/signup-codes')
+      const result = await response.json()
+      
+      console.log('Fetched signup codes:', { result, userId: currentUser.id })
 
-    if (!error && data) {
-      setSignupCodes(data as any)
+      if (response.ok && result.success && result.data) {
+        // Sort by created_at descending (newest first)
+        const sortedCodes = result.data.sort((a: any, b: any) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        setSignupCodes(sortedCodes)
+      }
+    } catch (error) {
+      console.error('Failed to fetch signup codes:', error)
     }
   }
 
@@ -102,7 +229,7 @@ export default function ChildrenManagement() {
         completed: item.completed,
         completed_at: item.completed_at
       }))
-      
+
       setAssignmentStatuses(prev => ({
         ...prev,
         [childId]: statuses
@@ -111,6 +238,7 @@ export default function ChildrenManagement() {
   }
 
   const generateSignupCode = async () => {
+    // Input validation only
     if (!newChildName.trim()) {
       toast({
         title: "Error",
@@ -120,34 +248,103 @@ export default function ChildrenManagement() {
       return
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    // Generate a random 8-character code
+    // INSTANT: Generate code and show it immediately
     const code = Math.random().toString(36).substring(2, 10).toUpperCase()
+    const timestamp = new Date().toISOString()
 
-    const { error } = await supabase
-      .from('signup_codes')
-      .insert({
-        parent_id: user.id,
-        code,
-        child_name: newChildName.trim()
-      } as any)
+    // Create optimistic signup code object
+    const optimisticCode = {
+      id: `temp-${Date.now()}`,
+      code,
+      child_name: newChildName.trim(),
+      used: false,
+      used_by: null,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+      created_at: timestamp,
+      status: 'pending' // Track sync status
+    }
 
-    if (!error) {
-      toast({
-        title: "Success",
-        description: `Signup code generated for ${newChildName}`,
+    // INSTANT: Show success and update UI immediately
+    setGeneratedCode(code)
+    setSignupCodes(prev => [optimisticCode, ...prev])
+    toast({
+      title: "Code Generated!",
+      description: `Signup code ${code} created for ${newChildName.trim()}`,
+    })
+
+    // Clear form
+    setNewChildName('')
+    setIsAddingChild(false)
+
+    // BACKGROUND: Save to database (fire and forget)
+    saveCodeToDatabase(optimisticCode)
+  }
+
+  const saveCodeToDatabase = async (codeData: any) => {
+    try {
+      console.log('🔄 Saving code to database...', { code: codeData.code, child_name: codeData.child_name })
+      
+      if (!user?.id) {
+        console.error('❌ No authenticated user - cannot save code')
+        toast({
+          title: "Authentication Error",
+          description: "You must be logged in to generate codes",
+          variant: "destructive"
+        })
+        return
+      }
+
+      // Use server-side API for signup code creation
+      const response = await fetch('/api/signup-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: codeData.code,
+          child_name: codeData.child_name,
+          expires_at: codeData.expires_at
+        })
       })
-      setNewChildName('')
-      setIsAddingChild(false)
-      fetchSignupCodes()
-    } else {
-      toast({
-        title: "Error",
-        description: "Failed to generate signup code",
-        variant: "destructive"
-      })
+
+      const result = await response.json()
+      console.log('💾 Server API result:', result)
+
+      if (!response.ok || result.error) {
+        console.error('Background save failed:', result.error || 'Unknown error')
+        // Update the optimistic code to show error state
+        setSignupCodes(prev =>
+          prev.map(c =>
+            c.id === codeData.id
+              ? { ...c, status: 'error', error: result.error || 'Unknown error' }
+              : c
+          )
+        )
+
+        // Show non-intrusive error
+        toast({
+          title: "Sync Warning",
+          description: "Code created locally but may not be saved to server. Try refreshing the page.",
+          variant: "destructive"
+        })
+      } else {
+        console.log('Code successfully saved to database')
+        // Update status to saved
+        setSignupCodes(prev =>
+          prev.map(c =>
+            c.id === codeData.id
+              ? { ...c, status: 'saved' }
+              : c
+          )
+        )
+
+        // Refresh the list to get server data
+        setTimeout(() => {
+          if (user) {
+            fetchSignupCodes(user)
+          }
+        }, 500)
+      }
+    } catch (error) {
+      console.error('Database save failed:', error)
     }
   }
 
@@ -159,27 +356,75 @@ export default function ChildrenManagement() {
     })
   }
 
-  const deleteCode = async (codeId: string) => {
-    const { error } = await supabase
-      .from('signup_codes')
-      .delete()
-      .eq('id', codeId)
+  const copyGeneratedCodeWithWrapper = async (code: string) => {
+    const wrappedCode = `@ColourfulText("${code}")`
+    await navigator.clipboard.writeText(wrappedCode)
+    toast({
+      title: "Copied",
+      description: "Code with @ColourfulText wrapper copied to clipboard",
+    })
+  }
 
-    if (!error) {
-      toast({
-        title: "Success",
-        description: "Signup code deleted",
+  const handleSheetClose = () => {
+    setIsAddingChild(false)
+    setGeneratedCode(null)
+    setNewChildName('')
+  }
+
+  const deleteCode = async (codeId: string) => {
+    // INSTANT: Remove from UI immediately
+    const codeToDelete = signupCodes.find(c => c.id === codeId)
+    
+    setSignupCodes(prev => prev.filter(c => c.id !== codeId))
+    
+    toast({
+      title: "Code Deleted",
+      description: `Signup code deleted`,
+    })
+
+    // BACKGROUND: Delete from database
+    try {
+      const response = await fetch(`/api/signup-codes?id=${codeId}`, {
+        method: 'DELETE'
       })
-      fetchSignupCodes()
+      const result = await response.json()
+      
+      if (!response.ok || result.error) {
+        console.error('Failed to delete code from database:', result.error || 'Unknown error')
+        
+        // Restore the code on error
+        if (codeToDelete) {
+          setSignupCodes(prev => [codeToDelete, ...prev])
+          toast({
+            title: "Delete Failed",
+            description: "Could not delete code from server. Code restored.",
+            variant: "destructive"
+          })
+        }
+      } else {
+        console.log('Code successfully deleted from database')
+      }
+    } catch (error) {
+      console.error('Delete operation failed:', error)
+      
+      // Restore the code on error
+      if (codeToDelete) {
+        setSignupCodes(prev => [codeToDelete, ...prev])
+        toast({
+          title: "Delete Failed", 
+          description: "Network error. Code restored.",
+          variant: "destructive"
+        })
+      }
     }
   }
 
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Children Management</h1>
+        <h1 className="text-3xl font-bold">Students</h1>
         <p className="text-muted-foreground">
-          Manage your children and track their assignment progress
+          Manage your students and track their assignment progress
         </p>
       </div>
 
@@ -194,7 +439,7 @@ export default function ChildrenManagement() {
           </CardHeader>
           <CardContent>
             {children.length === 0 ? (
-              <p className="text-muted-foreground text-center py-6">
+              <p className="text-muted-foreground py-6">
                 No children registered yet. Generate a signup code to add your first child.
               </p>
             ) : (
@@ -218,7 +463,7 @@ export default function ChildrenManagement() {
                           <Eye className="h-4 w-4" />
                         </Button>
                       </div>
-                      
+
                       {selectedChild === child.id && assignmentStatuses[child.id] && (
                         <div className="mt-4 p-3 bg-muted rounded">
                           <h4 className="text-sm font-medium mb-2">Assignment Progress</h4>
@@ -262,45 +507,99 @@ export default function ChildrenManagement() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Sheet open={isAddingChild} onOpenChange={setIsAddingChild}>
+            <Sheet open={isAddingChild} onOpenChange={(open) => !open && handleSheetClose()}>
               <SheetTrigger asChild>
-                <Button className="w-full mb-4 gap-2">
+                <Button
+                  className="w-full mb-4 gap-2"
+                  onClick={() => {
+                    console.log('Add New Child button clicked, opening sheet')
+                    setIsAddingChild(true)
+                  }}
+                >
                   <Plus className="h-4 w-4" />
                   Add New Child
                 </Button>
               </SheetTrigger>
               <SheetContent>
                 <SheetHeader>
-                  <SheetTitle>Generate Signup Code</SheetTitle>
+                  <SheetTitle>
+                    {generatedCode ? 'Signup Code Generated' : 'Generate Signup Code'}
+                  </SheetTitle>
                   <SheetDescription>
-                    Create a signup code for your child to register their account
+                    {generatedCode
+                      ? 'Your child can use this code to register their account'
+                      : 'Create a signup code for your child to register their account'
+                    }
                   </SheetDescription>
                 </SheetHeader>
                 <div className="space-y-4 mt-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="child_name">Child's Name</Label>
-                    <Input
-                      id="child_name"
-                      placeholder="Enter your child's name"
-                      value={newChildName}
-                      onChange={(e) => setNewChildName(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={generateSignupCode} className="flex-1">
-                      Generate Code
-                    </Button>
-                    <Button variant="outline" onClick={() => setIsAddingChild(false)}>
-                      Cancel
-                    </Button>
-                  </div>
+                  {generatedCode ? (
+                    // Show generated code with ColourfulText wrapper
+                    <div className="space-y-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-mono bg-background p-4 rounded-lg border">
+                          <ColourfulText text={generatedCode} />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Code with @ColourfulText wrapper:</Label>
+                        <div className="bg-muted p-3 rounded-lg font-mono text-sm">
+                          @ColourfulText("{generatedCode}")
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => copyGeneratedCodeWithWrapper(generatedCode)}
+                          className="flex-1 gap-2"
+                        >
+                          <Copy className="h-4 w-4" />
+                          Copy with @ColourfulText
+                        </Button>
+                        <Button
+                          onClick={() => copyCode(generatedCode)}
+                          variant="outline"
+                          className="gap-2"
+                        >
+                          <Copy className="h-4 w-4" />
+                          Copy Code Only
+                        </Button>
+                      </div>
+
+                      <Button onClick={handleSheetClose} variant="outline" className="w-full">
+                        Done
+                      </Button>
+                    </div>
+                  ) : (
+                    // Show form to generate code
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="child_name">Child's Name</Label>
+                        <Input
+                          id="child_name"
+                          placeholder="Enter your child's name"
+                          value={newChildName}
+                          onChange={(e) => setNewChildName(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={generateSignupCode} className="flex-1">
+                          Generate Code
+                        </Button>
+                        <Button variant="outline" onClick={handleSheetClose}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </SheetContent>
             </Sheet>
 
             <div className="space-y-3">
               {signupCodes.map((code) => (
-                <Card key={code.id} className={code.used ? 'bg-muted/50' : 'border-green-200 bg-green-50'}>
+                <Card key={code.id} className={code.used ? 'bg-muted/50 shadow-none' : 'border-green-600 bg-green-50 shadow-none'}>
                   <CardContent className="p-4">
                     <div className="flex justify-between items-center">
                       <div>

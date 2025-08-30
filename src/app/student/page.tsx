@@ -84,6 +84,7 @@ export default function StudentDashboard() {
 
     const assignmentsWithCompletion = assignmentsData?.map(a => ({
       ...a,
+      links: Array.isArray(a.links) ? a.links as Array<{ title: string; url: string }> : [],
       completed: completionMap.get(a.id)?.completed || false,
       completed_at: completionMap.get(a.id)?.completed_at
     })) || []

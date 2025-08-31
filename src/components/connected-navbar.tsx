@@ -28,7 +28,6 @@ export function ConnectedNavbar() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [notificationCount, setNotificationCount] = useState(0)
 
-  const supabase = createClient()
 
   const fetchNotifications = async () => {
     try {
@@ -89,6 +88,7 @@ export function ConnectedNavbar() {
     checkAuth()
 
     // Listen for auth changes
+    const supabase = createClient()
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
       if (session?.user) {
         setUser(session.user)
@@ -232,6 +232,7 @@ export function ConnectedNavbar() {
           setUserName('')
 
           // Try to sign out from Supabase (fire and forget)
+          const supabase = createClient()
           supabase.auth.signOut().catch(() => {
             // Ignore errors - we're already redirecting
           })
@@ -263,7 +264,7 @@ export function ConnectedNavbar() {
       navigationLinks={getNavigationLinks()}
       userName={userName}
       userEmail={user.email || ''}
-      userAvatar={user.user_metadata?.avatar_url}
+      userAvatar={user.user_metadata?.picture || user.user_metadata?.avatar_url}
       notificationCount={notificationCount}
       onNavItemClick={handleNavItemClick}
       onInfoItemClick={handleInfoItemClick}

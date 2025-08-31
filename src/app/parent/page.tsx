@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import MultipleSelector, { Option } from '@/components/ui/multiselect'
 import { Plus, Trash2, Calendar, Link as LinkIcon, Repeat, Edit } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -26,6 +27,7 @@ interface Assignment {
   links: Link[]
   due_date: string
   created_at: string
+  category?: string
   is_recurring?: boolean
   recurrence_pattern?: {
     days: string[] // ['monday', 'wednesday', 'friday']
@@ -45,6 +47,7 @@ interface Child {
 export default function ParentDashboard() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [children, setChildren] = useState<Child[]>([])
+  const [categories, setCategories] = useState<Option[]>([])
   const [isCreating, setIsCreating] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null)
@@ -53,7 +56,8 @@ export default function ParentDashboard() {
     content: null as any,
     links: [] as Link[],
     due_date: format(new Date(), 'yyyy-MM-dd'),
-    selectedChildren: [] as string[],
+    category: [] as Option[],
+    selectedChildren: [] as Option[],
     is_recurring: false,
     recurrence_pattern: {
       days: [] as string[],
@@ -68,6 +72,7 @@ export default function ParentDashboard() {
   useEffect(() => {
     fetchAssignments()
     fetchChildren()
+    fetchCategories()
   }, [])
 
   // Update due date when calendar date is selected
@@ -87,6 +92,26 @@ export default function ParentDashboard() {
 
       if (data.children) {
         setChildren(data.children)
+      }
+    } catch (error) {
+      // Handle error silently
+    }
+  }
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/assignments')
+      const data = await response.json()
+
+      if (data.assignments) {
+        const uniqueCategories = [...new Set(
+          data.assignments
+            .map((a: Assignment) => a.category)
+            .filter((c: string) => c && c.trim())
+        )]
+        setCategories(
+          uniqueCategories.map((cat: string) => ({ label: cat, value: cat }))
+        )
       }
     } catch (error) {
       // Handle error silently
@@ -125,7 +150,8 @@ export default function ParentDashboard() {
           content: newAssignment.content,
           links: newAssignment.links,
           due_date: newAssignment.due_date,
-          selectedChildren: newAssignment.selectedChildren,
+          category: newAssignment.category.length > 0 ? newAssignment.category[0].value : '',
+          selectedChildren: newAssignment.selectedChildren.map(child => child.value),
           is_recurring: newAssignment.is_recurring,
           recurrence_pattern: newAssignment.is_recurring ? newAssignment.recurrence_pattern : null,
           recurrence_end_date: newAssignment.is_recurring && newAssignment.recurrence_end_date ? newAssignment.recurrence_end_date : null
@@ -205,17 +231,22 @@ export default function ParentDashboard() {
   const startEditAssignment = (assignment: Assignment) => {
     setEditingAssignment(assignment)
 
-    // Find the child IDs that are currently assigned to this assignment
-    const assignedChildIds = children
+    // Find the child options that are currently assigned to this assignment
+    const assignedChildOptions = children
       .filter(child => assignment.assigned_children?.includes(child.name))
-      .map(child => child.id)
+      .map(child => ({ label: child.name, value: child.id }))
+
+    // Convert category string to Option array
+    const categoryOptions = assignment.category ?
+      [{ label: assignment.category, value: assignment.category }] : []
 
     setNewAssignment({
       title: assignment.title,
       content: assignment.content,
       links: assignment.links || [],
       due_date: assignment.due_date,
-      selectedChildren: assignedChildIds,
+      category: categoryOptions,
+      selectedChildren: assignedChildOptions,
       is_recurring: assignment.is_recurring || false,
       recurrence_pattern: {
         days: assignment.recurrence_pattern?.days || [],
@@ -233,7 +264,8 @@ export default function ParentDashboard() {
       content: null as any,
       links: [] as Link[],
       due_date: format(new Date(), 'yyyy-MM-dd'),
-      selectedChildren: [] as string[],
+      category: [] as Option[],
+      selectedChildren: [] as Option[],
       is_recurring: false,
       recurrence_pattern: {
         days: [] as string[],
@@ -271,6 +303,18 @@ export default function ParentDashboard() {
                   placeholder="Enter assignment title"
                   value={newAssignment.title}
                   onChange={(e) => setNewAssignment({ ...newAssignment, title: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <MultipleSelector
+                  value={newAssignment.category}
+                  onChange={(selected) => setNewAssignment({ ...newAssignment, category: selected })}
+                  options={categories}
+                  placeholder="Select or create categories..."
+                  creatable
+                  maxSelected={1}
                 />
               </div>
 
@@ -373,64 +417,18 @@ export default function ParentDashboard() {
 
               <div className="space-y-2">
                 <Label>Assign to Children</Label>
-                <div className="space-y-2">
-                  {children.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No children added yet. <Link href="/parent/children" className="underline">Add children</Link> to assign tasks.
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex gap-2 mb-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setNewAssignment({
-                            ...newAssignment,
-                            selectedChildren: children.map(c => c.id)
-                          })}
-                        >
-                          Select All
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setNewAssignment({
-                            ...newAssignment,
-                            selectedChildren: []
-                          })}
-                        >
-                          Clear All
-                        </Button>
-                      </div>
-                      {children.map((child) => (
-                        <label key={child.id} className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={newAssignment.selectedChildren.includes(child.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setNewAssignment({
-                                  ...newAssignment,
-                                  selectedChildren: [...newAssignment.selectedChildren, child.id]
-                                })
-                              } else {
-                                setNewAssignment({
-                                  ...newAssignment,
-                                  selectedChildren: newAssignment.selectedChildren.filter(id => id !== child.id)
-                                })
-                              }
-                            }}
-                            className="rounded"
-                          />
-                          <span className="text-sm">{child.name}</span>
-                          <span className="text-xs text-muted-foreground">({child.email})</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {children.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No children added yet. <Link href="/parent/children" className="underline">Add children</Link> to assign tasks.
+                  </p>
+                ) : (
+                  <MultipleSelector
+                    value={newAssignment.selectedChildren}
+                    onChange={(selected) => setNewAssignment({ ...newAssignment, selectedChildren: selected })}
+                    options={children.map(child => ({ label: `${child.name} (${child.email})`, value: child.id }))}
+                    placeholder="Select children to assign..."
+                  />
+                )}
               </div>
 
               <div className="space-y-2">
@@ -536,13 +534,13 @@ export default function ParentDashboard() {
                     <span className="text-sm font-medium">Assigned to:</span>
                     <div className="flex flex-wrap gap-2">
                       {assignment.assigned_children.map((childName, index) => (
-                        <span key={index} className="bg-primary/30 text-foreground text-xs px-2 py-1 rounded-full">
+                        <span key={index} className="bg-primary/30 text-foreground text-xs px-2 py-0.5 rounded-full leading-4">
                           {childName}
                         </span>
                       ))}
-                      {assignment.is_recurring && assignment.recurrence_pattern?.days && (
-                        <span className="flex items-center gap-1 whitespace-nowrap text-xs bg-primary/30 text-foreground px-2 py-1 rounded-full">
-                          <Repeat className="h-4 w-4 text-blue-500" /> {assignment.recurrence_pattern.days.join(', ')}
+                      {assignment.category && (
+                        <span className="flex items-center gap-1 whitespace-nowrap text-xs border border-primary/30 text-foreground px-2 py-0.5 rounded-full leading-4">
+                          {assignment.category}
                         </span>
                       )}
                     </div>

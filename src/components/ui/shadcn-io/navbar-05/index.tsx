@@ -182,9 +182,9 @@ const UserMenu = ({
       <DropdownMenuItem onClick={() => onItemClick?.('profile')}>
         Profile
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => onItemClick?.('settings')}>
+      {/* <DropdownMenuItem onClick={() => onItemClick?.('settings')}>
         Settings
-      </DropdownMenuItem>
+      </DropdownMenuItem> */}
       <DropdownMenuSeparator />
       <DropdownMenuItem onClick={() => onItemClick?.('logout')}>
         Log out

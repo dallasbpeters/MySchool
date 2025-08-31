@@ -1,16 +1,21 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardMedia } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardMedia, CardFooter } from '@/components/ui/card'
 import Image from 'next/image'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Calendar, CheckCircle2, Link as LinkIcon, User, ChevronDown } from 'lucide-react'
-import { format, isToday, isTomorrow, isPast, isFuture } from 'date-fns'
+import { StickyNote, Calendar, CheckCircle2, Link as LinkIcon, User, ChevronDown, BookOpen, Plus, Trash2 } from 'lucide-react'
+import { format, isToday, isTomorrow, isPast } from 'date-fns'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { WysiwygEditor } from '@/components/editor/wysiwyg-editor'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/hooks/use-toast'
 
 import ColourfulText from '@/components/ui/colourful-text'
 
@@ -22,12 +27,21 @@ interface Assignment {
   due_date: string
   completed?: boolean
   completed_at?: string
+  category?: string
 }
 
 interface Child {
   id: string
   name: string
   email: string
+}
+
+interface Note {
+  id: string
+  title: string
+  content: any
+  category: string
+  created_at: string
 }
 
 export default function StudentDashboard() {
@@ -38,10 +52,14 @@ export default function StudentDashboard() {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
   const [selectedChildName, setSelectedChildName] = useState<string | null>(null)
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null)
+  const [notes, setNotes] = useState<Note[]>([])
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchAssignments()
     checkUserRole()
+    fetchNotes()
+    fetchCategories()
   }, [])
 
   // Handle hash-based scrolling for notifications
@@ -129,6 +147,70 @@ export default function StudentDashboard() {
     setSelectedChildId(null)
     setSelectedChildName(null)
     fetchAssignments()
+  }
+
+  const fetchNotes = async () => {
+    try {
+      const response = await fetch('/api/notes')
+      const data = await response.json()
+
+      if (data.notes) {
+        setNotes(data.notes)
+      }
+    } catch (error) {
+      // Handle error silently
+    }
+  }
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/assignments')
+      const data = await response.json()
+
+    } catch (error) {
+      // Handle error silently
+    }
+  }
+
+  const deleteNote = async (noteId: string) => {
+    try {
+      const response = await fetch(`/api/notes?id=${noteId}`, {
+        method: 'DELETE'
+      })
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: data.message || "Note deleted successfully",
+        })
+        fetchNotes()
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to delete note",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete note",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const groupNotesByCategory = () => {
+    const grouped: { [key: string]: Note[] } = {}
+    notes.forEach(note => {
+      const category = note.category || 'General'
+      if (!grouped[category]) {
+        grouped[category] = []
+      }
+      grouped[category].push(note)
+    })
+    return grouped
   }
 
   const toggleAssignment = async (assignmentId: string, completed: boolean) => {
@@ -248,10 +330,10 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="z-100 relative container mx-auto p-4 max-w-5xl">
+    <div className="z-10 relative container mx-auto p-4 max-w-5xl">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">
-          {selectedChildName ? `${selectedChildName}'s Assignments` : 'Assignments'}
+          {selectedChildName ? `${selectedChildName}'s Dashboard` : 'Student Dashboard'}
         </h1>
         {userRole === 'parent' && (
           <DropdownMenu>
@@ -288,88 +370,239 @@ export default function StudentDashboard() {
         )}
       </div>
 
-      <ol className="relative  border-s border-grey-200 dark:border-gray-400">
-        {overdueAssignments.length > 0 && (
-          <li className="mb-10 ms-4">
-            <div className="absolute w-3 h-3 block bg-red-500 rounded-full mt-0.5 -start-1.5 border border-red-500 dark:border-red-500 dark:bg-red-500"></div>
-            <time className="block mb-2 text-lg font-medium leading-none text-red-500 dark:text-red-500">Overdue</time>
-            <div className={`grid gap-4 transition-grid-cols duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
-              }`}>
-              {overdueAssignments.map((assignment, index) => (
-                <AssignmentCard
-                  key={assignment.id}
-                  assignment={assignment}
-                  onToggle={toggleAssignment}
-                  getDateLabel={getDateLabel}
-                  getDateColor={getDateColor}
-                  imageIndex={index}
-                  expandedCardId={expandedCardId}
-                  setExpandedCardId={setExpandedCardId}
-                />
-              ))}
-            </div>
-          </li>
-        )}
+      <Tabs defaultValue="assignments" className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="assignments">Assignments</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="notes">My Notes</TabsTrigger>
+        </TabsList>
 
-        {todayAssignments.length > 0 && (
-          <li className="mb-8 ms-4">
-            <div className="absolute w-3 h-3 block bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
-            <time className="block mb-2 text-lg font-medium leading-none text-foreground  dark:text-foreground">Today's Assignments</time>
-            <div className="mb-6">
-              <div className={`grid gap-4 transition-[grid-template-columns] duration-600 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
-                }`}>
-                {todayAssignments.map((assignment, index) => (
-                  <AssignmentCard
-                    key={assignment.id}
-                    assignment={assignment}
-                    onToggle={toggleAssignment}
-                    getDateLabel={getDateLabel}
-                    getDateColor={getDateColor}
-                    imageIndex={index + overdueAssignments.length}
-                    expandedCardId={expandedCardId}
-                    setExpandedCardId={setExpandedCardId}
-                  />
-                ))}
-              </div>
-            </div>
-          </li>
-        )}
-        <li className="mb-8 ms-4">
-          <div className="absolute w-3 h-3 block bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
-          <time className="block mb-2 text-lg font-medium leading-none text-foreground dark:text-foreground">Upcoming</time>
-          {upcomingAssignments.length > 0 && (
-            <div className="mb-6">
-              <div className={`grid gap-4 transition-all duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
-                }`}>
-                {upcomingAssignments.map((assignment, index) => (
-                  <AssignmentCard
-                    key={assignment.id}
-                    assignment={assignment}
-                    onToggle={toggleAssignment}
-                    getDateLabel={getDateLabel}
-                    getDateColor={getDateColor}
-                    imageIndex={index + overdueAssignments.length + todayAssignments.length}
-                    expandedCardId={expandedCardId}
-                    setExpandedCardId={setExpandedCardId}
-                  />
-                ))}
-              </div>
-            </div>
+        <TabsContent value="assignments">
+          <ol className="relative  border-s border-grey-200 dark:border-gray-400">
+            {overdueAssignments.length > 0 && (
+              <li className="mb-10 ms-4">
+                <div className="absolute w-3 h-3 block bg-red-500 rounded-full mt-0.5 -start-1.5 border border-red-500 dark:border-red-500 dark:bg-red-500"></div>
+                <time className="block mb-2 text-lg font-medium leading-none text-red-500 dark:text-red-500">Overdue</time>
+                <div className={`grid gap-4 transition-grid-cols duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+                  }`}>
+                  {overdueAssignments.map((assignment, index) => (
+                    <AssignmentCard
+                      key={assignment.id}
+                      assignment={assignment}
+                      onToggle={toggleAssignment}
+                      getDateLabel={getDateLabel}
+                      getDateColor={getDateColor}
+                      imageIndex={index}
+                      expandedCardId={expandedCardId}
+                      setExpandedCardId={setExpandedCardId}
+                      onNoteCreated={fetchNotes}
+                    />
+                  ))}
+                </div>
+              </li>
+            )}
+
+            {todayAssignments.length > 0 && (
+              <li className="mb-8 ms-4">
+                <div className="absolute w-3 h-3 block bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
+                <time className="block mb-2 text-lg font-medium leading-none text-foreground  dark:text-foreground">Today's Assignments</time>
+                <div className="mb-6">
+                  <div className={`grid gap-4 transition-[grid-template-columns] duration-600 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+                    }`}>
+                    {todayAssignments.map((assignment, index) => (
+                      <AssignmentCard
+                        key={assignment.id}
+                        assignment={assignment}
+                        onToggle={toggleAssignment}
+                        getDateLabel={getDateLabel}
+                        getDateColor={getDateColor}
+                        imageIndex={index + overdueAssignments.length}
+                        expandedCardId={expandedCardId}
+                        setExpandedCardId={setExpandedCardId}
+                        onNoteCreated={fetchNotes}
+                        assignmentNotes={notes}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </li>
+            )}
+            <li className="mb-8 ms-4">
+              <div className="absolute w-3 h-3 block bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
+              <time className="block mb-2 text-lg font-medium leading-none text-foreground dark:text-foreground">Upcoming</time>
+              {upcomingAssignments.length > 0 && (
+                <div className="mb-6">
+                  <div className={`grid gap-4 transition-all duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+                    }`}>
+                    {upcomingAssignments.map((assignment, index) => (
+                      <AssignmentCard
+                        key={assignment.id}
+                        assignment={assignment}
+                        onToggle={toggleAssignment}
+                        getDateLabel={getDateLabel}
+                        getDateColor={getDateColor}
+                        imageIndex={index + overdueAssignments.length + todayAssignments.length}
+                        expandedCardId={expandedCardId}
+                        setExpandedCardId={setExpandedCardId}
+                        onNoteCreated={fetchNotes}
+                        assignmentNotes={notes}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </li>
+          </ol>
+
+          {assignments.length === 0 && (
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-muted-foreground">No assignments yet!</p>
+              </CardContent>
+            </Card>
           )}
-        </li>
-      </ol>
+        </TabsContent>
 
+        <TabsContent value="timeline">
+          <div className="mt-4">
 
+            {assignments.filter(a => isDatePast(a.due_date) || isDateToday(a.due_date)).length > 0 ? (
+              <ol className="relative border-s border-grey-200 dark:border-gray-400">
+                {(() => {
+                  const sortedAssignments = assignments
+                    .filter(assignment => isDatePast(assignment.due_date) || isDateToday(assignment.due_date))
+                    .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
 
+                  const groupedByDate = sortedAssignments.reduce((acc, assignment) => {
+                    const dateKey = format(new Date(assignment.due_date), 'EEEE, MMMM dd, yyyy')
+                    if (!acc[dateKey]) {
+                      acc[dateKey] = []
+                    }
+                    acc[dateKey].push(assignment)
+                    return acc
+                  }, {} as Record<string, Assignment[]>)
 
+                  let runningIndex = 0
 
-      {assignments.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">No assignments yet!</p>
-          </CardContent>
-        </Card>
-      )}
+                  return Object.entries(groupedByDate).map(([date, dateAssignments]) => (
+                    <li key={date} className="mb-10 ms-4">
+                      <div className="absolute w-3 h-3 block bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
+                      <time className="block mb-2 text-lg font-medium leading-none text-foreground dark:text-foreground">{date}</time>
+                      <p className="text-sm text-muted-foreground mb-4">{dateAssignments.length} assignment{dateAssignments.length !== 1 ? 's' : ''}</p>
+                      <div className={`grid gap-4 transition-grid-cols duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+                        {dateAssignments.map((assignment) => {
+                          const currentIndex = runningIndex++
+                          return (
+                            <AssignmentCard
+                              key={assignment.id}
+                              assignment={assignment}
+                              onToggle={toggleAssignment}
+                              getDateLabel={getDateLabel}
+                              getDateColor={getDateColor}
+                              imageIndex={currentIndex}
+                              expandedCardId={expandedCardId}
+                              setExpandedCardId={setExpandedCardId}
+                              onNoteCreated={fetchNotes}
+                              assignmentNotes={notes}
+                            />
+                          )
+                        })}
+                      </div>
+                    </li>
+                  ))
+                })()}
+              </ol>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No past assignments yet!</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="notes">
+          <div className="mt-4">
+            <h2 className="text-2xl font-semibold flex items-center gap-2 mb-4">
+              <BookOpen className="h-6 w-6" />
+              My Notes
+            </h2>
+
+            {Object.keys(groupNotesByCategory()).length > 0 ? (
+              <Tabs defaultValue={Object.keys(groupNotesByCategory())[0]} className="w-full bg-background">
+                <TabsList className="bg-background">
+                  {Object.keys(groupNotesByCategory()).map((category) => (
+                    <TabsTrigger key={category} value={category}>
+                      {category} ({groupNotesByCategory()[category].length})
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+
+                {Object.entries(groupNotesByCategory()).map(([category, categoryNotes]) => (
+                  <TabsContent key={category} value={category} className="mt-4">
+                    <div className="grid gap-4 md:grid-cols-1">
+                      {categoryNotes.map((note) => (
+                        <Card key={note.id}>
+                          <CardHeader className="mb-4">
+                            <div className="flex justify-between items-start">
+                              <CardTitle className="text-lg">{note.title}</CardTitle>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteNote(note.id)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <CardDescription className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              {format(new Date(note.created_at), 'MMM dd, yyyy')}
+                            </CardDescription>
+                          </CardHeader>
+                          {note.content && (
+                            <CardContent>
+                              <NoteContent content={note.content} />
+                            </CardContent>
+                          )}
+                          <CardFooter className="mt-4 flex justify-between items-center">
+                            <div className="text-sm text-muted-foreground">
+                              <div className="mt-1 space-x-2">
+                                <span>Related Assignments: </span>
+                                {assignments
+                                  .filter(assignment => assignment.category === note.category)
+                                  .map((assignment, index, filteredAssignments) => (
+                                    <code key={assignment.id} className="bg-gray-100 px-2 py-1 rounded-md font-medium">
+                                      {assignment.title}
+                                      {index < filteredAssignments.length - 1 ? ', ' : ''}
+                                    </code>
+                                  ))
+                                }
+                                {assignments.filter(assignment => assignment.category === note.category).length === 0 && (
+                                  <span className="italic">No current assignments in this category</span>
+                                )}
+                              </div>
+                            </div>
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No notes yet. Add notes to assignments to see them here!</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
@@ -381,7 +614,9 @@ function AssignmentCard({
   getDateColor,
   imageIndex = 0,
   expandedCardId,
-  setExpandedCardId
+  setExpandedCardId,
+  onNoteCreated,
+  assignmentNotes = []
 }: {
   assignment: Assignment
   onToggle: (id: string, completed: boolean) => void
@@ -390,9 +625,24 @@ function AssignmentCard({
   imageIndex?: number
   expandedCardId: string | null
   setExpandedCardId: (id: string | null) => void
+  onNoteCreated?: () => void
+  assignmentNotes?: Note[]
 }) {
   const expanded = expandedCardId === assignment.id
   const cardRef = useRef<HTMLDivElement>(null)
+  const [isCreatingNote, setIsCreatingNote] = useState(false)
+  const [newNote, setNewNote] = useState({ title: '', content: null as any })
+  const { toast } = useToast()
+
+  // Filter notes that belong to this assignment's category
+  // Only show notes if there's an exact category match (don't default to 'General' for assignments without categories)
+  const assignmentCategory = assignment.category?.trim()
+  const relatedNotes = assignmentCategory
+    ? assignmentNotes.filter(note => {
+      const noteCategory = note.category?.trim()
+      return noteCategory === assignmentCategory
+    })
+    : [] // No notes for assignments without categories
   const images = [
     '/wildan-kurniawan-fKdoeUJBh_o-unsplash.svg',
     '/amanda-sala-oHHc3UsNrqs-unsplash.svg',
@@ -426,6 +676,59 @@ function AssignmentCard({
     }
   }
 
+  const createNote = async () => {
+    try {
+      if (!newNote.title.trim()) {
+        toast({
+          title: "Error",
+          description: "Please enter a title for the note",
+          variant: "destructive"
+        })
+        return
+      }
+
+      const category = assignment.category?.trim() || 'General'
+
+      const response = await fetch('/api/notes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: newNote.title.trim(),
+          content: newNote.content,
+          category
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: data.message || "Note created successfully",
+        })
+        setNewNote({ title: '', content: null })
+        setIsCreatingNote(false)
+        if (onNoteCreated) {
+          onNoteCreated()
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to create note",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create note",
+        variant: "destructive"
+      })
+    }
+  }
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -451,12 +754,23 @@ function AssignmentCard({
       <CardMedia onClick={handleToggleExpand} className="cursor-pointer">
         <Image src={images[imageIndex % images.length]} alt={assignment.title} width={1200} height={1200} loading="eager" className="z-0 h-100 object-cover" />
       </CardMedia>
+      {relatedNotes.length > 0 && (
+        <span className="index-50 fixed top-4 right-4 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+          <StickyNote className="h-3 w-3" />
+          {relatedNotes.length}
+        </span>
+      )}
       <CardHeader onClick={handleToggleExpand} className="cursor-pointer pb-3 z-10">
         <div className="flex items-start gap-3">
 
           <div className="flex-1">
-            <CardTitle className={`text-lg ${assignment.completed ? 'line-through text-muted-foreground' : ''}`}>
+            <CardTitle className={`text-lg ${assignment.completed ? 'line-through text-muted-foreground' : ''} flex items-center gap-2`}>
               {assignment.title}
+              {assignment.category && (
+                <span className="flex items-center gap-1 whitespace-nowrap text-xs border border-primary/30 text-foreground px-2 py-0.5 rounded-full leading-4">
+                  {assignment.category}
+                </span>
+              )}
             </CardTitle>
             <CardDescription className={`flex items-center gap-2 mt-0 ${getDateColor(assignment.due_date, assignment.completed)}`}>
               <Calendar className="h-3 w-3" />
@@ -469,37 +783,22 @@ function AssignmentCard({
               )}
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id={`assignment-${assignment.id}`}
-              checked={assignment.completed}
-              onCheckedChange={(checked) => onToggle(assignment.id, checked as boolean)}
-              className="cursor-pointer h-5 w-5 hover:ring-1 hover:ring-ring/50"
-            />
-            <label
-              htmlFor={`assignment-${assignment.id}`}
-              className="text-sm text-muted-foreground cursor-pointer select-none"
-            >
-              {assignment.completed ? 'Done' : 'I\'m Done'}
-            </label>
-          </div>
         </div>
       </CardHeader>
 
       {(assignment.content || (assignment.links && assignment.links.length > 0)) && (
         <div
-          className={`overflow-auto transition-all duration-300 ease-in-out ${expanded ? 'max-h-[100vh] opacity-100' : 'max-h-0 opacity-0'
+          className={`overflow-auto transition-all duration-300 ease-in-out ${expanded ? 'max-h-[unset] opacity-100' : 'max-h-0 opacity-0'
             }`}
         >
           <CardContent className="flex flex-col gap-2 justify-end z-10 pt-0">
-            <div className="space-y-3">
+            <div className="space-y-3 pb-4">
               {assignment.content && (
                 <EditorContent editor={editor} />
               )}
 
               {assignment.links && assignment.links.length > 0 && (
-                <div className="space-y-1">
-                  <span className="text-sm font-medium">Resources:</span>
+                <div className="flex gap-2 items-center">
                   {assignment.links.map((link, index) => (
                     <div key={index} className="flex items-center gap-2 text-sm">
                       <Button
@@ -520,9 +819,132 @@ function AssignmentCard({
                 </div>
               )}
             </div>
+
+            {/* Display related notes */}
+            {relatedNotes.length > 0 && (
+              <div className="my-4 pt-4 border-t border-gray-200">
+                <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Notes ({relatedNotes.length})
+                </h4>
+                <div className="space-y-2">
+                  {relatedNotes.map((note) => (
+                    <div key={note.id} className="bg-gray-50 rounded-md p-4">
+                      <div className="flex items-center justify-between mb-1">
+                        <h5 className="text-sm font-medium text-foreground-muted">{note.title}</h5>
+                        <span className="text-sm font-medium text-gray-500">
+                          {format(new Date(note.created_at), 'MMM dd')}
+                        </span>
+                      </div>
+                      {note.content && (
+                        <div className="text-sm text-foreground-muted">
+                          <NoteContent content={note.content} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
+          <CardFooter className="flex-col space-y-4 border-t border-gray-200 dark:border-gray-400">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id={`assignment-${assignment.id}`}
+                  checked={assignment.completed}
+                  onCheckedChange={(checked) => onToggle(assignment.id, checked as boolean)}
+                  className="cursor-pointer h-5 w-5 hover:ring-1 hover:ring-ring/50"
+                />
+                <label
+                  htmlFor={`assignment-${assignment.id}`}
+                  className="text-sm text-muted-foreground cursor-pointer select-none"
+                >
+                  {assignment.completed ? 'Done' : 'I\'m Done'}
+                </label>
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsCreatingNote(true)
+                }}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Note
+              </Button>
+            </div>
+
+            {isCreatingNote && (
+              <div className="w-full justify-end space-y-3" onClick={(e) => e.stopPropagation()}>
+                <div>
+                  <Label htmlFor={`note-title-${assignment.id}`}>Note Title</Label>
+                  <Input
+                    id={`note-title-${assignment.id}`}
+                    placeholder="Enter note title..."
+                    value={newNote.title}
+                    onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`note-content-${assignment.id}`}>Content</Label>
+                  <div className="mt-1">
+                    <WysiwygEditor
+                      content={newNote.content}
+                      onChange={(content) => setNewNote({ ...newNote, content })}
+                      placeholder="Write your note here..."
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setNewNote({ title: '', content: null })
+                      setIsCreatingNote(false)
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={createNote}
+                  >
+                    Save Note
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardFooter>
         </div>
       )}
     </Card>
   )
+}
+
+// Separate component for rendering note content to avoid hook rule violations
+function NoteContent({ content }: { content: any }) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Link.configure({
+        openOnClick: true,
+        HTMLAttributes: {
+          class: 'text-primary underline'
+        }
+      })
+    ],
+    content,
+    editable: false,
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm max-w-none'
+      }
+    }
+  })
+
+  return <EditorContent editor={editor} />
 }

@@ -129,7 +129,7 @@ export function ConnectedNavbar() {
 
     // Initial fetch
     fetchNotifications()
-    
+
     // Set up interval to refresh every 30 seconds
     const notificationInterval = setInterval(() => {
       fetchNotifications()
@@ -251,16 +251,7 @@ export function ConnectedNavbar() {
   const handleUserItemClick = async (item: string) => {
     switch (item) {
       case 'profile':
-        toast({
-          title: 'Profile',
-          description: 'Profile management coming soon!'
-        })
-        break
-      case 'settings':
-        toast({
-          title: 'Settings',
-          description: 'Settings page coming soon!'
-        })
+        router.push('/profile')
         break
       case 'logout':
         // Immediately redirect to login page

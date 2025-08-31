@@ -201,8 +201,23 @@ export function ConnectedNavbar() {
         description: notification.message,
       })
 
-      // Navigate to the appropriate page
-      router.push(notification.href)
+      // Extract assignment ID from notification ID and navigate with scroll target
+      let assignmentId = null
+      if (notification.id.startsWith('overdue-')) {
+        assignmentId = notification.id.replace('overdue-', '')
+      } else if (notification.id.startsWith('due-today-')) {
+        assignmentId = notification.id.replace('due-today-', '')
+      } else if (notification.id.startsWith('child-overdue-')) {
+        // Format: child-overdue-${child.id}-${assignment.id}
+        const parts = notification.id.split('-')
+        if (parts.length >= 4) {
+          assignmentId = parts.slice(3).join('-') // Handle assignment IDs with dashes
+        }
+      }
+
+      // Navigate to the appropriate page with assignment ID as hash
+      const url = assignmentId ? `${notification.href}#assignment-${assignmentId}` : notification.href
+      router.push(url)
     }
   }
 

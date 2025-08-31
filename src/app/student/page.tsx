@@ -42,6 +42,32 @@ export default function StudentDashboard() {
     checkUserRole()
   }, [])
 
+  // Handle hash-based scrolling for notifications
+  useEffect(() => {
+    const handleHashScroll = () => {
+      const hash = window.location.hash
+      if (hash.startsWith('#assignment-')) {
+        const assignmentId = hash.replace('#assignment-', '')
+        setTimeout(() => {
+          const element = document.getElementById(`assignment-${assignmentId}`)
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            // Clear the hash after scrolling
+            window.history.replaceState(null, null, window.location.pathname)
+          }
+        }, 500) // Wait for assignments to load and render
+      }
+    }
+
+    // Handle initial hash and hash changes
+    handleHashScroll()
+    window.addEventListener('hashchange', handleHashScroll)
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashScroll)
+    }
+  }, [assignments])
+
   const checkUserRole = async () => {
     try {
       const response = await fetch('/api/user')
@@ -217,7 +243,7 @@ export default function StudentDashboard() {
         )}
         <li className="mb-8 ms-4">
           <div className="absolute w-3 h-3 bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
-          <time className="block mb-2 text-md font-normal leading-none text-gray-400 dark:text-gray-500">Today's Assignments</time>
+          <time className="block mb-2 text-md font-normal leading-none text-foreground  dark:text-foreground">Today's Assignments</time>
           {todayAssignments.length > 0 && (
             <div className="mb-6">
               <div className="space-y-3">
@@ -236,7 +262,7 @@ export default function StudentDashboard() {
         </li>
         <li className="mb-8 ms-4">
           <div className="absolute w-3 h-3 bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
-          <time className="block mb-2 text-md font-normal leading-none text-gray-400 dark:text-gray-500">Upcoming</time>
+          <time className="block mb-2 text-md font-normal leading-none text-foreground dark:text-foreground">Upcoming</time>
           {upcomingAssignments.length > 0 && (
             <div className="mb-6">
               <div className="space-y-3">
@@ -319,7 +345,7 @@ function AssignmentCard({
   })
 
   return (
-    <Card ref={cardRef} className={assignment.completed ? 'bg-muted/30' : ''}>
+    <Card ref={cardRef} id={`assignment-${assignment.id}`} className={assignment.completed ? 'bg-muted/30' : ''}>
       <CardHeader className="pb-3">
         <div className="flex items-start gap-3">
 
@@ -359,6 +385,7 @@ function AssignmentCard({
         <CardContent className="flex flex-col gap-2 justify-end">
           <Button
             size="sm"
+            variant="outline"
             onClick={handleToggleExpand}
             className="mb-2 self-start"
           >

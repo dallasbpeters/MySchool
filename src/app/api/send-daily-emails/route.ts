@@ -3,8 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
 import { format } from 'date-fns'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function GET(request: Request) {
   // This endpoint should be called by a cron job at 8:00 AM daily
   // You can use services like Vercel Cron Jobs, Railway, or Supabase Edge Functions
@@ -13,6 +11,16 @@ export async function GET(request: Request) {
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response('Unauthorized', { status: 401 })
   }
+
+  // Check if Resend API key is available
+  if (!process.env.RESEND_API_KEY) {
+    return NextResponse.json(
+      { error: 'Email service not configured' },
+      { status: 503 }
+    )
+  }
+
+  const resend = new Resend(process.env.RESEND_API_KEY)
 
   try {
     const supabase = await createClient()

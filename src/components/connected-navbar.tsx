@@ -27,6 +27,12 @@ export function ConnectedNavbar() {
   const [isLoading, setIsLoading] = useState(true)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [notificationCount, setNotificationCount] = useState(0)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Prevent SSR issues
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
 
   const fetchNotifications = async () => {
@@ -139,11 +145,15 @@ export function ConnectedNavbar() {
 
 
 
+  // Don't render during SSR to prevent build issues
+  if (!isMounted) {
+    return null
+  }
+
   // Don't show navbar on auth pages
   if (['/login', '/auth/callback', '/auth/reset-password', '/auth/test-reset', '/setup'].some(path => pathname?.startsWith(path))) {
     return null
   }
-
 
   // Show navbar immediately if we have a user, don't wait for profile
   if (!user) {

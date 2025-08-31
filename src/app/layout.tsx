@@ -1,11 +1,13 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import {
+  Schibsted_Grotesk
+} from 'next/font/google'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
 import { ConnectedNavbar } from '@/components/connected-navbar'
 import { ThemeProvider } from '@/components/theme-provider'
 
-const inter = Inter({ subsets: ['latin'] })
+const font = Schibsted_Grotesk({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'MySchool - Homeschool Assignment Manager',
@@ -19,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={font.className}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

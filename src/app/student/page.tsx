@@ -251,10 +251,10 @@ export default function StudentDashboard() {
         )}
       </div>
 
-      <ol className="relative border-s border-gray-300 dark:border-gray-400">
+      <ol className="relative sm:border-s border-gray-300 dark:border-gray-400">
         {overdueAssignments.length > 0 && (
-          <li className="mb-10 ms-4">
-            <div className="absolute w-3 h-3 bg-red-500 rounded-full mt-1 -start-1.5 border border-red-500 dark:border-red-500 dark:bg-red-500"></div>
+          <li className="mb-10 sm:ms-4">
+            <div className="absolute w-3 h-3 hidden sm:block sm:absolute bg-red-500 rounded-full mt-1 -start-1.5 border border-red-500 dark:border-red-500 dark:bg-red-500"></div>
             <time className="block mb-2 text-lg font-medium leading-none text-red-500 dark:text-red-500">Overdue</time>
             <div className={`grid gap-4 transition-all duration-300 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
               }`}>
@@ -273,8 +273,8 @@ export default function StudentDashboard() {
             </div>
           </li>
         )}
-        <li className="mb-8 ms-4">
-          <div className="absolute w-3 h-3 bg-gray-200 rounded-full mt-1 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
+        <li className="mb-8 sm:ms-4">
+          <div className="absolute w-3 h-3 hidden sm:block sm:absolute bg-gray-200 rounded-full mt-1 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
           <time className="block mb-2 text-lg font-medium leading-none text-foreground  dark:text-foreground">Today's Assignments</time>
           {todayAssignments.length > 0 && (
             <div className="mb-6">
@@ -296,8 +296,8 @@ export default function StudentDashboard() {
             </div>
           )}
         </li>
-        <li className="mb-8 ms-4">
-          <div className="absolute w-3 h-3 bg-gray-200 rounded-full mt-1 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
+        <li className="mb-8 sm:ms-4">
+          <div className="absolute w-3 h-3 hidden sm:block sm:absolute bg-gray-200 rounded-full mt-1 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
           <time className="block mb-2 text-lg font-medium leading-none text-foreground dark:text-foreground">Upcoming</time>
           {upcomingAssignments.length > 0 && (
             <div className="mb-6">

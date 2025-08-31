@@ -26,8 +26,6 @@ export function LoginForm({
   const [isLoading, setIsLoading] = useState(false)
   const [currentMode, setCurrentMode] = useState(mode)
   const [showForgotPassword, setShowForgotPassword] = useState(false)
-
-  const supabase = createClient()
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,6 +59,7 @@ export function LoginForm({
 
         // Set session in background (don't await it)
         if (data.session) {
+          const supabase = createClient()
           supabase.auth.setSession({
             access_token: data.session.access_token,
             refresh_token: data.session.refresh_token
@@ -106,10 +105,10 @@ export function LoginForm({
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ 
-            email, 
-            password, 
-            name, 
+          body: JSON.stringify({
+            email,
+            password,
+            name,
             role,
             signupCode: role === 'student' ? signupCode : null
           })
@@ -160,6 +159,7 @@ export function LoginForm({
     setIsLoading(true)
 
     try {
+      const supabase = createClient()
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`
       })
@@ -184,6 +184,7 @@ export function LoginForm({
   }
 
   const handleGoogleLogin = async () => {
+    const supabase = createClient()
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -321,15 +322,6 @@ export function LoginForm({
             <div className="grid gap-2">
               <div className="flex items-center">
                 <Label htmlFor="password">Password</Label>
-                {currentMode === 'login' && (
-                  <button
-                    type="button"
-                    onClick={() => setShowForgotPassword(true)}
-                    className="ml-auto text-sm underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </button>
-                )}
               </div>
               <Input
                 id="password"
@@ -339,6 +331,15 @@ export function LoginForm({
                 required
                 autoComplete="current-password"
               />
+              {currentMode === 'login' && (
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="ml-auto text-sm underline-offset-4 hover:underline"
+                >
+                  Forgot your password?
+                </button>
+              )}
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>

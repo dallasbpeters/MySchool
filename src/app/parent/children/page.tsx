@@ -49,7 +49,6 @@ export default function ChildrenManagement() {
   const [user, setUser] = useState<any>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
   const { toast } = useToast()
 
   useEffect(() => {
@@ -76,6 +75,7 @@ export default function ChildrenManagement() {
         const { data: profiles, error: profileError } = await fetchClient.query('profiles', 'id,email,name,role', 1)
 
         // Test auth
+        const supabase = createClient()
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
         if (session?.user) {
@@ -179,6 +179,7 @@ export default function ChildrenManagement() {
   }
 
   const fetchAssignmentStatus = async (childId: string) => {
+    const supabase = createClient()
     const { data, error } = await supabase
       .from('student_assignments')
       .select(`

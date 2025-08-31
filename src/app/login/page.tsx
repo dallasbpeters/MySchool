@@ -12,30 +12,36 @@ export default function LoginPage() {
           </a>
         </div>
         <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-xs">
+          <div className="w-full md:max-w-md max-w-lg">
             <LoginForm />
           </div>
         </div>
       </div>
-      <div className="relative z-10 hidden bg-background lg:block">
-        <div className="min-h-screen w-full bg-background relative">
-          <div className="min-h-screen w-full bg-background relative">
+      <div className="relative z-10 hidden lg:block">
+        <div className="min-h-screen w-full relative">
+          <div className="min-h-screen w-full relative">
             {/* Top Fade Grid Background */}
-            <div
-              className="absolute inset-0 z-0"
-              style={{
-                backgroundImage: `
-        linear-gradient(to right, #e2e8f0 1px, transparent 1px),
-        linear-gradient(to bottom, #e2e8f0 1px, transparent 1px)
+            <div className="min-h-screen w-full relative">
+              {/* Magenta Orb Grid Background */}
+              <div className="min-h-screen w-full relative">
+                {/* Diagonal Fade Grid Background - Top Right */}
+                <div
+                  className="absolute inset-0 z-0"
+                  style={{
+                    backgroundImage: `
+        linear-gradient(to right, color-mix(in srgb, var(--color-primary) 20%, transparent) 1px, transparent 1px),
+        linear-gradient(to bottom, color-mix(in srgb, var(--color-primary) 20%, transparent) 1px, transparent 1px)
       `,
-                backgroundSize: "20px 30px",
-                WebkitMaskImage:
-                  "radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%)",
-                maskImage:
-                  "radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%)",
-              }}
-            />
-            <LoginHeading />
+                    backgroundSize: "20px 30px",
+                    WebkitMaskImage:
+                      "radial-gradient(ellipse 80% 80% at 100% 0%, #000 50%, transparent 90%)",
+                    maskImage:
+                      "radial-gradient(ellipse 80% 80% at 100% 0%, #000 50%, transparent 90%)",
+                  }}
+                />
+                <LoginHeading />
+              </div>
+            </div>
           </div>
 
 

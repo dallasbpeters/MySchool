@@ -27,10 +27,9 @@ export function useUser(): UserData {
     loading: true,
   })
 
-  const supabase = createClient()
-
   useEffect(() => {
     let mounted = true
+    const supabase = createClient()
 
     const getUser = async () => {
       try {

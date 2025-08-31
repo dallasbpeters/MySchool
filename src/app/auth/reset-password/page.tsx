@@ -15,7 +15,6 @@ export default function ResetPasswordPage() {
   const [isValidSession, setIsValidSession] = useState(false)
   const [isCheckingSession, setIsCheckingSession] = useState(true)
   const { toast } = useToast()
-  const supabase = createClient()
 
   useEffect(() => {
     let mounted = true
@@ -24,6 +23,8 @@ export default function ResetPasswordPage() {
       console.log('Setting up password reset...')
       
       try {
+        const supabase = createClient()
+        
         // Check if we already have a valid session
         const { data: { session } } = await supabase.auth.getSession()
         console.log('Current session:', session ? 'exists' : 'none')
@@ -98,6 +99,7 @@ export default function ResetPasswordPage() {
     }
 
     // Listen for auth events
+    const supabase = createClient()
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
         if (session?.user && mounted) {
@@ -187,6 +189,7 @@ export default function ResetPasswordPage() {
       }, 1500)
 
       // Sign out in background (don't await it)
+      const supabase = createClient()
       supabase.auth.signOut().catch(() => {
         // Ignore signout errors since we're already redirecting
       })

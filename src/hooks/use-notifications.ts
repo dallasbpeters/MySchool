@@ -30,7 +30,6 @@ interface NotificationsData {
 export function useNotifications(userId?: string): NotificationsData {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   const fetchNotifications = async () => {
     if (!userId) {
@@ -40,6 +39,7 @@ export function useNotifications(userId?: string): NotificationsData {
     }
 
     try {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -62,6 +62,7 @@ export function useNotifications(userId?: string): NotificationsData {
 
   const markAsRead = async (id: string) => {
     try {
+      const supabase = createClient()
       await supabase
         .from('notifications')
         .update({ read: true })
@@ -81,6 +82,7 @@ export function useNotifications(userId?: string): NotificationsData {
     if (!userId) return
 
     try {
+      const supabase = createClient()
       await supabase
         .from('notifications')
         .update({ read: true })
@@ -100,6 +102,7 @@ export function useNotifications(userId?: string): NotificationsData {
 
     if (userId) {
       // Set up real-time subscription for notifications
+      const supabase = createClient()
       const subscription = supabase
         .channel(`notifications:user_id=eq.${userId}`)
         .on(

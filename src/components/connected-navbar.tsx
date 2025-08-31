@@ -117,6 +117,23 @@ export function ConnectedNavbar() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Set up periodic notification refresh when user is available
+  useEffect(() => {
+    if (!user) return
+
+    // Initial fetch
+    fetchNotifications()
+    
+    // Set up interval to refresh every 30 seconds
+    const notificationInterval = setInterval(() => {
+      fetchNotifications()
+    }, 30000)
+
+    return () => {
+      clearInterval(notificationInterval)
+    }
+  }, [user])
+
   // Don't handle redirects in navbar - let middleware or page-level redirects handle this
   // This prevents redirect loops
 

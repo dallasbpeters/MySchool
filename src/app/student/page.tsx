@@ -37,6 +37,7 @@ export default function StudentDashboard() {
   const [children, setChildren] = useState<Child[]>([])
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
   const [selectedChildName, setSelectedChildName] = useState<string | null>(null)
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAssignments()
@@ -255,7 +256,8 @@ export default function StudentDashboard() {
           <li className="mb-10 ms-4">
             <div className="absolute w-3 h-3 bg-red-500 rounded-full mt-1 -start-1.5 border border-red-500 dark:border-red-500 dark:bg-red-500"></div>
             <time className="block mb-2 text-lg font-medium leading-none text-red-500 dark:text-red-500">Overdue</time>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={`grid gap-4 transition-all duration-300 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+              }`}>
               {overdueAssignments.map((assignment, index) => (
                 <AssignmentCard
                   key={assignment.id}
@@ -264,6 +266,8 @@ export default function StudentDashboard() {
                   getDateLabel={getDateLabel}
                   getDateColor={getDateColor}
                   imageIndex={index}
+                  expandedCardId={expandedCardId}
+                  setExpandedCardId={setExpandedCardId}
                 />
               ))}
             </div>
@@ -274,7 +278,8 @@ export default function StudentDashboard() {
           <time className="block mb-2 text-lg font-medium leading-none text-foreground  dark:text-foreground">Today's Assignments</time>
           {todayAssignments.length > 0 && (
             <div className="mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={`grid gap-4 transition-all duration-300 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+                }`}>
                 {todayAssignments.map((assignment, index) => (
                   <AssignmentCard
                     key={assignment.id}
@@ -283,6 +288,8 @@ export default function StudentDashboard() {
                     getDateLabel={getDateLabel}
                     getDateColor={getDateColor}
                     imageIndex={index + overdueAssignments.length}
+                    expandedCardId={expandedCardId}
+                    setExpandedCardId={setExpandedCardId}
                   />
                 ))}
               </div>
@@ -294,7 +301,8 @@ export default function StudentDashboard() {
           <time className="block mb-2 text-lg font-medium leading-none text-foreground dark:text-foreground">Upcoming</time>
           {upcomingAssignments.length > 0 && (
             <div className="mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={`grid gap-4 transition-all duration-300 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+                }`}>
                 {upcomingAssignments.map((assignment, index) => (
                   <AssignmentCard
                     key={assignment.id}
@@ -303,6 +311,8 @@ export default function StudentDashboard() {
                     getDateLabel={getDateLabel}
                     getDateColor={getDateColor}
                     imageIndex={index + overdueAssignments.length + todayAssignments.length}
+                    expandedCardId={expandedCardId}
+                    setExpandedCardId={setExpandedCardId}
                   />
                 ))}
               </div>
@@ -331,15 +341,19 @@ function AssignmentCard({
   onToggle,
   getDateLabel,
   getDateColor,
-  imageIndex = 0
+  imageIndex = 0,
+  expandedCardId,
+  setExpandedCardId
 }: {
   assignment: Assignment
   onToggle: (id: string, completed: boolean) => void
   getDateLabel: (date: string) => string
   getDateColor: (date: string) => string
   imageIndex?: number
+  expandedCardId: string | null
+  setExpandedCardId: (id: string | null) => void
 }) {
-  const [expanded, setExpanded] = useState(false)
+  const expanded = expandedCardId === assignment.id
   const cardRef = useRef<HTMLDivElement>(null)
   const images = [
     'https://plus.unsplash.com/premium_vector-1689096635358-c37d266c4f31?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
@@ -356,17 +370,20 @@ function AssignmentCard({
   ]
 
   const handleToggleExpand = () => {
-    setExpanded(!expanded)
+    // Toggle expanded state
+    if (expanded) {
+      setExpandedCardId(null)
+    } else {
+      setExpandedCardId(assignment.id)
 
-    // Scroll to card when expanding
-    if (!expanded && cardRef.current) {
+      // Scroll to card when expanding
       setTimeout(() => {
         cardRef.current?.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
           inline: 'center',
         })
-      }, 100) // Small delay to let the content expand first
+      }, 400) // Increased delay to allow for grid transition
     }
   }
 
@@ -391,7 +408,7 @@ function AssignmentCard({
   })
 
   return (
-    <Card ref={cardRef} onClick={handleToggleExpand} id={`assignment-${assignment.id}`} className={`cursor-pointer self-start overflow-hidden relative ${assignment.completed ? 'bg-muted/30' : ''}`}>
+    <Card ref={cardRef} onClick={handleToggleExpand} id={`assignment-${assignment.id}`} className={`cursor-pointer self-start overflow-hidden relative ${assignment.completed ? 'bg-muted/30 opacity-75' : ''}`}>
       <CardMedia>
         <Image src={images[imageIndex % images.length]} alt={assignment.title} width={1200} height={100} className="z-0 h-100 object-cover" />
       </CardMedia>
@@ -413,12 +430,12 @@ function AssignmentCard({
               )}
             </CardDescription>
           </div>
-          <div className="flex group items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <Checkbox
               id={`assignment-${assignment.id}`}
               checked={assignment.completed}
               onCheckedChange={(checked) => onToggle(assignment.id, checked as boolean)}
-              className="h-5 w-5 group-hover:ring-1 group-hover:ring-ring/50"
+              className="cursor-pointer h-5 w-5 hover:ring-1 hover:ring-ring/50"
             />
             <label
               htmlFor={`assignment-${assignment.id}`}
@@ -431,9 +448,11 @@ function AssignmentCard({
       </CardHeader>
 
       {(assignment.content || (assignment.links && assignment.links.length > 0)) && (
-        <CardContent className="flex flex-col gap-2 justify-end z-10">
-
-          {expanded && (
+        <div
+          className={`overflow-auto transition-all duration-300 ease-in-out ${expanded ? 'max-h-[100vh] opacity-100' : 'max-h-0 opacity-0'
+            }`}
+        >
+          <CardContent className="flex flex-col gap-2 justify-end z-10 pt-0">
             <div className="space-y-3">
               {assignment.content && (
                 <div className="border rounded-lg p-3 bg-muted/30">
@@ -448,12 +467,13 @@ function AssignmentCard({
                     <div key={index} className="flex items-center gap-2 text-sm">
                       <Button
                         variant="outline"
+                        size="sm"
                         onClick={(e) => {
                           e.stopPropagation()
                           window.open(link.url, '_blank')
                         }}
                         rel="noopener noreferrer"
-                        className="cursor-pointer text-primary underline hover:text-primary/80"
+                        className="cursor-pointer hover:text-primary/80"
                       >
                         <LinkIcon className="h-3 w-3" />
                         {link.title}
@@ -463,8 +483,8 @@ function AssignmentCard({
                 </div>
               )}
             </div>
-          )}
-        </CardContent>
+          </CardContent>
+        </div>
       )}
     </Card>
   )

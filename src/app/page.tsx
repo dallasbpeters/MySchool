@@ -2,6 +2,15 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function Home() {
+  // Handle missing environment variables during build
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  
+  if (!supabaseUrl || !supabaseKey) {
+    // During build time, redirect to login as fallback
+    redirect('/login')
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

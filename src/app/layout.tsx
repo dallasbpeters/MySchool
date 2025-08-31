@@ -33,7 +33,7 @@ export default function RootLayout({
             {children}
             <Toaster />
             <div
-              className="absolute inset-0 z-0"
+              className="fixed inset-0 z-0"
               style={{
                 backgroundImage: `
         linear-gradient(to right, var(--muted) 1px, transparent 1px),

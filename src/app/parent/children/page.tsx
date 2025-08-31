@@ -402,7 +402,7 @@ export default function ChildrenManagement() {
             ) : (
               <div className="space-y-4">
                 {children.map((child) => (
-                  <Card key={child.id} className="border-l-4 border-l-primary">
+                  <Card key={child.id} className="border-l-10 border-l-primary">
                     <CardContent className="pt-4">
                       <div className="flex justify-between items-start mb-3">
                         <div>
@@ -496,7 +496,7 @@ export default function ChildrenManagement() {
                     // Show generated code with ColourfulText wrapper
                     <div className="space-y-4">
                       <div className="text-center">
-                        <div className="text-2xl font-mono bg-background p-4 rounded-lg border">
+                        <div className="text-3xl font-mono bg-background p-4 rounded-lg border">
                           <ColourfulText text={generatedCode} />
                         </div>
                       </div>

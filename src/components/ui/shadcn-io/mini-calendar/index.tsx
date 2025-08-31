@@ -71,7 +71,7 @@ export const MiniCalendar = ({
   startDate,
   defaultStartDate = new Date(),
   onStartDateChange,
-  days = 7,
+  days = 5,
   className,
   children,
   ...props
@@ -114,7 +114,7 @@ export const MiniCalendar = ({
     <MiniCalendarContext.Provider value={contextValue}>
       <div
         className={cn(
-          'flex items-center gap-2 rounded-lg border bg-background p-2',
+          'flex items-center gap-2 rounded-lg border bg-background p-2 overflow-auto no-scrollbar',
           className
         )}
         {...props}

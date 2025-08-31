@@ -242,6 +242,7 @@ export async function PUT(request: NextRequest) {
       content, 
       links, 
       due_date, 
+      selectedChildren,
       is_recurring,
       recurrence_pattern,
       recurrence_end_date
@@ -304,6 +305,35 @@ export async function PUT(request: NextRequest) {
         { error: 'Assignment not found or you do not have permission to update it' },
         { status: 404 }
       )
+    }
+
+    // Update student assignments if selectedChildren is provided
+    if (selectedChildren && Array.isArray(selectedChildren)) {
+      // First, remove all existing student assignments for this assignment
+      await supabase
+        .from('student_assignments')
+        .delete()
+        .eq('assignment_id', assignmentId)
+
+      // Then, add the new student assignments
+      if (selectedChildren.length > 0) {
+        const studentAssignments = selectedChildren.map((childId: string) => ({
+          assignment_id: assignmentId,
+          student_id: childId,
+          completed: false
+        }))
+
+        const { error: studentError } = await supabase
+          .from('student_assignments')
+          .insert(studentAssignments)
+
+        if (studentError) {
+          return NextResponse.json(
+            { error: 'Assignment updated but failed to update student assignments' },
+            { status: 207 } // Partial success
+          )
+        }
+      }
     }
 
     return NextResponse.json({ 

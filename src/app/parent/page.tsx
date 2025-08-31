@@ -106,12 +106,16 @@ export default function ParentDashboard() {
   }
 
 
-  const createAssignment = async () => {
+  const createOrUpdateAssignment = async () => {
     setIsSaving(true)
 
     try {
-      const response = await fetch('/api/assignments', {
-        method: 'POST',
+      const isEditing = !!editingAssignment
+      const url = isEditing ? `/api/assignments?id=${editingAssignment.id}` : '/api/assignments'
+      const method = isEditing ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json'
         },
@@ -130,36 +134,22 @@ export default function ParentDashboard() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Assignment creation failed')
+        throw new Error(data.error || `Assignment ${isEditing ? 'update' : 'creation'} failed`)
       }
 
       // Success!
       toast({
         title: "Success",
-        description: data.message || "Assignment created successfully",
+        description: data.message || `Assignment ${isEditing ? 'updated' : 'created'} successfully`,
       })
 
-      setIsCreating(false)
-      setNewAssignment({
-        title: '',
-        content: null,
-        links: [],
-        due_date: format(new Date(), 'yyyy-MM-dd'),
-        selectedChildren: [],
-        is_recurring: false,
-        recurrence_pattern: {
-          days: [],
-          frequency: 'weekly'
-        },
-        recurrence_end_date: ''
-      })
-      setSelectedCalendarDate(new Date())
+      resetForm()
       fetchAssignments()
 
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred while creating the assignment",
+        description: error.message || `An unexpected error occurred while ${editingAssignment ? 'updating' : 'creating'} the assignment`,
         variant: "destructive"
       })
     } finally {
@@ -213,12 +203,18 @@ export default function ParentDashboard() {
 
   const startEditAssignment = (assignment: Assignment) => {
     setEditingAssignment(assignment)
+    
+    // Find the child IDs that are currently assigned to this assignment
+    const assignedChildIds = children
+      .filter(child => assignment.assigned_children?.includes(child.name))
+      .map(child => child.id)
+    
     setNewAssignment({
       title: assignment.title,
       content: assignment.content,
       links: assignment.links || [],
       due_date: assignment.due_date,
-      selectedChildren: [],
+      selectedChildren: assignedChildIds,
       is_recurring: assignment.is_recurring || false,
       recurrence_pattern: {
         days: assignment.recurrence_pattern?.days || [],
@@ -250,7 +246,7 @@ export default function ParentDashboard() {
 
   return (
     <div className="z-10 relative container mx-auto p-4 max-w-6xl">
-      <div className="flex justify-between items-center mb-6">
+      <div className="gap-4 flex md:flex-row flex-col justify-between items-start md:items-center mb-6">
         <h1 className="text-3xl font-bold">Parent Dashboard</h1>
 
         <Sheet open={isCreating} onOpenChange={setIsCreating}>
@@ -279,20 +275,10 @@ export default function ParentDashboard() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="due_date">Due Date</Label>
-                <Input
-                  id="due_date"
-                  type="date"
-                  value={newAssignment.due_date}
-                  onChange={(e) => {
-                    setNewAssignment({ ...newAssignment, due_date: e.target.value })
-                    setSelectedCalendarDate(new Date(e.target.value))
-                  }}
-                />
 
                 {/* Mini Calendar */}
                 <div className="mt-2">
-                  <Label className="text-sm text-foreground mb-1 block">Quick Date Selection</Label>
+                  <Label className="text-sm text-foreground mb-1 block">Due Date</Label>
                   <MiniCalendar
                     value={selectedCalendarDate}
                     onValueChange={setSelectedCalendarDate}
@@ -484,7 +470,7 @@ export default function ParentDashboard() {
               </div>
 
               <div className="flex gap-2">
-                <Button onClick={createAssignment} disabled={isSaving}>
+                <Button onClick={createOrUpdateAssignment} disabled={isSaving}>
                   {isSaving ? 'Saving...' : (editingAssignment ? 'Update Assignment' : 'Save Assignment')}
                 </Button>
                 <Button

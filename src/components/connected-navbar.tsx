@@ -266,6 +266,7 @@ export function ConnectedNavbar() {
       userEmail={user.email || ''}
       userAvatar={user.user_metadata?.picture || user.user_metadata?.avatar_url}
       notificationCount={notificationCount}
+      notifications={notifications}
       onNavItemClick={handleNavItemClick}
       onInfoItemClick={handleInfoItemClick}
       onNotificationItemClick={handleNotificationItemClick}

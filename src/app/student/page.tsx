@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
@@ -151,7 +151,7 @@ export default function StudentDashboard() {
   if (loading) {
     return (
       <div className="container mx-auto p-4 max-w-4xl">
-        <p className="text-center text-large"> Loding your <ColourfulText text="assignments..." /></p>
+        <p className="text-center text-2xl"> Loding your <ColourfulText text="assignments..." /></p>
       </div>
     )
   }
@@ -197,56 +197,67 @@ export default function StudentDashboard() {
         )}
       </div>
 
-      {overdueAssignments.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-3 text-destructive">Overdue</h2>
-          <div className="space-y-3">
-            {overdueAssignments.map((assignment) => (
-              <AssignmentCard
-                key={assignment.id}
-                assignment={assignment}
-                onToggle={toggleAssignment}
-                getDateLabel={getDateLabel}
-                getDateColor={getDateColor}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      <ol className="relative border-s border-gray-200 dark:border-gray-200">
+        {overdueAssignments.length > 0 && (
+          <li className="mb-10 ms-4">
+            <div className="absolute w-3 h-3 bg-red-500 rounded-full mt-0.5 -start-1.5 border border-red-500 dark:border-red-500 dark:bg-red-500"></div>
+            <time className="block mb-2 text-md font-normal leading-none text-red-500 dark:text-red-500">Overdue</time>
+            <div className="space-y-3">
+              {overdueAssignments.map((assignment) => (
+                <AssignmentCard
+                  key={assignment.id}
+                  assignment={assignment}
+                  onToggle={toggleAssignment}
+                  getDateLabel={getDateLabel}
+                  getDateColor={getDateColor}
+                />
+              ))}
+            </div>
+          </li>
+        )}
+        <li className="mb-8 ms-4">
+          <div className="absolute w-3 h-3 bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
+          <time className="block mb-2 text-md font-normal leading-none text-gray-400 dark:text-gray-500">Today's Assignments</time>
+          {todayAssignments.length > 0 && (
+            <div className="mb-6">
+              <div className="space-y-3">
+                {todayAssignments.map((assignment) => (
+                  <AssignmentCard
+                    key={assignment.id}
+                    assignment={assignment}
+                    onToggle={toggleAssignment}
+                    getDateLabel={getDateLabel}
+                    getDateColor={getDateColor}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </li>
+        <li className="mb-8 ms-4">
+          <div className="absolute w-3 h-3 bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
+          <time className="block mb-2 text-md font-normal leading-none text-gray-400 dark:text-gray-500">Upcoming</time>
+          {upcomingAssignments.length > 0 && (
+            <div className="mb-6">
+              <div className="space-y-3">
+                {upcomingAssignments.map((assignment) => (
+                  <AssignmentCard
+                    key={assignment.id}
+                    assignment={assignment}
+                    onToggle={toggleAssignment}
+                    getDateLabel={getDateLabel}
+                    getDateColor={getDateColor}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </li>
+      </ol>
 
-      {todayAssignments.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-3">Today's Assignments</h2>
-          <div className="space-y-3">
-            {todayAssignments.map((assignment) => (
-              <AssignmentCard
-                key={assignment.id}
-                assignment={assignment}
-                onToggle={toggleAssignment}
-                getDateLabel={getDateLabel}
-                getDateColor={getDateColor}
-              />
-            ))}
-          </div>
-        </div>
-      )}
 
-      {upcomingAssignments.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-3">Upcoming</h2>
-          <div className="space-y-3">
-            {upcomingAssignments.map((assignment) => (
-              <AssignmentCard
-                key={assignment.id}
-                assignment={assignment}
-                onToggle={toggleAssignment}
-                getDateLabel={getDateLabel}
-                getDateColor={getDateColor}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+
+
 
       {assignments.length === 0 && (
         <Card>
@@ -271,6 +282,21 @@ function AssignmentCard({
   getDateColor: (date: string) => string
 }) {
   const [expanded, setExpanded] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  const handleToggleExpand = () => {
+    setExpanded(!expanded)
+
+    // Scroll to card when expanding
+    if (!expanded && cardRef.current) {
+      setTimeout(() => {
+        cardRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        })
+      }, 100) // Small delay to let the content expand first
+    }
+  }
 
   const editor = useEditor({
     extensions: [
@@ -293,7 +319,7 @@ function AssignmentCard({
   })
 
   return (
-    <Card className={assignment.completed ? 'opacity-60' : ''}>
+    <Card ref={cardRef} className={assignment.completed ? 'bg-muted/30' : ''}>
       <CardHeader className="pb-3">
         <div className="flex items-start gap-3">
 
@@ -323,19 +349,18 @@ function AssignmentCard({
               htmlFor={`assignment-${assignment.id}`}
               className="text-sm text-muted-foreground cursor-pointer select-none"
             >
-              {assignment.completed ? 'Done' : 'Mark complete'}
+              {assignment.completed ? 'Done' : 'Mark Done'}
             </label>
           </div>
         </div>
       </CardHeader>
 
       {(assignment.content || (assignment.links && assignment.links.length > 0)) && (
-        <CardContent>
+        <CardContent className="flex flex-col gap-2 justify-end">
           <Button
-            variant="ghost"
             size="sm"
-            onClick={() => setExpanded(!expanded)}
-            className="mb-2"
+            onClick={handleToggleExpand}
+            className="mb-2 self-start"
           >
             {expanded ? 'Hide Assignment' : 'View Assignment'}
           </Button>

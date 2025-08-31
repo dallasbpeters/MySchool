@@ -35,8 +35,8 @@ import type { ComponentProps } from 'react';
 const HamburgerIcon = ({ className, ...props }: React.SVGAttributes<SVGElement>) => (
   <svg
     className={cn('pointer-events-none', className)}
-    width={16}
-    height={16}
+    width={24}
+    height={24}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -86,9 +86,18 @@ const InfoMenu = ({ onItemClick }: { onItemClick?: (item: string) => void }) => 
 // Notification Menu Component
 const NotificationMenu = ({
   notificationCount = 3,
+  notifications = [],
   onItemClick
 }: {
   notificationCount?: number;
+  notifications?: Array<{
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    href: string;
+    created_at: string;
+  }>;
   onItemClick?: (item: string) => void;
 }) => (
   <DropdownMenu>
@@ -106,28 +115,31 @@ const NotificationMenu = ({
     <DropdownMenuContent align="end" className="w-80">
       <DropdownMenuLabel>Notifications</DropdownMenuLabel>
       <DropdownMenuSeparator />
-      <DropdownMenuItem onClick={() => onItemClick?.('notification1')}>
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium">New message received</p>
-          <p className="text-xs text-muted-foreground">2 minutes ago</p>
-        </div>
-      </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => onItemClick?.('notification2')}>
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium">System update available</p>
-          <p className="text-xs text-muted-foreground">1 hour ago</p>
-        </div>
-      </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => onItemClick?.('notification3')}>
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium">Weekly report ready</p>
-          <p className="text-xs text-muted-foreground">3 hours ago</p>
-        </div>
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem onClick={() => onItemClick?.('view-all')}>
-        View all notifications
-      </DropdownMenuItem>
+      {notifications.length > 0 ? (
+        <>
+          {notifications.map((notification) => (
+            <DropdownMenuItem key={notification.id} onClick={() => onItemClick?.(notification.id)}>
+              <div className="flex flex-col gap-1">
+                <p className="text-sm font-medium">{notification.title}</p>
+                <p className="text-xs text-muted-foreground">{notification.message}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(notification.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => onItemClick?.('view-all')}>
+            View all notifications
+          </DropdownMenuItem>
+        </>
+      ) : (
+        <DropdownMenuItem disabled>
+          <div className="flex flex-col gap-1">
+            <p className="text-sm text-muted-foreground">No notifications</p>
+          </div>
+        </DropdownMenuItem>
+      )}
     </DropdownMenuContent>
   </DropdownMenu>
 );
@@ -147,7 +159,7 @@ const UserMenu = ({
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button variant="ghost" className="h-9 px-2 py-0 hover:bg-accent hover:text-accent-foreground">
-        <Avatar className="h-7 w-7">
+        <Avatar className="h-9 w-9">
           <AvatarImage src={userAvatar} alt={userName} />
           <AvatarFallback className="text-xs">
             {userName.split(' ').map(n => n[0]).join('')}
@@ -195,6 +207,14 @@ export interface Navbar05Props extends React.HTMLAttributes<HTMLElement> {
   userEmail?: string;
   userAvatar?: string;
   notificationCount?: number;
+  notifications?: Array<{
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    href: string;
+    created_at: string;
+  }>;
   onNavItemClick?: (href: string) => void;
   onInfoItemClick?: (item: string) => void;
   onNotificationItemClick?: (item: string) => void;
@@ -219,6 +239,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
       userEmail = 'john@example.com',
       userAvatar,
       notificationCount = 3,
+      notifications = [],
       onNavItemClick,
       onInfoItemClick,
       onNotificationItemClick,
@@ -327,7 +348,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
                             e.preventDefault();
                             if (onNavItemClick && link.href) onNavItemClick(link.href);
                           }}
-                          className="text-muted-foreground hover:text-primary py-1.5 font-medium transition-colors cursor-pointer group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 text-sm focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+                          className="text-muted-foreground hover:text-primary py-1.5 font-medium transition-colors cursor-pointer group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 text-sm focus:bg-accent focus:text-accent-foreground active:bg-accent active:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50"
                         >
                           {link.label}
                         </NavigationMenuLink>
@@ -346,6 +367,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
               {/* Notification */}
               <NotificationMenu
                 notificationCount={notificationCount}
+                notifications={notifications}
                 onItemClick={onNotificationItemClick}
               />
               <ThemeToggleButton variant="circle" start="top-right" />

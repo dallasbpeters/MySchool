@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardMedia } from '@/components/ui/card'
+import Image from 'next/image'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -170,9 +171,35 @@ export default function StudentDashboard() {
     return 'text-muted-foreground'
   }
 
-  const todayAssignments = assignments.filter(a => isToday(new Date(a.due_date)))
-  const upcomingAssignments = assignments.filter(a => isFuture(new Date(a.due_date)) && !isToday(new Date(a.due_date)))
-  const overdueAssignments = assignments.filter(a => isPast(new Date(a.due_date)) && !isToday(new Date(a.due_date)) && !a.completed)
+  // Helper function to check if a date string represents today
+  const isDateToday = (dateStr: string) => {
+    // Parse the date string and get just the date part (no time)
+    const assignmentDate = new Date(dateStr + 'T00:00:00')
+    const today = new Date()
+
+    // Compare year, month, and day
+    return assignmentDate.getFullYear() === today.getFullYear() &&
+      assignmentDate.getMonth() === today.getMonth() &&
+      assignmentDate.getDate() === today.getDate()
+  }
+
+  const isDateFuture = (dateStr: string) => {
+    const assignmentDate = new Date(dateStr + 'T23:59:59')
+    const today = new Date()
+    today.setHours(23, 59, 59, 999)
+    return assignmentDate > today
+  }
+
+  const isDatePast = (dateStr: string) => {
+    const assignmentDate = new Date(dateStr + 'T23:59:59')
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return assignmentDate < today
+  }
+
+  const todayAssignments = assignments.filter(a => isDateToday(a.due_date))
+  const upcomingAssignments = assignments.filter(a => isDateFuture(a.due_date))
+  const overdueAssignments = assignments.filter(a => isDatePast(a.due_date) && !a.completed)
 
   if (loading) {
     return (
@@ -183,7 +210,7 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="z-10 relative container mx-auto p-4 max-w-4xl">
+    <div className="z-10 relative container mx-auto p-4 max-w-5xl">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">
           {selectedChildName ? `${selectedChildName}'s Assignments` : 'Assignments'}
@@ -223,37 +250,39 @@ export default function StudentDashboard() {
         )}
       </div>
 
-      <ol className="relative border-s border-gray-400 dark:border-gray-400">
+      <ol className="relative border-s border-gray-300 dark:border-gray-400">
         {overdueAssignments.length > 0 && (
           <li className="mb-10 ms-4">
-            <div className="absolute w-3 h-3 bg-red-500 rounded-full mt-0.5 -start-1.5 border border-red-500 dark:border-red-500 dark:bg-red-500"></div>
-            <time className="block mb-2 text-md font-normal leading-none text-red-500 dark:text-red-500">Overdue</time>
-            <div className="space-y-3">
-              {overdueAssignments.map((assignment) => (
+            <div className="absolute w-3 h-3 bg-red-500 rounded-full mt-1 -start-1.5 border border-red-500 dark:border-red-500 dark:bg-red-500"></div>
+            <time className="block mb-2 text-lg font-medium leading-none text-red-500 dark:text-red-500">Overdue</time>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {overdueAssignments.map((assignment, index) => (
                 <AssignmentCard
                   key={assignment.id}
                   assignment={assignment}
                   onToggle={toggleAssignment}
                   getDateLabel={getDateLabel}
                   getDateColor={getDateColor}
+                  imageIndex={index}
                 />
               ))}
             </div>
           </li>
         )}
         <li className="mb-8 ms-4">
-          <div className="absolute w-3 h-3 bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
-          <time className="block mb-2 text-md font-normal leading-none text-foreground  dark:text-foreground">Today's Assignments</time>
+          <div className="absolute w-3 h-3 bg-gray-200 rounded-full mt-1 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
+          <time className="block mb-2 text-lg font-medium leading-none text-foreground  dark:text-foreground">Today's Assignments</time>
           {todayAssignments.length > 0 && (
             <div className="mb-6">
-              <div className="space-y-3">
-                {todayAssignments.map((assignment) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {todayAssignments.map((assignment, index) => (
                   <AssignmentCard
                     key={assignment.id}
                     assignment={assignment}
                     onToggle={toggleAssignment}
                     getDateLabel={getDateLabel}
                     getDateColor={getDateColor}
+                    imageIndex={index + overdueAssignments.length}
                   />
                 ))}
               </div>
@@ -261,18 +290,19 @@ export default function StudentDashboard() {
           )}
         </li>
         <li className="mb-8 ms-4">
-          <div className="absolute w-3 h-3 bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
-          <time className="block mb-2 text-md font-normal leading-none text-foreground dark:text-foreground">Upcoming</time>
+          <div className="absolute w-3 h-3 bg-gray-200 rounded-full mt-1 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
+          <time className="block mb-2 text-lg font-medium leading-none text-foreground dark:text-foreground">Upcoming</time>
           {upcomingAssignments.length > 0 && (
             <div className="mb-6">
-              <div className="space-y-3">
-                {upcomingAssignments.map((assignment) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {upcomingAssignments.map((assignment, index) => (
                   <AssignmentCard
                     key={assignment.id}
                     assignment={assignment}
                     onToggle={toggleAssignment}
                     getDateLabel={getDateLabel}
                     getDateColor={getDateColor}
+                    imageIndex={index + overdueAssignments.length + todayAssignments.length}
                   />
                 ))}
               </div>
@@ -300,15 +330,30 @@ function AssignmentCard({
   assignment,
   onToggle,
   getDateLabel,
-  getDateColor
+  getDateColor,
+  imageIndex = 0
 }: {
   assignment: Assignment
   onToggle: (id: string, completed: boolean) => void
   getDateLabel: (date: string) => string
   getDateColor: (date: string) => string
+  imageIndex?: number
 }) {
   const [expanded, setExpanded] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
+  const images = [
+    'https://plus.unsplash.com/premium_vector-1689096635358-c37d266c4f31?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    'https://plus.unsplash.com/premium_vector-1707445731646-daf31bafc5fe?q=80&w=1022&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    'https://images.unsplash.com/vector-1747069104000-d096a1c61a88?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    'https://plus.unsplash.com/premium_vector-1725479330824-84da5f16167e?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDEwfHx8ZW58MHx8fHx8',
+    'https://plus.unsplash.com/premium_vector-1713176941256-ea505e793196?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDE2fHx8ZW58MHx8fHx8',
+    'https://plus.unsplash.com/premium_vector-1736807327185-9149603c2701?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDIxfHx8ZW58MHx8fHx8',
+    'https://images.unsplash.com/vector-1738292955262-61c36b210ca5?q=80&w=986&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    'https://plus.unsplash.com/premium_vector-1754029090817-92b24c82d730?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDMxfHx8ZW58MHx8fHx8',
+    'https://plus.unsplash.com/premium_vector-1689096737724-48e35df8a907?q=80&w=3520&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    'https://plus.unsplash.com/premium_vector-1689096917660-9041bba693dc?q=80&w=3520&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    'https://plus.unsplash.com/premium_vector-1689096917660-9041bba693dc?q=80&w=3520&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+  ]
 
   const handleToggleExpand = () => {
     setExpanded(!expanded)
@@ -318,7 +363,8 @@ function AssignmentCard({
       setTimeout(() => {
         cardRef.current?.scrollIntoView({
           behavior: 'smooth',
-          block: 'start'
+          block: 'start',
+          inline: 'center',
         })
       }, 100) // Small delay to let the content expand first
     }
@@ -345,8 +391,11 @@ function AssignmentCard({
   })
 
   return (
-    <Card ref={cardRef} id={`assignment-${assignment.id}`} className={assignment.completed ? 'bg-muted/30' : ''}>
-      <CardHeader className="pb-3">
+    <Card ref={cardRef} onClick={handleToggleExpand} id={`assignment-${assignment.id}`} className={`cursor-pointer self-start overflow-hidden relative ${assignment.completed ? 'bg-muted/30' : ''}`}>
+      <CardMedia>
+        <Image src={images[imageIndex % images.length]} alt={assignment.title} width={1200} height={100} className="z-0 h-100 object-cover" />
+      </CardMedia>
+      <CardHeader className="pb-3 z-10">
         <div className="flex items-start gap-3">
 
           <div className="flex-1">
@@ -364,33 +413,25 @@ function AssignmentCard({
               )}
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex group items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <Checkbox
               id={`assignment-${assignment.id}`}
               checked={assignment.completed}
               onCheckedChange={(checked) => onToggle(assignment.id, checked as boolean)}
-              className="h-5 w-5"
+              className="h-5 w-5 group-hover:ring-1 group-hover:ring-ring/50"
             />
             <label
               htmlFor={`assignment-${assignment.id}`}
               className="text-sm text-muted-foreground cursor-pointer select-none"
             >
-              {assignment.completed ? 'Done' : 'Mark Done'}
+              {assignment.completed ? 'Done' : 'I\'m Done'}
             </label>
           </div>
         </div>
       </CardHeader>
 
       {(assignment.content || (assignment.links && assignment.links.length > 0)) && (
-        <CardContent className="flex flex-col gap-2 justify-end">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleToggleExpand}
-            className="mb-2 self-start"
-          >
-            {expanded ? 'Hide Assignment' : 'View Assignment'}
-          </Button>
+        <CardContent className="flex flex-col gap-2 justify-end z-10">
 
           {expanded && (
             <div className="space-y-3">
@@ -405,15 +446,18 @@ function AssignmentCard({
                   <span className="text-sm font-medium">Resources:</span>
                   {assignment.links.map((link, index) => (
                     <div key={index} className="flex items-center gap-2 text-sm">
-                      <LinkIcon className="h-3 w-3" />
-                      <a
-                        href={link.url}
-                        target="_blank"
+                      <Button
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          window.open(link.url, '_blank')
+                        }}
                         rel="noopener noreferrer"
-                        className="text-primary underline hover:text-primary/80"
+                        className="cursor-pointer text-primary underline hover:text-primary/80"
                       >
+                        <LinkIcon className="h-3 w-3" />
                         {link.title}
-                      </a>
+                      </Button>
                     </div>
                   ))}
                 </div>

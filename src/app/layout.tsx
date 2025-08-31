@@ -10,8 +10,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 const font = Schibsted_Grotesk({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'MySchool - Homeschool Assignment Manager',
-  description: 'Manage assignments for homeschooling families',
+  title: 'My School - Daily Assignment Tracker',
+  description: 'Track your daily assignments',
 }
 
 export default function RootLayout({

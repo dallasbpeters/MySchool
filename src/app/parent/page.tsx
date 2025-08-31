@@ -11,6 +11,7 @@ import { Plus, Trash2, Calendar, Link as LinkIcon, Repeat, Edit } from 'lucide-r
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { MiniCalendar, MiniCalendarNavigation, MiniCalendarDays, MiniCalendarDay } from '@/components/ui/shadcn-io/mini-calendar'
+import { ChartLineInteractive } from '@/components/ui/shadcn-io/line-chart-01';
 import { useToast } from '@/hooks/use-toast'
 
 interface Link {
@@ -248,7 +249,6 @@ export default function ParentDashboard() {
     <div className="z-10 relative container mx-auto p-4 max-w-6xl">
       <div className="gap-4 flex md:flex-row flex-col justify-between items-start md:items-center mb-6">
         <h1 className="text-3xl font-bold">Parent Dashboard</h1>
-
         <Sheet open={isCreating} onOpenChange={setIsCreating}>
           <SheetTrigger asChild>
             <Button className="gap-2">
@@ -256,7 +256,7 @@ export default function ParentDashboard() {
               Create New Assignment
             </Button>
           </SheetTrigger>
-          <SheetContent className="w-full sm:w-[600px] overflow-y-auto">
+          <SheetContent className="w-full sm:w-[700px] overflow-y-auto">
             <SheetHeader>
               <SheetTitle>{editingAssignment ? 'Edit Assignment' : 'Create New Assignment'}</SheetTitle>
               <SheetDescription>
@@ -484,6 +484,13 @@ export default function ParentDashboard() {
           </SheetContent>
         </Sheet>
       </div>
+      {assignments.length > 0 && (
+        <Card className="mb-4">
+          <CardContent>
+            <ChartLineInteractive />
+          </CardContent>
+        </Card>
+      )}
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Assignments</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
@@ -507,6 +514,7 @@ export default function ParentDashboard() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="hidden group-hover:block group-hover:text-foreground"
                       onClick={() => startEditAssignment(assignment)}
                     >
                       <Edit className="h-4 w-4" />
@@ -514,6 +522,7 @@ export default function ParentDashboard() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="hidden group-hover:block group-hover:text-foreground"
                       onClick={() => deleteAssignment(assignment.id)}
                     >
                       <Trash2 className="h-4 w-4" />

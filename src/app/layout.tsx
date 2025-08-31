@@ -26,11 +26,27 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="min-h-screen bg-background">
+
+          <div className="min-h-screen w-full bg-background relative">
+            {/* Bottom Fade Grid Background */}
             <ConnectedNavbar />
             {children}
+            <Toaster />
+            <div
+              className="absolute inset-0 z-0"
+              style={{
+                backgroundImage: `
+        linear-gradient(to right, var(--muted) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--muted) 1px, transparent 1px)
+      `,
+                backgroundSize: "20px 30px",
+                WebkitMaskImage:
+                  "radial-gradient(ellipse 70% 60% at 50% 100%, #000 60%, transparent 100%)",
+                maskImage:
+                  "radial-gradient(ellipse 70% 60% at 50% 100%, #000 60%, transparent 100%)",
+              }}
+            />
           </div>
-          <Toaster />
         </ThemeProvider>
       </body>
     </html>

@@ -71,7 +71,7 @@ export const MiniCalendar = ({
   startDate,
   defaultStartDate = new Date(),
   onStartDateChange,
-  days = 5,
+  days = 7,
   className,
   children,
   ...props

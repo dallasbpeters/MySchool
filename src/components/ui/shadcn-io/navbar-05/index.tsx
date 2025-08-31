@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { BellIcon, HelpCircleIcon, ChevronDownIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggleButton } from '@/components/ui/shadcn-io/theme-toggle-button';
@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { ComponentProps } from 'react';
+
 
 // Hamburger icon component
 const HamburgerIcon = ({ className, ...props }: React.SVGAttributes<SVGElement>) => (
@@ -63,12 +64,6 @@ const HamburgerIcon = ({ className, ...props }: React.SVGAttributes<SVGElement>)
 // Info Menu Component
 const InfoMenu = ({ onItemClick }: { onItemClick?: (item: string) => void }) => (
   <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <Button variant="ghost" size="icon" className="h-9 w-9">
-        <HelpCircleIcon className="h-4 w-4" />
-        <span className="sr-only">Help and Information</span>
-      </Button>
-    </DropdownMenuTrigger>
     <DropdownMenuContent align="end" className="w-56">
       <DropdownMenuLabel>Help & Support</DropdownMenuLabel>
       <DropdownMenuSeparator />
@@ -178,9 +173,6 @@ const UserMenu = ({
       <DropdownMenuItem onClick={() => onItemClick?.('settings')}>
         Settings
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => onItemClick?.('billing')}>
-        Billing
-      </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem onClick={() => onItemClick?.('logout')}>
         Log out
@@ -212,7 +204,7 @@ export interface Navbar05Props extends React.HTMLAttributes<HTMLElement> {
 // Default navigation links
 const defaultNavigationLinks: Navbar05NavItem[] = [
   { href: '/', label: 'Dashboard' },
-  { href: '/manage-children', label: 'Manage Children' },
+  { href: '/manage-children', label: 'Students' },
   { href: '/child-view', label: 'Child View' },
 ];
 
@@ -356,7 +348,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
                 notificationCount={notificationCount}
                 onItemClick={onNotificationItemClick}
               />
-              <ThemeToggleButton />
+              <ThemeToggleButton variant="circle" start="top-right" />
             </div>
             {/* User menu */}
             <UserMenu

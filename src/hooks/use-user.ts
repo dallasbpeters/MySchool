@@ -63,7 +63,6 @@ export function useUser(): UserData {
           }
         }
       } catch (error) {
-        console.error('Error fetching user:', error)
         if (mounted) {
           setUserData({
             user: null,
@@ -105,7 +104,6 @@ export function useUser(): UserData {
           }
         }
       } catch (error) {
-        console.error('Error fetching session:', error)
         if (mounted) {
           setUserData({
             user: null,

@@ -175,8 +175,14 @@ export const ThemeToggleButton = ({
       }, 3000);
     }
     
-    // Toggle the theme
-    setTheme(theme === 'light' ? 'dark' : 'light');
+    // Toggle the theme with view transition
+    if ('startViewTransition' in document) {
+      (document as any).startViewTransition(() => {
+        setTheme(theme === 'light' ? 'dark' : 'light');
+      });
+    } else {
+      setTheme(theme === 'light' ? 'dark' : 'light');
+    }
   }, [setTheme, theme, variant, start, url]);
 
   return (

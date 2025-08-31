@@ -8,6 +8,15 @@ import { useToast } from '@/hooks/use-toast'
 import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 
+interface Notification {
+  id: string
+  type: string
+  title: string
+  message: string
+  href: string
+  created_at: string
+}
+
 export function ConnectedNavbar() {
   const router = useRouter()
   const pathname = usePathname()
@@ -16,35 +25,58 @@ export function ConnectedNavbar() {
   const [userRole, setUserRole] = useState<string>('parent') // Default to parent
   const [userName, setUserName] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [notificationCount, setNotificationCount] = useState(0)
 
   const supabase = createClient()
 
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch('/api/notifications')
+      const data = await response.json()
+
+      if (data.notifications) {
+        setNotifications(data.notifications)
+        setNotificationCount(data.count)
+      }
+    } catch (error) {
+    }
+  }
+
   useEffect(() => {
-    // Fast initial auth check
+    // Fast initial auth check using API route
     const checkAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
+        const response = await fetch('/api/user')
+        const data = await response.json()
 
-        if (session?.user) {
-          setUser(session.user)
-          setUserName(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User')
+        if (data.user) {
+          setUser(data.user)
+          setUserName(data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User')
 
-          // Fetch role in background, don't block rendering
-          const fetchProfile = async () => {
+          // Get role from user metadata first, then fetch profile
+          const metadataRole = data.user.user_metadata?.role
+          if (metadataRole) {
+            setUserRole(metadataRole)
+          }
+
+          // Fetch full profile and notifications in background
+          const fetchProfileAndNotifications = async () => {
             try {
-              const { data } = await supabase
-                .from('profiles')
-                .select('role, name')
-                .eq('id', session.user.id)
-                .single()
+              const profileResponse = await fetch('/api/user')
+              const profileData = await profileResponse.json()
 
-              if (data?.role) setUserRole(data.role)
-              if (data?.name) setUserName(data.name)
+              if (profileData.user?.user_metadata?.role) {
+                setUserRole(profileData.user.user_metadata.role)
+              }
+
+              // Fetch notifications after we have the user
+              await fetchNotifications()
             } catch (error) {
-              // If profile doesn't exist, keep defaults
+              // Keep defaults on error
             }
           }
-          fetchProfile()
+          fetchProfileAndNotifications()
         } else {
           setUser(null)
         }
@@ -95,19 +127,9 @@ export function ConnectedNavbar() {
     return null
   }
 
-  // Debug logging - temporarily disabled to see other logs
-  // console.log('ConnectedNavbar render:', { 
-  //   pathname, 
-  //   user: !!user, 
-  //   userId: user?.id, 
-  //   userRole, 
-  //   userName,
-  //   isLoading 
-  // })
 
   // Show navbar immediately if we have a user, don't wait for profile
   if (!user) {
-    // console.log('No user found, hiding navbar - user should be redirected to login')
     return null
   }
 
@@ -116,13 +138,12 @@ export function ConnectedNavbar() {
     if (userRole === 'parent') {
       return [
         { href: '/parent', label: 'Dashboard' },
-        { href: '/parent/children', label: 'Manage Children' },
+        { href: '/parent/children', label: 'Students' },
         { href: '/student', label: 'Student View' }
       ]
     } else if (userRole === 'student') {
       return [
-        { href: '/student', label: 'My Assignments' },
-        { href: '/parent', label: 'Parent View' }
+        { href: '/student', label: 'My Assignments' }
       ]
     } else {
       return [
@@ -167,39 +188,21 @@ export function ConnectedNavbar() {
 
   const handleNotificationItemClick = (item: string) => {
     if (item === 'view-all') {
-      toast({
-        title: 'All Notifications',
-        description: 'Full notifications page coming soon!'
-      })
+      // Navigate to appropriate page based on role
+      router.push(userRole === 'student' ? '/student' : '/parent')
       return
     }
 
-    // For now, show generic responses for the default notification items
-    switch (item) {
-      case 'notification1':
-        toast({
-          title: 'New Assignment',
-          description: 'You have a new assignment. Check your dashboard for details.'
-        })
-        router.push(userRole === 'student' ? '/student' : '/parent')
-        break
-      case 'notification2':
-        toast({
-          title: 'Email Notification',
-          description: 'Your daily assignment email has been sent successfully.'
-        })
-        break
-      case 'notification3':
-        toast({
-          title: 'System Update',
-          description: 'MySchool has been updated with new features!'
-        })
-        break
-      default:
-        toast({
-          title: 'Notification',
-          description: 'Notification details coming soon!'
-        })
+    // Find the notification by ID
+    const notification = notifications.find(n => n.id === item)
+    if (notification) {
+      toast({
+        title: notification.title,
+        description: notification.message,
+      })
+
+      // Navigate to the appropriate page
+      router.push(notification.href)
     }
   }
 
@@ -217,28 +220,22 @@ export function ConnectedNavbar() {
           description: 'Settings page coming soon!'
         })
         break
-      case 'billing':
-        toast({
-          title: 'Billing',
-          description: 'Billing management coming soon!'
-        })
-        break
       case 'logout':
         // Immediately redirect to login page
         window.location.href = '/login?logout=true'
-        
+
         // Clean up in the background (this will run but page will already be navigating)
         setTimeout(() => {
           // Clear local state
           setUser(null)
           setUserRole('parent')
           setUserName('')
-          
+
           // Try to sign out from Supabase (fire and forget)
           supabase.auth.signOut().catch(() => {
             // Ignore errors - we're already redirecting
           })
-          
+
           // Clear all Supabase cookies
           document.cookie.split(";").forEach((c) => {
             if (c.includes('supabase')) {
@@ -247,7 +244,7 @@ export function ConnectedNavbar() {
                 .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
             }
           })
-          
+
           // Clear localStorage
           for (let i = localStorage.length - 1; i >= 0; i--) {
             const key = localStorage.key(i)
@@ -267,7 +264,7 @@ export function ConnectedNavbar() {
       userName={userName}
       userEmail={user.email || ''}
       userAvatar={user.user_metadata?.avatar_url}
-      notificationCount={3} // Show sample notifications
+      notificationCount={notificationCount}
       onNavItemClick={handleNavItemClick}
       onInfoItemClick={handleInfoItemClick}
       onNotificationItemClick={handleNotificationItemClick}

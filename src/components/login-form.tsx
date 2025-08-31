@@ -36,25 +36,40 @@ export function LoginForm({
 
     try {
       if (currentMode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password
+        // Use API route instead of client method
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, password })
         })
 
-        if (error) throw error
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Login failed')
+        }
 
         toast({
           title: "Success",
           description: "Logged in successfully",
         })
 
-        // Give the session time to establish before redirecting
-        await new Promise(resolve => setTimeout(resolve, 500))
+        // Redirect immediately - the server-side login worked
         window.location.href = '/'
+
+        // Set session in background (don't await it)
+        if (data.session) {
+          supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token
+          }).catch(() => {
+            // Ignore errors - we're already redirecting
+          })
+        }
       } else {
         // Handle signup
-        let parentId: string | null = null
-
         // If role is student, validate signup code
         if (role === 'student') {
           if (!signupCode.trim()) {
@@ -71,7 +86,6 @@ export function LoginForm({
             }
           )
 
-          console.log('Signup code validation:', { codes, error: codeError, searchCode: signupCode.trim().toUpperCase() })
 
           if (codeError || !codes || codes.length === 0) {
             throw new Error('Invalid signup code')
@@ -83,36 +97,31 @@ export function LoginForm({
             throw new Error('This signup code has already been used')
           }
 
-          parentId = codeData.parent_id
           setName(codeData.child_name) // Use the name from the signup code
         }
 
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name: name,
-              role: role
-            }
-          }
+        // Use API route instead of client method
+        const response = await fetch('/api/signup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            email, 
+            password, 
+            name, 
+            role,
+            signupCode: role === 'student' ? signupCode : null
+          })
         })
 
-        if (error) throw error
+        const data = await response.json()
 
-        // If student signup, mark the code as used using fetch client
-        if (role === 'student' && data.user && parentId) {
-          await fetchClient.update(
-            'signup_codes',
-            {
-              used: true,
-              used_by: data.user.id
-            },
-            {
-              code: `eq.${signupCode.trim().toUpperCase()}`
-            }
-          )
+        if (!response.ok) {
+          throw new Error(data.error || 'Signup failed')
         }
+
+        // Profile creation is now handled by the server-side signup API
 
         toast({
           title: "Success",
@@ -244,12 +253,13 @@ export function LoginForm({
             {currentMode === 'signup' && (
               <>
                 <div className="grid gap-2">
-                  <Label>Account Type</Label>
+                  <Label>Are you a parent or student?</Label>
                   <div className="flex gap-2">
                     <Button
                       type="button"
+
                       variant={role === 'parent' ? 'default' : 'outline'}
-                      size="sm"
+                      size="fullWidth"
                       onClick={() => setRole('parent')}
                     >
                       Parent
@@ -257,7 +267,7 @@ export function LoginForm({
                     <Button
                       type="button"
                       variant={role === 'student' ? 'default' : 'outline'}
-                      size="sm"
+                      size="fullWidth"
                       onClick={() => setRole('student')}
                     >
                       Student

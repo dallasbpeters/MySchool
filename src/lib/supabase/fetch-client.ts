@@ -36,7 +36,6 @@ export class FetchSupabaseClient {
       })
     }
 
-    console.log('Making direct fetch request to:', url.toString())
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -78,7 +77,6 @@ export class FetchSupabaseClient {
       url.searchParams.set(key, value)
     })
 
-    console.log('Making update request to:', url.toString())
 
     const response = await fetch(url.toString(), {
       method: 'PATCH',
@@ -103,7 +101,6 @@ export class FetchSupabaseClient {
       url.searchParams.set(key, value)
     })
 
-    console.log('Making delete request to:', url.toString())
 
     const response = await fetch(url.toString(), {
       method: 'DELETE',

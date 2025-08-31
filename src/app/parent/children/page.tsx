@@ -54,48 +54,31 @@ export default function ChildrenManagement() {
 
   useEffect(() => {
     const initUser = async () => {
-      console.log('Initializing user with simplified client...')
-      
       try {
         // Test with custom fetch client to bypass SDK issues
-        console.log('Testing with custom fetch client...')
-        
         const { data, error } = await fetchClient.query('profiles', 'count', 1)
-        console.log('Fetch client result:', { data, error })
-        
+
         if (error) {
-          console.error('Fetch client error:', error)
           throw error
         }
-        
-        console.log('✅ Direct fetch works! Connection is fine.')
-        
+
         // Get user from server-side API (which works since middleware allows access)
-        console.log('Getting authenticated user from server-side API...')
         const userResponse = await fetch('/api/user')
         const { user: serverUser, error: userError } = await userResponse.json()
-        console.log('Server user result:', { user: serverUser?.id, error: userError })
-        
+
         if (serverUser) {
-          console.log('✅ User found via server API:', serverUser.id)
           setUser(serverUser)
           setIsLoading(false)
           return
         }
-        
+
         // Fallback: try to get profile data from database
         const { data: profiles, error: profileError } = await fetchClient.query('profiles', 'id,email,name,role', 1)
-        console.log('Profile fetch result:', { profiles, error: profileError })
-        
+
         // Test auth
-        console.log('Testing auth session...')
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        console.log('Session result:', { session: !!session, user: session?.user?.id, error: sessionError })
-        
+
         if (session?.user) {
-          console.log('✅ User authenticated via session:', session.user.id)
-          console.log('📝 Access token:', session.access_token ? 'Present' : 'Missing')
-          console.log('📝 Access token length:', session.access_token?.length)
           setUser(session.user)
           setAccessToken(session.access_token)
           setIsLoading(false)
@@ -103,12 +86,11 @@ export default function ChildrenManagement() {
           fetchSignupCodes(session.user)
         } else {
           // Try to get user from profiles
-          console.log('No session, checking profiles...')
           const { data: profiles, error: profileError } = await supabase
             .from('profiles')
             .select('id, email, name, role')
             .limit(1)
-          
+
           if (profiles && profiles.length > 0) {
             const profile = profiles[0]
             const user = {
@@ -116,18 +98,15 @@ export default function ChildrenManagement() {
               email: profile.email || 'authenticated@example.com',
               user_metadata: { full_name: profile.name || 'Authenticated User' }
             }
-            console.log('✅ User found via profiles:', user.id)
             setUser(user)
             setIsLoading(false)
             fetchChildren(user)
             fetchSignupCodes(user)
           } else {
-            console.log('❌ No user found')
             setIsLoading(false)
           }
         }
       } catch (error) {
-        console.error('Connection failed:', error)
         setIsLoading(false)
       }
     }
@@ -138,7 +117,6 @@ export default function ChildrenManagement() {
   // Separate effect to load data when user is authenticated
   useEffect(() => {
     if (user && !isLoading) {
-      console.log('Loading data for authenticated user:', user.id)
       fetchChildren(user)
       fetchSignupCodes(user)
     }
@@ -154,7 +132,7 @@ export default function ChildrenManagement() {
     return (
       <div className="p-8 text-center">
         <p>You need to be logged in to access this page.</p>
-        <button 
+        <button
           onClick={() => window.location.href = '/login'}
           className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
         >
@@ -168,24 +146,16 @@ export default function ChildrenManagement() {
     if (!currentUser) return
 
     try {
-      const { data, error } = await fetchClient.query(
-        'profiles',
-        'id,name,email,created_at',
-        undefined,
-        {
-          parent_id: `eq.${currentUser.id}`,
-          role: 'eq.student'
-        },
-        accessToken || undefined
-      )
+      const response = await fetch('/api/children')
+      const data = await response.json()
 
-      if (!error && data) {
-        setChildren(data)
+      if (data.children) {
+        setChildren(data.children)
         // Fetch assignment statuses for each child
-        data.forEach((child: any) => fetchAssignmentStatus(child.id))
+        data.children.forEach((child: any) => fetchAssignmentStatus(child.id))
       }
     } catch (error) {
-      console.error('Failed to fetch children:', error)
+      // Handle error silently
     }
   }
 
@@ -195,18 +165,16 @@ export default function ChildrenManagement() {
     try {
       const response = await fetch('/api/signup-codes')
       const result = await response.json()
-      
-      console.log('Fetched signup codes:', { result, userId: currentUser.id })
 
       if (response.ok && result.success && result.data) {
         // Sort by created_at descending (newest first)
-        const sortedCodes = result.data.sort((a: any, b: any) => 
+        const sortedCodes = result.data.sort((a: any, b: any) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
         setSignupCodes(sortedCodes)
       }
     } catch (error) {
-      console.error('Failed to fetch signup codes:', error)
+      // Handle error silently
     }
   }
 
@@ -272,9 +240,9 @@ export default function ChildrenManagement() {
       description: `Signup code ${code} created for ${newChildName.trim()}`,
     })
 
-    // Clear form
+    // Clear form but keep sheet open to show the generated code
     setNewChildName('')
-    setIsAddingChild(false)
+    // DON'T close the sheet here - let the user close it manually after seeing the code
 
     // BACKGROUND: Save to database (fire and forget)
     saveCodeToDatabase(optimisticCode)
@@ -282,10 +250,7 @@ export default function ChildrenManagement() {
 
   const saveCodeToDatabase = async (codeData: any) => {
     try {
-      console.log('🔄 Saving code to database...', { code: codeData.code, child_name: codeData.child_name })
-      
       if (!user?.id) {
-        console.error('❌ No authenticated user - cannot save code')
         toast({
           title: "Authentication Error",
           description: "You must be logged in to generate codes",
@@ -306,10 +271,8 @@ export default function ChildrenManagement() {
       })
 
       const result = await response.json()
-      console.log('💾 Server API result:', result)
 
       if (!response.ok || result.error) {
-        console.error('Background save failed:', result.error || 'Unknown error')
         // Update the optimistic code to show error state
         setSignupCodes(prev =>
           prev.map(c =>
@@ -326,7 +289,6 @@ export default function ChildrenManagement() {
           variant: "destructive"
         })
       } else {
-        console.log('Code successfully saved to database')
         // Update status to saved
         setSignupCodes(prev =>
           prev.map(c =>
@@ -344,7 +306,7 @@ export default function ChildrenManagement() {
         }, 500)
       }
     } catch (error) {
-      console.error('Database save failed:', error)
+      // Handle error silently
     }
   }
 
@@ -374,9 +336,9 @@ export default function ChildrenManagement() {
   const deleteCode = async (codeId: string) => {
     // INSTANT: Remove from UI immediately
     const codeToDelete = signupCodes.find(c => c.id === codeId)
-    
+
     setSignupCodes(prev => prev.filter(c => c.id !== codeId))
-    
+
     toast({
       title: "Code Deleted",
       description: `Signup code deleted`,
@@ -388,10 +350,8 @@ export default function ChildrenManagement() {
         method: 'DELETE'
       })
       const result = await response.json()
-      
+
       if (!response.ok || result.error) {
-        console.error('Failed to delete code from database:', result.error || 'Unknown error')
-        
         // Restore the code on error
         if (codeToDelete) {
           setSignupCodes(prev => [codeToDelete, ...prev])
@@ -401,17 +361,14 @@ export default function ChildrenManagement() {
             variant: "destructive"
           })
         }
-      } else {
-        console.log('Code successfully deleted from database')
       }
     } catch (error) {
-      console.error('Delete operation failed:', error)
-      
+
       // Restore the code on error
       if (codeToDelete) {
         setSignupCodes(prev => [codeToDelete, ...prev])
         toast({
-          title: "Delete Failed", 
+          title: "Delete Failed",
           description: "Network error. Code restored.",
           variant: "destructive"
         })
@@ -420,7 +377,7 @@ export default function ChildrenManagement() {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="z-10 relative container mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Students</h1>
         <p className="text-muted-foreground">
@@ -430,7 +387,7 @@ export default function ChildrenManagement() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Existing Children */}
-        <Card>
+        <Card className="gap-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -499,7 +456,7 @@ export default function ChildrenManagement() {
         </Card>
 
         {/* Signup Codes */}
-        <Card>
+        <Card className="gap-4">
           <CardHeader>
             <CardTitle>Signup Codes</CardTitle>
             <CardDescription>
@@ -512,7 +469,9 @@ export default function ChildrenManagement() {
                 <Button
                   className="w-full mb-4 gap-2"
                   onClick={() => {
-                    console.log('Add New Child button clicked, opening sheet')
+                    // Reset all sheet state when opening
+                    setGeneratedCode(null)
+                    setNewChildName('')
                     setIsAddingChild(true)
                   }}
                 >
@@ -542,28 +501,14 @@ export default function ChildrenManagement() {
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>Code with @ColourfulText wrapper:</Label>
-                        <div className="bg-muted p-3 rounded-lg font-mono text-sm">
-                          @ColourfulText("{generatedCode}")
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => copyGeneratedCodeWithWrapper(generatedCode)}
-                          className="flex-1 gap-2"
-                        >
-                          <Copy className="h-4 w-4" />
-                          Copy with @ColourfulText
-                        </Button>
+                      <div className="flex justify-end gap-2">
                         <Button
                           onClick={() => copyCode(generatedCode)}
                           variant="outline"
                           className="gap-2"
                         >
                           <Copy className="h-4 w-4" />
-                          Copy Code Only
+                          Copy Code
                         </Button>
                       </div>
 
@@ -598,8 +543,8 @@ export default function ChildrenManagement() {
             </Sheet>
 
             <div className="space-y-3">
-              {signupCodes.map((code) => (
-                <Card key={code.id} className={code.used ? 'bg-muted/50 shadow-none' : 'border-green-600 bg-green-50 shadow-none'}>
+              {signupCodes.filter(code => !code.used).map((code) => (
+                <Card key={code.id} className="border-green-600 bg-green-50 shadow-none">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-center">
                       <div>
@@ -607,30 +552,26 @@ export default function ChildrenManagement() {
                           <code className="bg-background px-2 py-1 rounded font-mono text-sm">
                             {code.code}
                           </code>
-                          {!code.used && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyCode(code.code)}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyCode(code.code)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
                         </div>
                         <p className="text-sm font-medium mt-1">{code.child_name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {code.used ? 'Used' : `Expires ${format(new Date(code.expires_at), 'MMM d, yyyy')}`}
+                          Expires {format(new Date(code.expires_at), 'MMM d, yyyy')}
                         </p>
                       </div>
-                      {!code.used && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => deleteCode(code.id)}
-                        >
-                          Delete
-                        </Button>
-                      )}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => deleteCode(code.id)}
+                      >
+                        Delete
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

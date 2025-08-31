@@ -180,11 +180,16 @@ export default function ResetPasswordPage() {
       setPassword('')
       setConfirmPassword('')
 
-      // Sign out and redirect to login
-      await supabase.auth.signOut()
+      // Redirect immediately without waiting for signOut
+      console.log('Redirecting to login...')
       setTimeout(() => {
         window.location.href = '/login'
       }, 1500)
+
+      // Sign out in background (don't await it)
+      supabase.auth.signOut().catch(() => {
+        // Ignore signout errors since we're already redirecting
+      })
 
     } catch (error: any) {
       clearTimeout(timeoutId) 

@@ -5,11 +5,14 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
-import { Calendar, CheckCircle2, Circle, Link as LinkIcon, User } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Calendar, CheckCircle2, Link as LinkIcon, User, ChevronDown } from 'lucide-react'
 import { format, isToday, isTomorrow, isPast, isFuture } from 'date-fns'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
+
+import ColourfulText from '@/components/ui/colourful-text'
 
 interface Assignment {
   id: string
@@ -21,10 +24,19 @@ interface Assignment {
   completed_at?: string
 }
 
+interface Child {
+  id: string
+  name: string
+  email: string
+}
+
 export default function StudentDashboard() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
   const [userRole, setUserRole] = useState<string>('')
+  const [children, setChildren] = useState<Child[]>([])
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
+  const [selectedChildName, setSelectedChildName] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -33,64 +45,64 @@ export default function StudentDashboard() {
   }, [])
 
   const checkUserRole = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    try {
+      const response = await fetch('/api/user')
+      const data = await response.json()
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile) {
-      setUserRole(profile.role || '')
+      if (data.user?.user_metadata?.role) {
+        setUserRole(data.user.user_metadata.role)
+        // If parent, fetch their children
+        if (data.user.user_metadata.role === 'parent') {
+          fetchChildren()
+        }
+      }
+    } catch (error) {
+      // Handle error silently
     }
   }
 
-  const fetchAssignments = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+  const fetchAssignments = async (childId?: string) => {
+    try {
+      const url = childId ? `/api/assignments?childId=${childId}` : '/api/assignments'
+      const response = await fetch(url)
+      const data = await response.json()
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('parent_id, role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile) return
-
-    let parentId = profile.role === 'parent' ? user.id : profile.parent_id
-
-    const { data: assignmentsData, error } = await supabase
-      .from('assignments')
-      .select('*')
-      .eq('parent_id', parentId)
-      .order('due_date', { ascending: true })
-
-    if (error) {
-      console.error('Error fetching assignments:', error)
+      if (data.assignments) {
+        setAssignments(data.assignments)
+        if (data.profile?.role) {
+          setUserRole(data.profile.role)
+        }
+      }
+    } catch (error) {
+      // Handle error silently
+    } finally {
       setLoading(false)
-      return
     }
+  }
 
-    const { data: completions } = await supabase
-      .from('student_assignments')
-      .select('assignment_id, completed, completed_at')
-      .eq('student_id', user.id)
+  const fetchChildren = async () => {
+    try {
+      const response = await fetch('/api/children')
+      const data = await response.json()
 
-    const completionMap = new Map(
-      completions?.map(c => [c.assignment_id, c]) || []
-    )
+      if (data.children) {
+        setChildren(data.children)
+      }
+    } catch (error) {
+      // Handle error silently
+    }
+  }
 
-    const assignmentsWithCompletion = assignmentsData?.map(a => ({
-      ...a,
-      links: Array.isArray(a.links) ? a.links as Array<{ title: string; url: string }> : [],
-      completed: completionMap.get(a.id)?.completed || false,
-      completed_at: completionMap.get(a.id)?.completed_at
-    })) || []
+  const switchToChild = (childId: string, childName: string) => {
+    setSelectedChildId(childId)
+    setSelectedChildName(childName)
+    fetchAssignments(childId)
+  }
 
-    setAssignments(assignmentsWithCompletion)
-    setLoading(false)
+  const switchToOwnView = () => {
+    setSelectedChildId(null)
+    setSelectedChildName(null)
+    fetchAssignments()
   }
 
   const toggleAssignment = async (assignmentId: string, completed: boolean) => {
@@ -150,24 +162,49 @@ export default function StudentDashboard() {
   if (loading) {
     return (
       <div className="container mx-auto p-4 max-w-4xl">
-        <div className="text-center py-8">Loading assignments...</div>
+        <p className="text-center text-large"> Loding your <ColourfulText text="assignments..." /></p>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
+    <div className="z-10 relative container mx-auto p-4 max-w-4xl">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">My Assignments</h1>
+        <h1 className="text-3xl font-bold">
+          {selectedChildName ? `${selectedChildName}'s Assignments` : 'My Assignments'}
+        </h1>
         {userRole === 'parent' && (
-          <Button
-            variant="outline"
-            onClick={() => window.location.href = '/parent'}
-            className="gap-2"
-          >
-            <User className="h-4 w-4" />
-            Switch to Parent View
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <User className="h-4 w-4" />
+                {selectedChildName || 'View as'}
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {!selectedChildId && (
+                <DropdownMenuItem disabled className="text-muted-foreground">
+                  My View (Current)
+                </DropdownMenuItem>
+              )}
+              {selectedChildId && (
+                <DropdownMenuItem onClick={switchToOwnView}>
+                  My View
+                </DropdownMenuItem>
+              )}
+              {children.map((child) => (
+                <DropdownMenuItem
+                  key={child.id}
+                  onClick={() => switchToChild(child.id, child.name)}
+                  disabled={selectedChildId === child.id}
+                  className={selectedChildId === child.id ? 'text-muted-foreground' : ''}
+                >
+                  {child.name} {selectedChildId === child.id && '(Current)'}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
 
@@ -233,11 +270,11 @@ export default function StudentDashboard() {
   )
 }
 
-function AssignmentCard({ 
-  assignment, 
-  onToggle, 
-  getDateLabel, 
-  getDateColor 
+function AssignmentCard({
+  assignment,
+  onToggle,
+  getDateLabel,
+  getDateColor
 }: {
   assignment: Assignment
   onToggle: (id: string, completed: boolean) => void
@@ -245,7 +282,7 @@ function AssignmentCard({
   getDateColor: (date: string) => string
 }) {
   const [expanded, setExpanded] = useState(false)
-  
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -258,6 +295,7 @@ function AssignmentCard({
     ],
     content: assignment.content,
     editable: false,
+    immediatelyRender: false,
     editorProps: {
       attributes: {
         class: 'prose prose-sm max-w-none'
@@ -291,7 +329,7 @@ function AssignmentCard({
           </div>
         </div>
       </CardHeader>
-      
+
       {(assignment.content || (assignment.links && assignment.links.length > 0)) && (
         <CardContent>
           <Button
@@ -302,7 +340,7 @@ function AssignmentCard({
           >
             {expanded ? 'Hide Details' : 'Show Details'}
           </Button>
-          
+
           {expanded && (
             <div className="space-y-3">
               {assignment.content && (
@@ -310,17 +348,17 @@ function AssignmentCard({
                   <EditorContent editor={editor} />
                 </div>
               )}
-              
+
               {assignment.links && assignment.links.length > 0 && (
                 <div className="space-y-1">
                   <span className="text-sm font-medium">Resources:</span>
                   {assignment.links.map((link, index) => (
                     <div key={index} className="flex items-center gap-2 text-sm">
                       <LinkIcon className="h-3 w-3" />
-                      <a 
-                        href={link.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-primary underline hover:text-primary/80"
                       >
                         {link.title}

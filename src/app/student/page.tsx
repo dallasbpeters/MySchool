@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
@@ -37,7 +36,6 @@ export default function StudentDashboard() {
   const [children, setChildren] = useState<Child[]>([])
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
   const [selectedChildName, setSelectedChildName] = useState<string | null>(null)
-  const supabase = createClient()
 
   useEffect(() => {
     fetchAssignments()
@@ -106,37 +104,28 @@ export default function StudentDashboard() {
   }
 
   const toggleAssignment = async (assignmentId: string, completed: boolean) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data: existing } = await supabase
-      .from('student_assignments')
-      .select('id')
-      .eq('assignment_id', assignmentId)
-      .eq('student_id', user.id)
-      .single()
-
-    if (existing) {
-      await supabase
-        .from('student_assignments')
-        .update({
-          completed,
-          completed_at: completed ? new Date().toISOString() : null
+    try {
+      const response = await fetch('/api/assignments/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          assignmentId,
+          studentId: selectedChildId || undefined,
+          completed
         })
-        .eq('assignment_id', assignmentId)
-        .eq('student_id', user.id)
-    } else {
-      await supabase
-        .from('student_assignments')
-        .insert({
-          assignment_id: assignmentId,
-          student_id: user.id,
-          completed,
-          completed_at: completed ? new Date().toISOString() : null
-        })
+      })
+
+      if (response.ok) {
+        // Refresh assignments for the current view
+        fetchAssignments(selectedChildId || undefined)
+      } else {
+        console.error('Failed to toggle assignment')
+      }
+    } catch (error) {
+      console.error('Error toggling assignment:', error)
     }
-
-    fetchAssignments()
   }
 
   const getDateLabel = (dateStr: string) => {
@@ -171,7 +160,7 @@ export default function StudentDashboard() {
     <div className="z-10 relative container mx-auto p-4 max-w-4xl">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">
-          {selectedChildName ? `${selectedChildName}'s Assignments` : 'My Assignments'}
+          {selectedChildName ? `${selectedChildName}'s Assignments` : 'Assignments'}
         </h1>
         {userRole === 'parent' && (
           <DropdownMenu>
@@ -307,13 +296,9 @@ function AssignmentCard({
     <Card className={assignment.completed ? 'opacity-60' : ''}>
       <CardHeader className="pb-3">
         <div className="flex items-start gap-3">
-          <Checkbox
-            checked={assignment.completed}
-            onCheckedChange={(checked) => onToggle(assignment.id, checked as boolean)}
-            className="mt-1"
-          />
+
           <div className="flex-1">
-            <CardTitle className={`text-lg ${assignment.completed ? 'line-through' : ''}`}>
+            <CardTitle className={`text-lg ${assignment.completed ? 'line-through text-muted-foreground' : ''}`}>
               {assignment.title}
             </CardTitle>
             <CardDescription className={`flex items-center gap-2 mt-1 ${getDateColor(assignment.due_date)}`}>
@@ -327,6 +312,20 @@ function AssignmentCard({
               )}
             </CardDescription>
           </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`assignment-${assignment.id}`}
+              checked={assignment.completed}
+              onCheckedChange={(checked) => onToggle(assignment.id, checked as boolean)}
+              className="h-5 w-5"
+            />
+            <label
+              htmlFor={`assignment-${assignment.id}`}
+              className="text-sm text-muted-foreground cursor-pointer select-none"
+            >
+              {assignment.completed ? 'Done' : 'Mark complete'}
+            </label>
+          </div>
         </div>
       </CardHeader>
 
@@ -338,7 +337,7 @@ function AssignmentCard({
             onClick={() => setExpanded(!expanded)}
             className="mb-2"
           >
-            {expanded ? 'Hide Details' : 'Show Details'}
+            {expanded ? 'Hide Assignment' : 'View Assignment'}
           </Button>
 
           {expanded && (

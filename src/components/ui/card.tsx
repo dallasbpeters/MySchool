@@ -7,7 +7,7 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "bg-card group text-card-foreground flex flex-col gap-0 rounded-lg border py-3 md:py-5 shadow-xs hover:shadow-md hover:ring-1 hover:ring-ring hover:scale-[1.01] hover:translate-y-[-2px] transition-all duration-300",
+        "bg-card group text-card-foreground flex flex-col gap-0 rounded-lg border py-3 md:py-5 shadow-xs hover:shadow-md hover:ring-2 hover:ring-ring hover:scale-[1.005] hover:translate-y-[-2px] transition-all duration-300",
         className
       )}
       {...props}
@@ -20,7 +20,7 @@ function CardMedia({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-media"
       className={cn(
-        "@container/card-media px-1 pt-1 -mt-3 md:-mt-5 relative rounded-t-lg overflow-hidden [&>img]:rounded-t-lg [&>img]:rounded-b-none [&>img]:border-border [&>img]:border-1 max-h-32 mask-clip-border mb-4",
+        "@container/card-media -mt-3 md:-mt-5 relative rounded-t-lg overflow-hidden [&>img]:rounded-t-lg [&>img]:rounded-b-none [&>img]:border-border [&>img]:border-1 max-h-30 mask-clip-border mb-4",
         className
       )}
       {...props}

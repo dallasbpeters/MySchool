@@ -156,16 +156,27 @@ export default function StudentDashboard() {
     }
   }
 
-  const getDateLabel = (dateStr: string) => {
+  const getDateLabel = (dateStr: string, completed?: boolean) => {
+    // Check if it's today first - today's assignments should never show as "Overdue"
+    if (isDateToday(dateStr)) {
+      return format(new Date(dateStr), 'MMM dd')
+    }
+
     const date = new Date(dateStr)
-    if (isToday(date)) return 'Today'
     if (isTomorrow(date)) return 'Tomorrow'
-    if (isPast(date)) return 'Overdue'
+
+    // Check if it's in the past (but not today) and not completed
+    if (isDatePast(dateStr) && !completed) {
+      return 'Overdue'
+    }
+
     return format(date, 'MMM dd')
   }
 
-  const getDateColor = (dateStr: string) => {
+  const getDateColor = (dateStr: string, completed?: boolean) => {
     const date = new Date(dateStr)
+    // Completed assignments should not have red color
+    if (completed) return 'text-muted-foreground'
     if (isPast(date) && !isToday(date)) return 'text-destructive'
     if (isToday(date)) return 'text-primary'
     if (isTomorrow(date)) return 'text-orange-500'
@@ -174,8 +185,8 @@ export default function StudentDashboard() {
 
   // Helper function to check if a date string represents today
   const isDateToday = (dateStr: string) => {
-    // Parse the date string and get just the date part (no time)
-    const assignmentDate = new Date(dateStr + 'T00:00:00')
+    // For YYYY-MM-DD format, add time to avoid timezone issues
+    const assignmentDate = new Date(dateStr + 'T12:00:00')
     const today = new Date()
 
     // Compare year, month, and day
@@ -185,22 +196,48 @@ export default function StudentDashboard() {
   }
 
   const isDateFuture = (dateStr: string) => {
-    const assignmentDate = new Date(dateStr + 'T23:59:59')
+    // For YYYY-MM-DD format, add time to avoid timezone issues  
+    const assignmentDate = new Date(dateStr + 'T12:00:00')
     const today = new Date()
-    today.setHours(23, 59, 59, 999)
-    return assignmentDate > today
+
+    // Compare dates - future means after today
+    return assignmentDate.getFullYear() > today.getFullYear() ||
+      (assignmentDate.getFullYear() === today.getFullYear() &&
+        assignmentDate.getMonth() > today.getMonth()) ||
+      (assignmentDate.getFullYear() === today.getFullYear() &&
+        assignmentDate.getMonth() === today.getMonth() &&
+        assignmentDate.getDate() > today.getDate())
   }
 
   const isDatePast = (dateStr: string) => {
-    const assignmentDate = new Date(dateStr + 'T23:59:59')
+    // For YYYY-MM-DD format, add time to avoid timezone issues
+    const assignmentDate = new Date(dateStr + 'T12:00:00')
     const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    return assignmentDate < today
+
+    // Compare dates - past means before today
+    return assignmentDate.getFullYear() < today.getFullYear() ||
+      (assignmentDate.getFullYear() === today.getFullYear() &&
+        assignmentDate.getMonth() < today.getMonth()) ||
+      (assignmentDate.getFullYear() === today.getFullYear() &&
+        assignmentDate.getMonth() === today.getMonth() &&
+        assignmentDate.getDate() < today.getDate())
   }
 
-  const todayAssignments = assignments.filter(a => isDateToday(a.due_date))
-  const upcomingAssignments = assignments.filter(a => isDateFuture(a.due_date))
-  const overdueAssignments = assignments.filter(a => isDatePast(a.due_date) && !a.completed)
+  // Filter assignments into categories - each assignment should only appear in one category
+  const overdueAssignments = assignments.filter(a => {
+    // Overdue: past dates that aren't completed
+    return isDatePast(a.due_date) && !a.completed
+  })
+
+  const todayAssignments = assignments.filter(a => {
+    // Today: assignments with today's date only
+    return isDateToday(a.due_date)
+  })
+
+  const upcomingAssignments = assignments.filter(a => {
+    // Upcoming: future dates only
+    return isDateFuture(a.due_date)
+  })
 
   if (loading) {
     return (
@@ -251,12 +288,12 @@ export default function StudentDashboard() {
         )}
       </div>
 
-      <ol className="relative sm:border-s border-gray-300 dark:border-gray-400">
+      <ol className="relative  border-s border-grey-200 dark:border-gray-400">
         {overdueAssignments.length > 0 && (
-          <li className="mb-10 sm:ms-4">
-            <div className="absolute w-3 h-3 hidden sm:block sm:absolute bg-red-500 rounded-full mt-1 -start-1.5 border border-red-500 dark:border-red-500 dark:bg-red-500"></div>
+          <li className="mb-10 ms-4">
+            <div className="absolute w-3 h-3 block bg-red-500 rounded-full mt-0.5 -start-1.5 border border-red-500 dark:border-red-500 dark:bg-red-500"></div>
             <time className="block mb-2 text-lg font-medium leading-none text-red-500 dark:text-red-500">Overdue</time>
-            <div className={`grid gap-4 transition-all duration-300 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+            <div className={`grid gap-4 transition-grid-cols duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
               }`}>
               {overdueAssignments.map((assignment, index) => (
                 <AssignmentCard
@@ -273,12 +310,13 @@ export default function StudentDashboard() {
             </div>
           </li>
         )}
-        <li className="mb-8 sm:ms-4">
-          <div className="absolute w-3 h-3 hidden sm:block sm:absolute bg-gray-200 rounded-full mt-1 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
-          <time className="block mb-2 text-lg font-medium leading-none text-foreground  dark:text-foreground">Today's Assignments</time>
-          {todayAssignments.length > 0 && (
+
+        {todayAssignments.length > 0 && (
+          <li className="mb-8 ms-4">
+            <div className="absolute w-3 h-3 block bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
+            <time className="block mb-2 text-lg font-medium leading-none text-foreground  dark:text-foreground">Today's Assignments</time>
             <div className="mb-6">
-              <div className={`grid gap-4 transition-all duration-300 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+              <div className={`grid gap-4 transition-[grid-template-columns] duration-600 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
                 }`}>
                 {todayAssignments.map((assignment, index) => (
                   <AssignmentCard
@@ -294,14 +332,14 @@ export default function StudentDashboard() {
                 ))}
               </div>
             </div>
-          )}
-        </li>
-        <li className="mb-8 sm:ms-4">
-          <div className="absolute w-3 h-3 hidden sm:block sm:absolute bg-gray-200 rounded-full mt-1 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
+          </li>
+        )}
+        <li className="mb-8 ms-4">
+          <div className="absolute w-3 h-3 block bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
           <time className="block mb-2 text-lg font-medium leading-none text-foreground dark:text-foreground">Upcoming</time>
           {upcomingAssignments.length > 0 && (
             <div className="mb-6">
-              <div className={`grid gap-4 transition-all duration-300 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+              <div className={`grid gap-4 transition-all duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
                 }`}>
                 {upcomingAssignments.map((assignment, index) => (
                   <AssignmentCard
@@ -347,8 +385,8 @@ function AssignmentCard({
 }: {
   assignment: Assignment
   onToggle: (id: string, completed: boolean) => void
-  getDateLabel: (date: string) => string
-  getDateColor: (date: string) => string
+  getDateLabel: (date: string, completed?: boolean) => string
+  getDateColor: (date: string, completed?: boolean) => string
   imageIndex?: number
   expandedCardId: string | null
   setExpandedCardId: (id: string | null) => void
@@ -408,29 +446,29 @@ function AssignmentCard({
   })
 
   return (
-    <Card ref={cardRef} onClick={handleToggleExpand} id={`assignment-${assignment.id}`} className={`cursor-pointer self-start overflow-hidden relative ${assignment.completed ? 'bg-muted/30 opacity-75' : ''}`}>
-      <CardMedia>
-        <Image src={images[imageIndex % images.length]} alt={assignment.title} width={1200} height={100} className="z-0 h-100 object-cover" />
+    <Card ref={cardRef} id={`assignment-${assignment.id}`} className={`self-start overflow-hidden relative ${expanded ? 'shadow-lg ring-0!' : ''} ${assignment.completed ? 'bg-muted/30 opacity-75' : ''}`}>
+      <CardMedia onClick={handleToggleExpand} className="cursor-pointer">
+        <Image src={images[imageIndex % images.length]} alt={assignment.title} width={1200} height={1200} loading="eager" className="z-0 h-100 object-cover" />
       </CardMedia>
-      <CardHeader className="pb-3 z-10">
+      <CardHeader onClick={handleToggleExpand} className="cursor-pointer pb-3 z-10">
         <div className="flex items-start gap-3">
 
           <div className="flex-1">
             <CardTitle className={`text-lg ${assignment.completed ? 'line-through text-muted-foreground' : ''}`}>
               {assignment.title}
             </CardTitle>
-            <CardDescription className={`flex items-center gap-2 mt-1 ${getDateColor(assignment.due_date)}`}>
+            <CardDescription className={`flex items-center gap-2 mt-0 ${getDateColor(assignment.due_date, assignment.completed)}`}>
               <Calendar className="h-3 w-3" />
-              {getDateLabel(assignment.due_date)}
+              {getDateLabel(assignment.due_date, assignment.completed)}
               {assignment.completed && (
                 <>
-                  <CheckCircle2 className="h-3 w-3 text-green-500 ml-2" />
+                  <CheckCircle2 className="h-3 w-4 te4t-green-500 ml-2" />
                   <span className="text-green-500">Completed</span>
                 </>
               )}
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-2">
             <Checkbox
               id={`assignment-${assignment.id}`}
               checked={assignment.completed}
@@ -455,9 +493,7 @@ function AssignmentCard({
           <CardContent className="flex flex-col gap-2 justify-end z-10 pt-0">
             <div className="space-y-3">
               {assignment.content && (
-                <div className="border rounded-lg p-3 bg-muted/30">
-                  <EditorContent editor={editor} />
-                </div>
+                <EditorContent editor={editor} />
               )}
 
               {assignment.links && assignment.links.length > 0 && (

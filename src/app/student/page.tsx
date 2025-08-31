@@ -223,7 +223,7 @@ export default function StudentDashboard() {
         )}
       </div>
 
-      <ol className="relative border-s border-gray-200 dark:border-gray-200">
+      <ol className="relative border-s border-gray-400 dark:border-gray-400">
         {overdueAssignments.length > 0 && (
           <li className="mb-10 ms-4">
             <div className="absolute w-3 h-3 bg-red-500 rounded-full mt-0.5 -start-1.5 border border-red-500 dark:border-red-500 dark:bg-red-500"></div>

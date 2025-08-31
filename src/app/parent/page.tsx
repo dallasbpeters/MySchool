@@ -203,12 +203,12 @@ export default function ParentDashboard() {
 
   const startEditAssignment = (assignment: Assignment) => {
     setEditingAssignment(assignment)
-    
+
     // Find the child IDs that are currently assigned to this assignment
     const assignedChildIds = children
       .filter(child => assignment.assigned_children?.includes(child.name))
       .map(child => child.id)
-    
+
     setNewAssignment({
       title: assignment.title,
       content: assignment.content,
@@ -523,16 +523,16 @@ export default function ParentDashboard() {
               </CardHeader>
               {assignment.assigned_children && assignment.assigned_children.length > 0 && (
                 <CardContent>
-                  <div className="space-y-1">
+                  <div className="space-y-1 flex items-center gap-2">
                     <span className="text-sm font-medium">Assigned to:</span>
                     <div className="flex flex-wrap gap-2">
                       {assignment.assigned_children.map((childName, index) => (
-                        <span key={index} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                        <span key={index} className="bg-primary/30 text-foreground text-xs px-2 py-1 rounded-full">
                           {childName}
                         </span>
                       ))}
                       {assignment.is_recurring && assignment.recurrence_pattern?.days && (
-                        <span className="flex items-center gap-1 whitespace-nowrap text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                        <span className="flex items-center gap-1 whitespace-nowrap text-xs bg-primary/30 text-foreground px-2 py-1 rounded-full">
                           <Repeat className="h-4 w-4 text-blue-500" /> {assignment.recurrence_pattern.days.join(', ')}
                         </span>
                       )}

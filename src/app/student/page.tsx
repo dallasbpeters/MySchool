@@ -248,7 +248,7 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="z-10 relative container mx-auto p-4 max-w-5xl">
+    <div className="z-100 relative container mx-auto p-4 max-w-5xl">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">
           {selectedChildName ? `${selectedChildName}'s Assignments` : 'Assignments'}
@@ -394,17 +394,18 @@ function AssignmentCard({
   const expanded = expandedCardId === assignment.id
   const cardRef = useRef<HTMLDivElement>(null)
   const images = [
-    'https://plus.unsplash.com/premium_vector-1689096635358-c37d266c4f31?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    'https://plus.unsplash.com/premium_vector-1707445731646-daf31bafc5fe?q=80&w=1022&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    'https://images.unsplash.com/vector-1747069104000-d096a1c61a88?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    'https://plus.unsplash.com/premium_vector-1725479330824-84da5f16167e?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDEwfHx8ZW58MHx8fHx8',
-    'https://plus.unsplash.com/premium_vector-1713176941256-ea505e793196?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDE2fHx8ZW58MHx8fHx8',
-    'https://plus.unsplash.com/premium_vector-1736807327185-9149603c2701?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDIxfHx8ZW58MHx8fHx8',
-    'https://images.unsplash.com/vector-1738292955262-61c36b210ca5?q=80&w=986&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    'https://plus.unsplash.com/premium_vector-1754029090817-92b24c82d730?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDMxfHx8ZW58MHx8fHx8',
-    'https://plus.unsplash.com/premium_vector-1689096737724-48e35df8a907?q=80&w=3520&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    'https://plus.unsplash.com/premium_vector-1689096917660-9041bba693dc?q=80&w=3520&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    'https://plus.unsplash.com/premium_vector-1689096917660-9041bba693dc?q=80&w=3520&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+    '/wildan-kurniawan-fKdoeUJBh_o-unsplash.svg',
+    '/amanda-sala-oHHc3UsNrqs-unsplash.svg',
+    '/eva-corbisier-6QxDZxUaScw-unsplash.svg',
+    '/evelina-mitev-jV_8Fn1l1ec-unsplash.svg',
+    '/gemma-evans-qVzRlSDe8OU-unsplash.svg',
+    '/gemma-evans-swmWhdbcb6M-unsplash.svg',
+    '/getty-images-F1sG0MZT_Ro-unsplash.svg',
+    '/getty-images-pnkJbt9HVBA-unsplash.svg',
+    '/lorenzo-mercanti-aKdXUkOY5ek-unsplash.svg',
+    '/melanie-villette-lQDNr81EW0w-unsplash.svg',
+    '/melanie-villette-Somqo53jwzE-unsplash.svg',
+    '/melanie-villette-wI97g9u9XVM-unsplash.svg',
   ]
 
   const handleToggleExpand = () => {

@@ -20,7 +20,7 @@ function CardMedia({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-media"
       className={cn(
-        "@container/card-media -mt-3 md:-mt-5 relative rounded-t-lg overflow-hidden [&>img]:rounded-t-lg [&>img]:rounded-b-none [&>img]:border-border [&>img]:border-1 max-h-30 mask-clip-border mb-4",
+        "@container/card-media -mt-3 md:-mt-5 relative rounded-t-lg overflow-hidden [&>img]:rounded-t-lg [&>img]:rounded-b-none [&>img]:border-border [&>img]:border-1 max-h-40 mask-clip-border mb-4",
         className
       )}
       {...props}

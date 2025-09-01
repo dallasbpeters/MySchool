@@ -53,6 +53,7 @@ export default function StudentDashboard() {
   const [selectedChildName, setSelectedChildName] = useState<string | null>(null)
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null)
   const [notes, setNotes] = useState<Note[]>([])
+
   const { toast } = useToast()
 
   useEffect(() => {
@@ -214,6 +215,15 @@ export default function StudentDashboard() {
   }
 
   const toggleAssignment = async (assignmentId: string, completed: boolean) => {
+    // Optimistic update - immediately update the UI
+    setAssignments(prevAssignments =>
+      prevAssignments.map(assignment =>
+        assignment.id === assignmentId
+          ? { ...assignment, completed, completed_at: completed ? new Date().toISOString() : undefined }
+          : assignment
+      )
+    )
+
     try {
       const response = await fetch('/api/assignments/toggle', {
         method: 'POST',
@@ -227,14 +237,37 @@ export default function StudentDashboard() {
         })
       })
 
-      if (response.ok) {
-        // Refresh assignments for the current view
-        fetchAssignments(selectedChildId || undefined)
-      } else {
-        console.error('Failed to toggle assignment')
+      if (!response.ok) {
+        // Revert optimistic update on error
+        setAssignments(prevAssignments =>
+          prevAssignments.map(assignment =>
+            assignment.id === assignmentId
+              ? { ...assignment, completed: !completed, completed_at: !completed ? new Date().toISOString() : undefined }
+              : assignment
+          )
+        )
+
+        toast({
+          title: "Error",
+          description: "Failed to update assignment. Please try again.",
+          variant: "destructive"
+        })
       }
     } catch (error) {
-      console.error('Error toggling assignment:', error)
+      // Revert optimistic update on error
+      setAssignments(prevAssignments =>
+        prevAssignments.map(assignment =>
+          assignment.id === assignmentId
+            ? { ...assignment, completed: !completed, completed_at: !completed ? new Date().toISOString() : undefined }
+            : assignment
+        )
+      )
+
+      toast({
+        title: "Error",
+        description: "Failed to update assignment. Please try again.",
+        variant: "destructive"
+      })
     }
   }
 
@@ -862,11 +895,11 @@ function AssignmentCard({
                   id={`assignment-${assignment.id}`}
                   checked={assignment.completed}
                   onCheckedChange={(checked) => onToggle(assignment.id, checked as boolean)}
-                  className="cursor-pointer h-5 w-5 hover:ring-1 hover:ring-ring/50"
+                  className="h-5 w-5 hover:ring-1 hover:ring-ring/50 cursor-pointer"
                 />
                 <label
                   htmlFor={`assignment-${assignment.id}`}
-                  className="text-sm text-muted-foreground cursor-pointer select-none"
+                  className="text-sm text-muted-foreground select-none cursor-pointer"
                 >
                   {assignment.completed ? 'Done' : 'I\'m Done'}
                 </label>

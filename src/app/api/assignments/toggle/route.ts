@@ -35,13 +35,24 @@ export async function POST(request: NextRequest) {
     // Use provided studentId or default to current user
     const targetStudentId = studentId || user.id
 
+    console.log('Toggle assignment:', { assignmentId, studentId, targetStudentId, userId: user.id, completed })
+
     // If toggling for another student, verify the user is their parent
     if (studentId && studentId !== user.id) {
-      const { data: childProfile } = await supabase
+      const { data: childProfile, error: childError } = await supabase
         .from('profiles')
-        .select('parent_id')
+        .select('parent_id, role')
         .eq('id', studentId)
         .single()
+
+      console.log('Child profile check:', { childProfile, childError })
+
+      if (childError) {
+        return NextResponse.json(
+          { error: `Failed to verify student: ${childError.message}` },
+          { status: 400 }
+        )
+      }
 
       if (!childProfile || childProfile.parent_id !== user.id) {
         return NextResponse.json(
@@ -95,7 +106,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: completed ? 'Assignment marked as complete' : 'Assignment marked as incomplete'
     })

@@ -23,16 +23,21 @@ export async function GET(request: NextRequest) {
     // Get children profiles
     const { data: children, error: childrenError } = await supabase
       .from('profiles')
-      .select('id, name, email, created_at')
+      .select('id, name, email, created_at, role, parent_id')
       .eq('parent_id', user.id)
       .eq('role', 'student')
       .order('created_at', { ascending: true })
+
+    // Debug logging
+    if (children) {
+      console.log(`Found ${children.length} children for parent ${user.id}:`, children)
+    }
 
     if (childrenError) {
       return NextResponse.json({ children: [], error: childrenError.message })
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       children: children || []
     })
 

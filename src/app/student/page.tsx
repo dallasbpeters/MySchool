@@ -91,13 +91,13 @@ export default function StudentDashboard() {
 
   const checkUserRole = async () => {
     try {
-      const response = await fetch('/api/user')
+      const response = await fetch('/api/assignments')
       const data = await response.json()
 
-      if (data.user?.user_metadata?.role) {
-        setUserRole(data.user.user_metadata.role)
+      if (data.profile?.role) {
+        setUserRole(data.profile.role)
         // If parent, fetch their children
-        if (data.user.user_metadata.role === 'parent') {
+        if (data.profile.role === 'parent') {
           fetchChildren()
         }
       }
@@ -232,7 +232,7 @@ export default function StudentDashboard() {
         },
         body: JSON.stringify({
           assignmentId,
-          studentId: selectedChildId || undefined,
+          studentId: selectedChildId,
           completed
         })
       })

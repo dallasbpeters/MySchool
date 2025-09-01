@@ -493,7 +493,7 @@ export default function ParentDashboard() {
         <h2 className="text-2xl font-semibold">Assignments</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
           {assignments.map((assignment) => (
-            <Card key={assignment.id}>
+            <Card key={assignment.id} className="group">
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>

@@ -755,7 +755,7 @@ function AssignmentCard({
         <Image src={images[imageIndex % images.length]} alt={assignment.title} width={1200} height={1200} loading="eager" className="z-0 h-100 object-cover" />
       </CardMedia>
       {relatedNotes.length > 0 && (
-        <span className="index-50 fixed top-4 right-4 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+        <span className="index-50 absolute top-4 right-4 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
           <StickyNote className="h-3 w-3" />
           {relatedNotes.length}
         </span>

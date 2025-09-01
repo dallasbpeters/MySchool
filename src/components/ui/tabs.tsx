@@ -8,12 +8,12 @@ import { cva, VariantProps } from "class-variance-authority"
 
 
 const tabsTriggerVariants = cva(
-  "hover:text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 inline-flex items-center justify-center gap-0.5 rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 cursor-pointer transition-colors",
+  "hover:text-muted-foreground text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 inline-flex items-center justify-center gap-0.5 rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 cursor-pointer transition-colors",
   {
     variants: {
       variant: {
         default:
-          "data-[state=active]:bg-black data-[state=active]:text-primary-foreground rounded-sm data-[state=active]:shadow-none",
+          "data-[state=active]:bg-black data-[state=active]:text-white rounded-sm data-[state=active]:shadow-none",
         secondary:
           "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full data-[state=active]:shadow-none",
       },

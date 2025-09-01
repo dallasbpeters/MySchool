@@ -387,6 +387,7 @@ export default function StudentDashboard() {
                   }`}>
                   {overdueAssignments.map((assignment, index) => (
                     <AssignmentCard
+                      image={true}
                       key={assignment.id}
                       assignment={assignment}
                       onToggle={toggleAssignment}
@@ -412,6 +413,7 @@ export default function StudentDashboard() {
                     {todayAssignments.map((assignment, index) => (
                       <AssignmentCard
                         key={assignment.id}
+                        image={true}
                         assignment={assignment}
                         onToggle={toggleAssignment}
                         getDateLabel={getDateLabel}
@@ -436,6 +438,7 @@ export default function StudentDashboard() {
                     }`}>
                     {upcomingAssignments.map((assignment, index) => (
                       <AssignmentCard
+                        image={true}
                         key={assignment.id}
                         assignment={assignment}
                         onToggle={toggleAssignment}
@@ -494,6 +497,7 @@ export default function StudentDashboard() {
                           const currentIndex = runningIndex++
                           return (
                             <AssignmentCard
+                              image={false}
                               key={assignment.id}
                               assignment={assignment}
                               onToggle={toggleAssignment}
@@ -615,9 +619,11 @@ function AssignmentCard({
   imageIndex = 0,
   expandedCardId,
   setExpandedCardId,
+  image,
   onNoteCreated,
   assignmentNotes = []
 }: {
+  image: boolean
   assignment: Assignment
   onToggle: (id: string, completed: boolean) => void
   getDateLabel: (date: string, completed?: boolean) => string
@@ -751,9 +757,11 @@ function AssignmentCard({
 
   return (
     <Card ref={cardRef} id={`assignment-${assignment.id}`} className={`self-start overflow-hidden relative ${expanded ? 'shadow-lg ring-0!' : ''} ${assignment.completed ? 'bg-muted/30 opacity-75' : ''}`}>
-      <CardMedia onClick={handleToggleExpand} className="cursor-pointer">
-        <Image src={images[imageIndex % images.length]} alt={assignment.title} width={1200} height={1200} loading="eager" className="z-0 h-100 object-cover" />
-      </CardMedia>
+      {image && (
+        <CardMedia onClick={handleToggleExpand} className="cursor-pointer">
+          <Image src={images[imageIndex % images.length]} alt={assignment.title} width={1200} height={1200} loading="eager" className="z-0 h-100 object-cover" />
+        </CardMedia>
+      )}
       {relatedNotes.length > 0 && (
         <span className="index-50 absolute top-4 right-4 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
           <StickyNote className="h-3 w-3" />
@@ -829,7 +837,7 @@ function AssignmentCard({
                 </h4>
                 <div className="space-y-2">
                   {relatedNotes.map((note) => (
-                    <div key={note.id} className="bg-gray-50 rounded-md p-4">
+                    <div key={note.id} className="bg-secondary rounded-md p-4">
                       <div className="flex items-center justify-between mb-1">
                         <h5 className="text-sm font-medium text-foreground-muted">{note.title}</h5>
                         <span className="text-sm font-medium text-gray-500">

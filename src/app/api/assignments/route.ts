@@ -62,11 +62,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ assignments: [], error: assignmentsError.message })
     }
 
-    // Get completion status and assigned children
-    const { data: completions } = await supabase
-      .from('student_assignments')
-      .select('assignment_id, completed, completed_at')
-      .eq('student_id', studentId)
+    // Get completion status (only for actual students, not parents viewing)
+    let completions = []
+    if (profile.role === 'student' || (profile.role === 'parent' && childId)) {
+      const { data: completionData } = await supabase
+        .from('student_assignments')
+        .select('assignment_id, completed, completed_at')
+        .eq('student_id', studentId)
+      completions = completionData || []
+    }
 
     // Get all student assignments for these assignments to find assigned children
     const assignmentIds = assignmentsData?.map(a => a.id) || []
@@ -75,7 +79,7 @@ export async function GET(request: NextRequest) {
       .select(`
         assignment_id,
         student_id,
-        profiles!inner(name)
+        profiles!inner(name, role)
       `)
       .in('assignment_id', assignmentIds)
 
@@ -86,10 +90,18 @@ export async function GET(request: NextRequest) {
 
     const assignedChildrenMap = new Map()
     allStudentAssignments?.forEach((sa: any) => {
-      if (!assignedChildrenMap.has(sa.assignment_id)) {
-        assignedChildrenMap.set(sa.assignment_id, [])
+      // Debug: log if we find parents in student_assignments (this shouldn't happen)
+      if (sa.profiles.role === 'parent') {
+        console.log('WARNING: Found parent in student_assignments:', sa)
       }
-      assignedChildrenMap.get(sa.assignment_id).push(sa.profiles.name)
+
+      // Only include actual students (role = 'student'), not parents
+      if (sa.profiles.role === 'student') {
+        if (!assignedChildrenMap.has(sa.assignment_id)) {
+          assignedChildrenMap.set(sa.assignment_id, [])
+        }
+        assignedChildrenMap.get(sa.assignment_id).push(sa.profiles.name)
+      }
     })
 
     const assignmentsWithCompletion = assignmentsData?.map((a: any) => {
@@ -103,7 +115,7 @@ export async function GET(request: NextRequest) {
       }
     }) || []
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       assignments: assignmentsWithCompletion,
       profile: profile
     })
@@ -115,11 +127,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { 
-      title, 
-      content, 
-      links, 
-      due_date, 
+    const {
+      title,
+      content,
+      links,
+      due_date,
       category,
       selectedChildren,
       is_recurring,
@@ -213,7 +225,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       assignment: assignmentData,
       message: `Assignment "${title.trim()}" created successfully`
@@ -239,11 +251,11 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const { 
-      title, 
-      content, 
-      links, 
-      due_date, 
+    const {
+      title,
+      content,
+      links,
+      due_date,
       category,
       selectedChildren,
       is_recurring,
@@ -340,7 +352,7 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       assignment: assignmentData,
       message: `Assignment "${title.trim()}" updated successfully`
@@ -400,7 +412,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Assignment deleted successfully'
     })

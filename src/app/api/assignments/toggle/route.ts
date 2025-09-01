@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { assignmentId, studentId, completed } = await request.json()
+    const body = await request.json()
+    console.log('Toggle request body:', body)
+
+    const { assignmentId, studentId, completed } = body
 
     if (!assignmentId) {
       return NextResponse.json(
@@ -63,12 +66,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if assignment already exists for this student
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('student_assignments')
       .select('id')
       .eq('assignment_id', assignmentId)
       .eq('student_id', targetStudentId)
       .single()
+
+    console.log('Existing assignment check:', { existing, existingError, assignmentId, targetStudentId })
+
+    // Handle the case where no existing record is found (this is not an error)
+    if (existingError && existingError.code !== 'PGRST116') {
+      console.error('Error checking existing assignment:', existingError)
+      return NextResponse.json(
+        { error: `Failed to check existing assignment: ${existingError.message}` },
+        { status: 500 }
+      )
+    }
 
     if (existing) {
       // Update existing assignment
@@ -82,11 +96,13 @@ export async function POST(request: NextRequest) {
         .eq('student_id', targetStudentId)
 
       if (updateError) {
+        console.error('Update assignment error:', updateError)
         return NextResponse.json(
           { error: `Failed to update assignment: ${updateError.message}` },
           { status: 500 }
         )
       }
+      console.log('Successfully updated assignment:', { assignmentId, targetStudentId, completed })
     } else {
       // Create new assignment record
       const { error: insertError } = await supabase
@@ -99,11 +115,13 @@ export async function POST(request: NextRequest) {
         })
 
       if (insertError) {
+        console.error('Insert assignment error:', insertError)
         return NextResponse.json(
           { error: `Failed to create assignment record: ${insertError.message}` },
           { status: 500 }
         )
       }
+      console.log('Successfully created assignment record:', { assignmentId, targetStudentId, completed })
     }
 
     return NextResponse.json({
@@ -112,8 +130,9 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
+    console.error('Toggle assignment error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     )
   }

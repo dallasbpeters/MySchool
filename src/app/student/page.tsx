@@ -10,7 +10,6 @@ import { StickyNote, Calendar, CheckCircle2, Link as LinkIcon, User, ChevronDown
 import { format, isToday, isTomorrow, isPast } from 'date-fns'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import Link from '@tiptap/extension-link'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { WysiwygEditor } from '@/components/editor/wysiwyg-editor'
 import { Input } from '@/components/ui/input'
@@ -238,6 +237,20 @@ export default function StudentDashboard() {
       })
 
       if (!response.ok) {
+        // Get detailed error message
+        let errorMessage = "Failed to update assignment. Please try again."
+        try {
+          const errorData = await response.json()
+          if (errorData.error) {
+            errorMessage = errorData.error
+            if (errorData.details) {
+              errorMessage += ` (${errorData.details})`
+            }
+          }
+        } catch (e) {
+          // If we can't parse the error response, use the default message
+        }
+
         // Revert optimistic update on error
         setAssignments(prevAssignments =>
           prevAssignments.map(assignment =>
@@ -249,7 +262,7 @@ export default function StudentDashboard() {
 
         toast({
           title: "Error",
-          description: "Failed to update assignment. Please try again.",
+          description: errorMessage,
           variant: "destructive"
         })
       }
@@ -770,13 +783,7 @@ function AssignmentCard({
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      Link.configure({
-        openOnClick: true,
-        HTMLAttributes: {
-          class: 'text-primary underline'
-        }
-      })
+      StarterKit
     ],
     content: assignment.content,
     editable: false,
@@ -969,13 +976,7 @@ function AssignmentCard({
 function NoteContent({ content }: { content: any }) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      Link.configure({
-        openOnClick: true,
-        HTMLAttributes: {
-          class: 'text-primary underline'
-        }
-      })
+      StarterKit
     ],
     content,
     editable: false,

@@ -546,7 +546,7 @@ export default function ChildrenManagement() {
 
             <div className="space-y-3">
               {(() => {
-                const unusedCodes = signupCodes.filter(code => code.used === false || code.used === 'false' || !code.used)
+                const unusedCodes = signupCodes.filter(code => !code.used)
                 console.log('Displaying signup codes:', {
                   total: signupCodes.length,
                   unused: unusedCodes.length,

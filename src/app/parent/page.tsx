@@ -121,14 +121,24 @@ export default function ParentDashboard() {
 
   const fetchAssignments = async () => {
     try {
+      console.log('🔧 Parent Dashboard: Fetching assignments...')
       const response = await fetch('/api/assignments')
       const data = await response.json()
 
+      console.log('🔧 Parent Dashboard: Assignments response:', {
+        status: response.status,
+        ok: response.ok,
+        assignmentsCount: data.assignments?.length || 0,
+        userRole: data.profile?.role,
+        error: data.error
+      })
+
       if (data.assignments) {
         setAssignments(data.assignments)
+        console.log('🔧 Parent Dashboard: Set assignments:', data.assignments.length)
       }
     } catch (error) {
-      // Handle error silently
+      console.error('🔧 Parent Dashboard: Fetch failed:', error)
     }
   }
 

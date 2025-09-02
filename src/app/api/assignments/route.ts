@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     // - Student view (childId provided or student user): Get only assigned assignments
     let assignmentsData, assignmentsError
 
-    if (profile.role === 'parent' && !childId) {
+    if ((profile.role === 'parent' || profile.role === 'admin') && !childId) {
       // Parent dashboard - show all assignments they created
       const result = await supabase
         .from('assignments')

@@ -121,6 +121,7 @@ interface Assignment {
   }
   recurrence_end_date?: string
   next_due_date?: string
+  instance_completions?: Record<string, { completed: boolean; completed_at?: string; instance_date: string }>
 }
 
 interface Child {
@@ -192,13 +193,23 @@ export default function StudentDashboard() {
 
       if (data.profile?.role) {
         setUserRole(data.profile.role)
-        // If parent, fetch their children
+
         if (data.profile.role === 'parent') {
+          // For parents, don't load assignments initially - wait for child selection
+          // The API will return empty assignments for parents without childId
+          setAssignments([])
           fetchChildren()
+        } else {
+          // For students, load their assignments normally
+          if (data.assignments) {
+            setAssignments(data.assignments)
+          }
+          setLoading(false)
         }
       }
     } catch (error) {
       // Handle error silently
+      setLoading(false)
     }
   }
 
@@ -227,8 +238,20 @@ export default function StudentDashboard() {
       const response = await fetch('/api/children')
       const data = await response.json()
 
-      if (data.children) {
+      if (data.children && data.children.length > 0) {
         setChildren(data.children)
+
+        // Auto-select first child if no child is currently selected
+        if (!selectedChildId) {
+          const firstChild = data.children[0]
+          setSelectedChildId(firstChild.id)
+          setSelectedChildName(firstChild.name)
+          // Fetch assignments for the first child and set loading to false when done
+          fetchAssignments(firstChild.id)
+        }
+      } else {
+        // No children found, stop loading
+        setLoading(false)
       }
     } catch (error) {
       // Handle error silently
@@ -323,16 +346,33 @@ export default function StudentDashboard() {
     }
   }
 
-  const toggleAssignment = async (assignmentId: string, completed: boolean) => {
-    console.log(`🎯 Toggle: ${assignmentId} → completed: ${completed}`)
+  const toggleAssignment = async (assignmentId: string, completed: boolean, instanceDate?: string) => {
+    console.log(`🎯 Toggle: ${assignmentId} → completed: ${completed}, instanceDate: ${instanceDate}`)
 
     // Optimistic update - immediately update the UI
     setAssignments(prevAssignments => {
-      const updated = prevAssignments.map(assignment =>
-        assignment.id === assignmentId
-          ? { ...assignment, completed, completed_at: completed ? new Date().toISOString() : undefined }
-          : assignment
-      )
+      const updated = prevAssignments.map(assignment => {
+        if (assignment.id === assignmentId) {
+          if (instanceDate && assignment.is_recurring) {
+            // For recurring assignments, update instance completion
+            const instanceCompletions = { ...assignment.instance_completions }
+            if (completed) {
+              instanceCompletions[instanceDate] = {
+                completed: true,
+                completed_at: new Date().toISOString(),
+                instance_date: instanceDate
+              }
+            } else {
+              delete instanceCompletions[instanceDate]
+            }
+            return { ...assignment, instance_completions: instanceCompletions }
+          } else {
+            // For regular assignments, update the main completion status
+            return { ...assignment, completed, completed_at: completed ? new Date().toISOString() : undefined }
+          }
+        }
+        return assignment
+      })
 
       const toggledAssignment = updated.find(a => a.id === assignmentId)
       console.log(`🎯 After optimistic update: ${toggledAssignment?.title} completed = ${toggledAssignment?.completed}`)
@@ -349,7 +389,8 @@ export default function StudentDashboard() {
         body: JSON.stringify({
           assignmentId,
           studentId: selectedChildId,
-          completed
+          completed,
+          instanceDate
         })
       })
 
@@ -370,11 +411,30 @@ export default function StudentDashboard() {
 
         // Revert optimistic update on error
         setAssignments(prevAssignments =>
-          prevAssignments.map(assignment =>
-            assignment.id === assignmentId
-              ? { ...assignment, completed: !completed, completed_at: !completed ? new Date().toISOString() : undefined }
-              : assignment
-          )
+          prevAssignments.map(assignment => {
+            if (assignment.id === assignmentId) {
+              if (instanceDate && assignment.is_recurring) {
+                // For recurring assignments, revert instance completion
+                const instanceCompletions = { ...assignment.instance_completions }
+                if (completed) {
+                  // Was trying to complete, so remove the completion
+                  delete instanceCompletions[instanceDate]
+                } else {
+                  // Was trying to uncomplete, so add it back
+                  instanceCompletions[instanceDate] = {
+                    completed: true,
+                    completed_at: new Date().toISOString(),
+                    instance_date: instanceDate
+                  }
+                }
+                return { ...assignment, instance_completions: instanceCompletions }
+              } else {
+                // For regular assignments, revert the main completion status
+                return { ...assignment, completed: !completed, completed_at: !completed ? new Date().toISOString() : undefined }
+              }
+            }
+            return assignment
+          })
         )
 
         toast({
@@ -382,6 +442,10 @@ export default function StudentDashboard() {
           description: errorMessage,
           variant: "destructive"
         })
+      } else {
+        // Success - refetch assignments to ensure data is up to date
+        console.log(`🎯 Successfully toggled assignment: ${assignmentId}, instanceDate: ${instanceDate}`)
+        fetchAssignments(selectedChildId)
       }
     } catch (error) {
       // Revert optimistic update on error
@@ -428,17 +492,95 @@ export default function StudentDashboard() {
 
 
 
-  // Simple filtering - no virtual instances, just use next_due_date for recurring
+  // Helper function to check if a recurring assignment should be visible for a specific date
+  const shouldShowAssignmentForDate = (assignment: Assignment, dateStr: string) => {
+    if (!assignment.is_recurring) {
+      return !assignment.completed
+    }
+
+    // For recurring assignments, show if:
+    // 1. Card is expanded, OR
+    // 2. The specific date instance is not completed
+    if (expandedCardId === assignment.id) {
+      return true
+    }
+
+    // Check if this specific date instance is completed
+    const instanceCompletions = assignment.instance_completions || {}
+    const dateCompletion = instanceCompletions[dateStr]
+
+
+
+    // Show if this date instance is not completed
+    return !dateCompletion?.completed
+  }
+
+  // Simple filtering - for recurring assignments, check if they occur on the filtered date
+  const today = new Date()
+  const todayStr = format(today, 'yyyy-MM-dd')
+
   const overdueAssignments = assignments.filter(a => {
-    return isDatePast(a.due_date) && !a.completed
+    if (!a.is_recurring) {
+      return isDatePast(a.due_date) && !a.completed
+    }
+
+    // For recurring assignments, they are "overdue" if:
+    // 1. The original due date is in the past, AND
+    // 2. They should occur today (based on recurrence pattern), AND  
+    // 3. Today's instance is not completed
+    const isOverdue = isDatePast(a.due_date)
+    if (!isOverdue) {
+      return false
+    }
+
+    // Check if this recurring assignment should occur today
+    const shouldOccurToday = a.recurrence_pattern?.days?.some(day => {
+      const dayMap: { [key: string]: number } = {
+        'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+        'thursday': 4, 'friday': 5, 'saturday': 6
+      }
+      return dayMap[day.toLowerCase()] === today.getDay()
+    })
+
+    // If it should occur today, check if today's instance is completed
+    if (shouldOccurToday) {
+      return shouldShowAssignmentForDate(a, todayStr)
+    }
+
+    // If it doesn't occur today, don't show it in overdue
+    return false
   })
 
   const todayAssignments = assignments.filter(a => {
-    return isDateToday(a.due_date) && !a.completed
+    if (!a.is_recurring) {
+      return isDateToday(a.due_date) && !a.completed
+    }
+
+    // For recurring assignments, check if they should occur today and today's instance isn't completed
+    // BUT exclude assignments that are overdue (original due date is in the past)
+    const isOverdue = isDatePast(a.due_date)
+    if (isOverdue) {
+      return false // Don't show overdue recurring assignments in today's view
+    }
+
+    const shouldOccurToday = a.recurrence_pattern?.days?.some(day => {
+      const dayMap: { [key: string]: number } = {
+        'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+        'thursday': 4, 'friday': 5, 'saturday': 6
+      }
+      return dayMap[day.toLowerCase()] === today.getDay()
+    })
+
+    const shouldShow = shouldOccurToday && shouldShowAssignmentForDate(a, todayStr)
+
+
+
+    return shouldShow
   })
 
   const upcomingAssignments = assignments.filter(a => {
-    return isDateFuture(a.due_date) && !a.completed
+    const isFuture = isDateFuture(a.due_date)
+    return isFuture && shouldShowAssignmentForDate(a, a.due_date)
   })
 
   if (loading) {
@@ -456,7 +598,7 @@ export default function StudentDashboard() {
           <h1 className="text-3xl font-bold">
             {selectedChildName ? `${selectedChildName}'s Dashboard` : 'Student Dashboard'}
           </h1>
-          {userRole === 'parent' && (
+          {userRole === 'parent' && children.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2">
@@ -761,7 +903,7 @@ function AssignmentCard({
 }: {
   image: boolean
   assignment: Assignment
-  onToggle: (id: string, completed: boolean) => void
+  onToggle: (id: string, completed: boolean, instanceDate?: string) => void
   getDateLabel: (date: string, completed?: boolean) => string
   getDateColor: (date: string, completed?: boolean) => string
   imageIndex?: number
@@ -891,8 +1033,10 @@ function AssignmentCard({
     }
   })
 
+  const isCompletedRecurring = assignment.completed && assignment.is_recurring && expanded
+
   return (
-    <Card ref={cardRef} id={`assignment-${assignment.id}`} className={`self-start overflow-hidden relative ${expanded ? 'shadow-lg ring-0!' : ''} ${assignment.completed ? 'bg-muted/30 opacity-75' : ''}`}>
+    <Card ref={cardRef} id={`assignment-${assignment.id}`} className={`self-start overflow-hidden relative ${expanded ? 'shadow-lg ring-0!' : ''} ${assignment.completed ? 'bg-muted/30 opacity-75' : ''} ${isCompletedRecurring ? 'border-green-200 bg-green-50/50' : ''}`}>
       {image && (
         <CardMedia onClick={handleToggleExpand} className="cursor-pointer">
           <Image src={images[imageIndex % images.length]} alt={assignment.title} width={1200} height={1200} loading="eager" className="z-0 h-100 object-cover" />
@@ -912,6 +1056,12 @@ function AssignmentCard({
               {assignment.title}
               {assignment.is_recurring && (
                 <Repeat className="h-4 w-4 text-blue-500" />
+              )}
+              {isCompletedRecurring && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Will hide when closed
+                </span>
               )}
               {assignment.category && (
                 <span className="flex items-center gap-1 whitespace-nowrap text-xs border border-primary/30 text-foreground px-2 py-0.5 rounded-full leading-4">
@@ -1037,8 +1187,36 @@ function AssignmentCard({
               <div className="flex items-center gap-2">
                 <Checkbox
                   id={`assignment-${assignment.id}`}
-                  checked={assignment.completed}
-                  onCheckedChange={(checked) => onToggle(assignment.id, checked as boolean)}
+                  checked={(() => {
+                    if (!assignment.is_recurring) {
+                      return assignment.completed || false
+                    }
+
+                    // For recurring assignments, determine the correct date to check
+                    let dateToCheck = selectedInstanceDate
+
+                    // If no instance date is selected, use today's date for today's assignments
+                    if (!dateToCheck) {
+                      const todayStr = format(new Date(), 'yyyy-MM-dd')
+                      dateToCheck = todayStr
+                    }
+
+                    return assignment.instance_completions?.[dateToCheck]?.completed || false
+                  })()}
+                  onCheckedChange={(checked) => {
+                    let instanceDate: string | undefined = undefined
+
+                    if (assignment.is_recurring) {
+                      instanceDate = selectedInstanceDate
+
+                      // If no instance date is selected, use today's date for today's assignments  
+                      if (!instanceDate) {
+                        instanceDate = format(new Date(), 'yyyy-MM-dd')
+                      }
+                    }
+
+                    onToggle(assignment.id, checked as boolean, instanceDate)
+                  }}
                   className="h-5 w-5 hover:ring-1 hover:ring-ring/50 cursor-pointer"
                 />
                 <label

@@ -29,7 +29,7 @@ interface RecurringInstancesGridProps {
 
 // Helper functions for date checking
 const isDateToday = (dateStr: string) => {
-  const assignmentDate = new Date(dateStr + 'T12:00:00')
+  const assignmentDate = new Date(dateStr)
   const today = new Date()
   return assignmentDate.getFullYear() === today.getFullYear() &&
     assignmentDate.getMonth() === today.getMonth() &&
@@ -37,14 +37,11 @@ const isDateToday = (dateStr: string) => {
 }
 
 const isDateFuture = (dateStr: string) => {
-  const assignmentDate = new Date(dateStr + 'T12:00:00')
+  const assignmentDate = new Date(dateStr)
   const today = new Date()
-  return assignmentDate.getFullYear() > today.getFullYear() ||
-    (assignmentDate.getFullYear() === today.getFullYear() &&
-      assignmentDate.getMonth() > today.getMonth()) ||
-    (assignmentDate.getFullYear() === today.getFullYear() &&
-      assignmentDate.getMonth() === today.getMonth() &&
-      assignmentDate.getDate() > today.getDate())
+  today.setHours(0, 0, 0, 0) // Reset time to start of day for accurate comparison
+  assignmentDate.setHours(0, 0, 0, 0)
+  return assignmentDate > today
 }
 
 // Helper function to generate upcoming instances for recurring assignments
@@ -66,9 +63,8 @@ const getRecurringInstances = (assignment: Assignment, daysAhead: number = 7, ma
     return dayMap[day.toLowerCase()]
   })
 
-  // Generate instances starting from tomorrow
+  // Generate instances starting from today
   const checkDate = new Date(today)
-  checkDate.setDate(checkDate.getDate() + 1)
 
   while (checkDate <= endDate && instances.length < maxInstances) {
     if (targetDays.includes(checkDate.getDay())) {
@@ -136,27 +132,27 @@ export const RecurringInstancesGrid = ({
         <Repeat className="h-4 w-4" />
         Upcoming Occurrences
       </h4>
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className="flex gap-3 overflow-x-auto py-2">
         {instances.map((instance, index) => {
           const isSelected = selectedInstanceDate === instance.date
           return (
             <Card
               key={instance.date}
-              className={`p-0 border rounded-md transition-colors relative overflow-hidden min-w-60 flex-shrink-0 cursor-pointer ${isSelected
+              className={`md:py-0 border rounded-md transition-colors relative overflow-hidden min-w-60 flex-shrink-0 cursor-pointer ${isSelected
                 ? 'bg-primary/20 border-primary hover:bg-primary/30'
                 : 'bg-muted/30 hover:bg-muted/50'
                 }`}
               onClick={() => onInstanceClick?.(instance.date, instance.dayName)}
             >
               {showImages && (
-                <CardMedia className="m-0">
+                <CardMedia className="-mt-0 md:-mt-0 mb-0">
                   <Image
                     src={imageArray[imageIndex % imageArray.length]}
                     alt={assignment.title}
                     width={1200}
                     height={1200}
                     loading="eager"
-                    className="z-0 h-80 object-cover"
+                    className="z-0 h-100 object-cover"
                   />
                 </CardMedia>
               )}

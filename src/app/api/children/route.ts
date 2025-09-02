@@ -20,6 +20,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ children: [], error: 'No user found' })
     }
 
+    // Get user profile to verify they are a parent
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    // Only parents can access children data
+    if (userProfile?.role !== 'parent') {
+      return NextResponse.json({
+        children: [],
+        error: 'Only parents can access children data'
+      })
+    }
+
     // Get children profiles
     const { data: children, error: childrenError } = await supabase
       .from('profiles')

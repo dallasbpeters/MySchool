@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log('Toggle request body:', body)
 
-    const { assignmentId, studentId, completed } = body
+    const { assignmentId, studentId, completed, instanceDate } = body
 
     if (!assignmentId) {
       return NextResponse.json(
@@ -35,10 +35,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use provided studentId or default to current user
-    const targetStudentId = studentId || user.id
+    // Get user profile to determine role
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
 
-    console.log('Toggle assignment:', { assignmentId, studentId, targetStudentId, userId: user.id, completed })
+    // Determine target student ID
+    let targetStudentId: string
+
+    if (userProfile?.role === 'parent') {
+      // For parents, studentId must be provided (child's ID)
+      if (!studentId) {
+        return NextResponse.json(
+          { error: 'Parent must specify which child to toggle assignment for' },
+          { status: 400 }
+        )
+      }
+      targetStudentId = studentId
+    } else {
+      // For students, use their own ID
+      targetStudentId = user.id
+    }
+
+    console.log('Toggle assignment:', { assignmentId, studentId, targetStudentId, userId: user.id, userRole: userProfile?.role, completed, instanceDate })
 
     // If toggling for another student, verify the user is their parent
     if (studentId && studentId !== user.id) {
@@ -65,13 +86,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check if assignment already exists for this student
-    const { data: existing, error: existingError } = await supabase
+    // Check if assignment already exists for this student (and instance date if provided)
+    let query = supabase
       .from('student_assignments')
       .select('id')
       .eq('assignment_id', assignmentId)
       .eq('student_id', targetStudentId)
-      .single()
+
+    if (instanceDate) {
+      query = query.eq('instance_date', instanceDate)
+    } else {
+      query = query.is('instance_date', null)
+    }
+
+    const { data: existing, error: existingError } = await query.single()
 
     console.log('Existing assignment check:', { existing, existingError, assignmentId, targetStudentId })
 
@@ -86,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       // Update existing assignment
-      const { error: updateError } = await supabase
+      let updateQuery = supabase
         .from('student_assignments')
         .update({
           completed,
@@ -94,6 +122,14 @@ export async function POST(request: NextRequest) {
         })
         .eq('assignment_id', assignmentId)
         .eq('student_id', targetStudentId)
+
+      if (instanceDate) {
+        updateQuery = updateQuery.eq('instance_date', instanceDate)
+      } else {
+        updateQuery = updateQuery.is('instance_date', null)
+      }
+
+      const { error: updateError } = await updateQuery
 
       if (updateError) {
         console.error('Update assignment error:', updateError)
@@ -111,7 +147,8 @@ export async function POST(request: NextRequest) {
           assignment_id: assignmentId,
           student_id: targetStudentId,
           completed,
-          completed_at: completed ? new Date().toISOString() : null
+          completed_at: completed ? new Date().toISOString() : null,
+          instance_date: instanceDate || null
         })
 
       if (insertError) {

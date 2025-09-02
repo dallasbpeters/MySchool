@@ -36,7 +36,22 @@ export async function GET(request: NextRequest) {
 
     // Determine which parent's assignments to fetch and which student to view as
     let parentId = profile.role === 'parent' ? user.id : profile.parent_id
-    let studentId = childId || user.id
+    let studentId: string
+
+    if (profile.role === 'parent') {
+      // Parents must specify a child to view assignments for
+      if (!childId) {
+        return NextResponse.json({
+          assignments: [],
+          profile: profile,
+          error: 'Parents must select a child to view assignments'
+        })
+      }
+      studentId = childId
+    } else {
+      // Students view their own assignments
+      studentId = user.id
+    }
 
     // If parent is requesting child view, verify the child belongs to them
     if (childId && profile.role === 'parent') {
@@ -69,7 +84,7 @@ export async function GET(request: NextRequest) {
     // Always fetch completions for the target student
     const { data: completionData } = await supabase
       .from('student_assignments')
-      .select('assignment_id, completed, completed_at')
+      .select('assignment_id, completed, completed_at, instance_date')
       .eq('student_id', studentId)
     console.log('API: Found completions:', completionData?.length || 0)
     completions = completionData || []
@@ -86,9 +101,22 @@ export async function GET(request: NextRequest) {
       .in('assignment_id', assignmentIds)
 
     // Create maps for completion and assigned children
-    const completionMap = new Map(
-      completions?.map((c: any) => [c.assignment_id, c]) || []
-    )
+    // For recurring assignments, we need to group completions by assignment_id
+    const completionMap = new Map()
+    const instanceCompletionMap = new Map()
+
+    completions?.forEach((c: any) => {
+      if (c.instance_date) {
+        // Recurring assignment instance
+        if (!instanceCompletionMap.has(c.assignment_id)) {
+          instanceCompletionMap.set(c.assignment_id, new Map())
+        }
+        instanceCompletionMap.get(c.assignment_id).set(c.instance_date, c)
+      } else {
+        // Regular assignment
+        completionMap.set(c.assignment_id, c)
+      }
+    })
 
     const assignedChildrenMap = new Map()
     allStudentAssignments?.forEach((sa: any) => {
@@ -108,12 +136,16 @@ export async function GET(request: NextRequest) {
 
     const assignmentsWithCompletion = assignmentsData?.map((a: any) => {
       const completion = completionMap.get(a.id) as any
+      const instanceCompletions = instanceCompletionMap.get(a.id)
+
       return {
         ...a,
         links: Array.isArray(a.links) ? a.links : [],
         completed: completion?.completed || false,
         completed_at: completion?.completed_at,
-        assigned_children: assignedChildrenMap.get(a.id) || []
+        assigned_children: assignedChildrenMap.get(a.id) || [],
+        // Add instance completions for recurring assignments
+        instance_completions: instanceCompletions ? Object.fromEntries(instanceCompletions) : {}
       }
     }) || []
 

@@ -518,6 +518,7 @@ export default function StudentDashboard() {
                         expandedCardId={expandedCardId}
                         setExpandedCardId={setExpandedCardId}
                         onNoteCreated={fetchNotes}
+                        selectedInstanceDate={selectedInstanceDates[assignment.id]}
                       />
                     ))}
                   </div>
@@ -582,6 +583,7 @@ export default function StudentDashboard() {
                         setExpandedCardId={setExpandedCardId}
                         onNoteCreated={fetchNotes}
                         assignmentNotes={notes}
+                        selectedInstanceDate={selectedInstanceDates[assignment.id]}
                       />
                     ))}
                   </div>

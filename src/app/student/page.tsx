@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardMedia, CardFooter } from '@/components/ui/card'
 import Image from 'next/image'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { StickyNote, Calendar, CheckCircle2, Link as LinkIcon, User, ChevronDown, BookOpen, Plus, Trash2 } from 'lucide-react'
+import { StickyNote, Calendar, CheckCircle2, Link as LinkIcon, User, ChevronDown, BookOpen, Plus, Trash2, Repeat, Video, Play } from 'lucide-react'
 import { format, isToday, isTomorrow, isPast } from 'date-fns'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -15,18 +15,112 @@ import { WysiwygEditor } from '@/components/editor/wysiwyg-editor'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { VideoPlayer, VideoPlayerContent, VideoPlayerControlBar, VideoPlayerPlayButton, VideoPlayerTimeRange, VideoPlayerVolumeRange, VideoPlayerMuteButton } from '@/components/ui/shadcn-io/video-player'
+import { Timeline, TimelineItem, TimelineHeader, TimelineContent } from '@/components/ui/timeline-view'
+import { RecurringInstancesGrid } from '@/components/ui/recurring-instances-grid'
 
 import ColourfulText from '@/components/ui/colourful-text'
+
+// Helper function to extract YouTube video ID from URL
+const getYouTubeVideoId = (url: string): string | null => {
+  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
+  const match = url.match(regex)
+  return match ? match[1] : null
+}
+
+// Helper function to generate upcoming instances for recurring assignments
+const getRecurringInstances = (assignment: Assignment, daysAhead: number = 7): Array<{ date: string, dayName: string }> => {
+  if (!assignment.is_recurring || !assignment.recurrence_pattern) {
+    return []
+  }
+
+  const instances: Array<{ date: string, dayName: string }> = []
+  const today = new Date()
+  const endDate = new Date()
+  endDate.setDate(today.getDate() + daysAhead)
+
+  const targetDays = assignment.recurrence_pattern.days.map(day => {
+    const dayMap: { [key: string]: number } = {
+      'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+      'thursday': 4, 'friday': 5, 'saturday': 6
+    }
+    return dayMap[day.toLowerCase()]
+  })
+
+  // Generate instances starting from tomorrow
+  const checkDate = new Date(today)
+  checkDate.setDate(checkDate.getDate() + 1)
+
+  while (checkDate <= endDate && instances.length < 6) { // Limit to 6 instances max
+    if (targetDays.includes(checkDate.getDay())) {
+      instances.push({
+        date: format(checkDate, 'yyyy-MM-dd'),
+        dayName: format(checkDate, 'EEE, MMM dd')
+      })
+    }
+    checkDate.setDate(checkDate.getDate() + 1)
+  }
+
+  return instances
+}
+
+// Helper functions for date checking
+const isDateToday = (dateStr: string) => {
+  // For YYYY-MM-DD format, add time to avoid timezone issues
+  const assignmentDate = new Date(dateStr + 'T12:00:00')
+  const today = new Date()
+
+  // Compare year, month, and day
+  return assignmentDate.getFullYear() === today.getFullYear() &&
+    assignmentDate.getMonth() === today.getMonth() &&
+    assignmentDate.getDate() === today.getDate()
+}
+
+const isDateFuture = (dateStr: string) => {
+  // For YYYY-MM-DD format, add time to avoid timezone issues  
+  const assignmentDate = new Date(dateStr + 'T12:00:00')
+  const today = new Date()
+
+  // Compare dates - future means after today
+  return assignmentDate.getFullYear() > today.getFullYear() ||
+    (assignmentDate.getFullYear() === today.getFullYear() &&
+      assignmentDate.getMonth() > today.getMonth()) ||
+    (assignmentDate.getFullYear() === today.getFullYear() &&
+      assignmentDate.getMonth() === today.getMonth() &&
+      assignmentDate.getDate() > today.getDate())
+}
+
+const isDatePast = (dateStr: string) => {
+  // For YYYY-MM-DD format, add time to avoid timezone issues
+  const assignmentDate = new Date(dateStr + 'T12:00:00')
+  const today = new Date()
+
+  // Compare dates - past means before today
+  return assignmentDate.getFullYear() < today.getFullYear() ||
+    (assignmentDate.getFullYear() === today.getFullYear() &&
+      assignmentDate.getMonth() < today.getMonth()) ||
+    (assignmentDate.getFullYear() === today.getFullYear() &&
+      assignmentDate.getMonth() === today.getMonth() &&
+      assignmentDate.getDate() < today.getDate())
+}
 
 interface Assignment {
   id: string
   title: string
   content: any
-  links: Array<{ title: string; url: string }>
+  links: Array<{ title: string; url: string; type?: 'link' | 'video' }>
   due_date: string
   completed?: boolean
   completed_at?: string
   category?: string
+  is_recurring?: boolean
+  recurrence_pattern?: {
+    days: string[] // ['monday', 'wednesday', 'friday']
+    frequency?: 'weekly' | 'daily'
+  }
+  recurrence_end_date?: string
+  next_due_date?: string
 }
 
 interface Child {
@@ -41,6 +135,7 @@ interface Note {
   content: any
   category: string
   created_at: string
+  assignment_id?: string
 }
 
 export default function StudentDashboard() {
@@ -52,6 +147,8 @@ export default function StudentDashboard() {
   const [selectedChildName, setSelectedChildName] = useState<string | null>(null)
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null)
   const [notes, setNotes] = useState<Note[]>([])
+  const [selectedInstanceDates, setSelectedInstanceDates] = useState<Record<string, string>>({})
+
 
   const { toast } = useToast()
 
@@ -113,6 +210,7 @@ export default function StudentDashboard() {
 
       if (data.assignments) {
         setAssignments(data.assignments)
+
         if (data.profile?.role) {
           setUserRole(data.profile.role)
         }
@@ -213,15 +311,34 @@ export default function StudentDashboard() {
     return grouped
   }
 
+  const handleInstanceClick = (assignmentId: string, date: string, dayName: string) => {
+    setSelectedInstanceDates(prev => ({
+      ...prev,
+      [assignmentId]: date
+    }))
+
+    // Also expand the main card if it's not already expanded
+    if (expandedCardId !== assignmentId) {
+      setExpandedCardId(assignmentId)
+    }
+  }
+
   const toggleAssignment = async (assignmentId: string, completed: boolean) => {
+    console.log(`🎯 Toggle: ${assignmentId} → completed: ${completed}`)
+
     // Optimistic update - immediately update the UI
-    setAssignments(prevAssignments =>
-      prevAssignments.map(assignment =>
+    setAssignments(prevAssignments => {
+      const updated = prevAssignments.map(assignment =>
         assignment.id === assignmentId
           ? { ...assignment, completed, completed_at: completed ? new Date().toISOString() : undefined }
           : assignment
       )
-    )
+
+      const toggledAssignment = updated.find(a => a.id === assignmentId)
+      console.log(`🎯 After optimistic update: ${toggledAssignment?.title} completed = ${toggledAssignment?.completed}`)
+
+      return updated
+    })
 
     try {
       const response = await fetch('/api/assignments/toggle', {
@@ -302,69 +419,26 @@ export default function StudentDashboard() {
   }
 
   const getDateColor = (dateStr: string, completed?: boolean) => {
-    const date = new Date(dateStr)
     // Completed assignments should not have red color
     if (completed) return 'text-muted-foreground'
-    if (isPast(date) && !isToday(date)) return 'text-destructive'
-    if (isToday(date)) return 'text-primary'
-    if (isTomorrow(date)) return 'text-orange-500'
+    if (isDateToday(dateStr)) return 'text-primary'
+    if (isDatePast(dateStr)) return 'text-destructive'
     return 'text-muted-foreground'
   }
 
-  // Helper function to check if a date string represents today
-  const isDateToday = (dateStr: string) => {
-    // For YYYY-MM-DD format, add time to avoid timezone issues
-    const assignmentDate = new Date(dateStr + 'T12:00:00')
-    const today = new Date()
 
-    // Compare year, month, and day
-    return assignmentDate.getFullYear() === today.getFullYear() &&
-      assignmentDate.getMonth() === today.getMonth() &&
-      assignmentDate.getDate() === today.getDate()
-  }
 
-  const isDateFuture = (dateStr: string) => {
-    // For YYYY-MM-DD format, add time to avoid timezone issues  
-    const assignmentDate = new Date(dateStr + 'T12:00:00')
-    const today = new Date()
-
-    // Compare dates - future means after today
-    return assignmentDate.getFullYear() > today.getFullYear() ||
-      (assignmentDate.getFullYear() === today.getFullYear() &&
-        assignmentDate.getMonth() > today.getMonth()) ||
-      (assignmentDate.getFullYear() === today.getFullYear() &&
-        assignmentDate.getMonth() === today.getMonth() &&
-        assignmentDate.getDate() > today.getDate())
-  }
-
-  const isDatePast = (dateStr: string) => {
-    // For YYYY-MM-DD format, add time to avoid timezone issues
-    const assignmentDate = new Date(dateStr + 'T12:00:00')
-    const today = new Date()
-
-    // Compare dates - past means before today
-    return assignmentDate.getFullYear() < today.getFullYear() ||
-      (assignmentDate.getFullYear() === today.getFullYear() &&
-        assignmentDate.getMonth() < today.getMonth()) ||
-      (assignmentDate.getFullYear() === today.getFullYear() &&
-        assignmentDate.getMonth() === today.getMonth() &&
-        assignmentDate.getDate() < today.getDate())
-  }
-
-  // Filter assignments into categories - each assignment should only appear in one category
+  // Simple filtering - no virtual instances, just use next_due_date for recurring
   const overdueAssignments = assignments.filter(a => {
-    // Overdue: past dates that aren't completed
     return isDatePast(a.due_date) && !a.completed
   })
 
   const todayAssignments = assignments.filter(a => {
-    // Today: assignments with today's date only
-    return isDateToday(a.due_date)
+    return isDateToday(a.due_date) && !a.completed
   })
 
   const upcomingAssignments = assignments.filter(a => {
-    // Upcoming: future dates only
-    return isDateFuture(a.due_date)
+    return isDateFuture(a.due_date) && !a.completed
   })
 
   if (loading) {
@@ -376,111 +450,124 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="z-10 relative container mx-auto p-4 max-w-5xl">
+    <div className="z-10 relative container mx-auto p-4 max-w-6xl">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">
-          {selectedChildName ? `${selectedChildName}'s Dashboard` : 'Student Dashboard'}
-        </h1>
-        {userRole === 'parent' && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <User className="h-4 w-4" />
-                {selectedChildName || 'View as'}
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {!selectedChildId && (
-                <DropdownMenuItem disabled className="text-muted-foreground">
-                  My View (Current)
-                </DropdownMenuItem>
-              )}
-              {selectedChildId && (
-                <DropdownMenuItem onClick={switchToOwnView}>
-                  My View
-                </DropdownMenuItem>
-              )}
-              {children.map((child) => (
-                <DropdownMenuItem
-                  key={child.id}
-                  onClick={() => switchToChild(child.id, child.name)}
-                  disabled={selectedChildId === child.id}
-                  className={selectedChildId === child.id ? 'text-muted-foreground' : ''}
-                >
-                  {child.name} {selectedChildId === child.id && '(Current)'}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-bold">
+            {selectedChildName ? `${selectedChildName}'s Dashboard` : 'Student Dashboard'}
+          </h1>
+          {userRole === 'parent' && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="gap-2">
+                  {selectedChildName || 'View as'}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {!selectedChildId && (
+                  <DropdownMenuItem disabled className="text-muted-foreground">
+                    My View (Current)
+                  </DropdownMenuItem>
+                )}
+                {selectedChildId && (
+                  <DropdownMenuItem onClick={switchToOwnView}>
+                    My View
+                  </DropdownMenuItem>
+                )}
+                {children.map((child) => (
+                  <DropdownMenuItem
+                    key={child.id}
+                    onClick={() => switchToChild(child.id, child.name)}
+                    disabled={selectedChildId === child.id}
+                    className={selectedChildId === child.id ? 'text-muted-foreground' : ''}
+                  >
+                    {child.name} {selectedChildId === child.id && '(Current)'}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
 
       <Tabs defaultValue="assignments" className="w-full">
-        <TabsList className="mb-6">
+        <TabsList variant="secondary" className="mb-2 md:mb-3">
           <TabsTrigger value="assignments">Assignments</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="notes">My Notes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="assignments">
-          <ol className="relative  border-s border-grey-200 dark:border-gray-400">
+          <Timeline>
             {overdueAssignments.length > 0 && (
-              <li className="mb-10 ms-4">
-                <div className="absolute w-3 h-3 block bg-red-500 rounded-full mt-0.5 -start-1.5 border border-red-500 dark:border-red-500 dark:bg-red-500"></div>
-                <time className="block mb-2 text-lg font-medium leading-none text-red-500 dark:text-red-500">Overdue</time>
-                <div className={`grid gap-4 transition-grid-cols duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
-                  }`}>
-                  {overdueAssignments.map((assignment, index) => (
-                    <AssignmentCard
-                      image={true}
-                      key={assignment.id}
-                      assignment={assignment}
-                      onToggle={toggleAssignment}
-                      getDateLabel={getDateLabel}
-                      getDateColor={getDateColor}
-                      imageIndex={index}
-                      expandedCardId={expandedCardId}
-                      setExpandedCardId={setExpandedCardId}
-                      onNoteCreated={fetchNotes}
-                    />
-                  ))}
-                </div>
-              </li>
-            )}
-
-            {todayAssignments.length > 0 && (
-              <li className="mb-8 ms-4">
-                <div className="absolute w-3 h-3 block bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
-                <time className="block mb-2 text-lg font-medium leading-none text-foreground  dark:text-foreground">Today's Assignments</time>
-                <div className="mb-6">
-                  <div className={`grid gap-4 transition-[grid-template-columns] duration-600 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+              <TimelineItem dotColor="red">
+                <TimelineHeader textColor="red">Overdue</TimelineHeader>
+                <TimelineContent>
+                  <div className={`grid gap-4 transition-grid-cols duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
                     }`}>
-                    {todayAssignments.map((assignment, index) => (
+                    {overdueAssignments.map((assignment, index) => (
                       <AssignmentCard
-                        key={assignment.id}
                         image={true}
+                        key={assignment.id}
                         assignment={assignment}
                         onToggle={toggleAssignment}
                         getDateLabel={getDateLabel}
                         getDateColor={getDateColor}
-                        imageIndex={index + overdueAssignments.length}
+                        imageIndex={index}
                         expandedCardId={expandedCardId}
                         setExpandedCardId={setExpandedCardId}
                         onNoteCreated={fetchNotes}
-                        assignmentNotes={notes}
                       />
                     ))}
                   </div>
-                </div>
-              </li>
+                </TimelineContent>
+              </TimelineItem>
             )}
-            <li className="mb-8 ms-4">
-              <div className="absolute w-3 h-3 block bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
-              <time className="block mb-2 text-lg font-medium leading-none text-foreground dark:text-foreground">Upcoming</time>
+
+            {todayAssignments.length > 0 && (
+              <TimelineItem dotColor="default">
+                <TimelineHeader textColor="default">Today's Assignments</TimelineHeader>
+                <TimelineContent>
+                  <div className={`grid gap-4 transition-[grid-template-columns] duration-600 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                    }`}>
+                    {todayAssignments.map((assignment, index) => (
+                      <React.Fragment key={assignment.id}>
+                        <AssignmentCard
+                          image={true}
+                          assignment={assignment}
+                          onToggle={toggleAssignment}
+                          getDateLabel={getDateLabel}
+                          getDateColor={getDateColor}
+                          imageIndex={index + overdueAssignments.length}
+                          expandedCardId={expandedCardId}
+                          setExpandedCardId={setExpandedCardId}
+                          onNoteCreated={fetchNotes}
+                          assignmentNotes={notes}
+                          selectedInstanceDate={selectedInstanceDates[assignment.id]}
+                        />
+                        {expandedCardId === assignment.id && (
+                          <RecurringInstancesGrid
+                            assignment={assignment}
+                            imageIndex={index + overdueAssignments.length}
+                            showImages={true}
+                            daysAhead={7}
+                            onInstanceClick={(date, dayName) => handleInstanceClick(assignment.id, date, dayName)}
+                            selectedInstanceDate={selectedInstanceDates[assignment.id]}
+                          />
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </TimelineContent>
+              </TimelineItem>
+            )}
+
+            <TimelineItem dotColor="default">
+              <TimelineHeader textColor="default">Upcoming</TimelineHeader>
               {upcomingAssignments.length > 0 && (
-                <div className="mb-6">
-                  <div className={`grid gap-4 transition-all duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+                <TimelineContent>
+                  <div className={`grid gap-4 transition-all duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
                     }`}>
                     {upcomingAssignments.map((assignment, index) => (
                       <AssignmentCard
@@ -498,10 +585,10 @@ export default function StudentDashboard() {
                       />
                     ))}
                   </div>
-                </div>
+                </TimelineContent>
               )}
-            </li>
-          </ol>
+            </TimelineItem>
+          </Timeline>
 
           {assignments.length === 0 && (
             <Card>
@@ -513,7 +600,7 @@ export default function StudentDashboard() {
         </TabsContent>
 
         <TabsContent value="timeline">
-          <div className="mt-4">
+          <div>
 
             {assignments.filter(a => isDatePast(a.due_date) || isDateToday(a.due_date)).length > 0 ? (
               <ol className="relative border-s border-grey-200 dark:border-gray-400">
@@ -574,7 +661,7 @@ export default function StudentDashboard() {
         </TabsContent>
 
         <TabsContent value="notes">
-          <div className="mt-4">
+          <div>
             <h2 className="text-2xl font-semibold flex items-center gap-2 mb-4">
               <BookOpen className="h-6 w-6" />
               My Notes
@@ -667,7 +754,8 @@ function AssignmentCard({
   setExpandedCardId,
   image,
   onNoteCreated,
-  assignmentNotes = []
+  assignmentNotes = [],
+  selectedInstanceDate
 }: {
   image: boolean
   assignment: Assignment
@@ -679,6 +767,7 @@ function AssignmentCard({
   setExpandedCardId: (id: string | null) => void
   onNoteCreated?: () => void
   assignmentNotes?: Note[]
+  selectedInstanceDate?: string
 }) {
   const expanded = expandedCardId === assignment.id
   const cardRef = useRef<HTMLDivElement>(null)
@@ -686,15 +775,19 @@ function AssignmentCard({
   const [newNote, setNewNote] = useState({ title: '', content: null as any })
   const { toast } = useToast()
 
-  // Filter notes that belong to this assignment's category
-  // Only show notes if there's an exact category match (don't default to 'General' for assignments without categories)
-  const assignmentCategory = assignment.category?.trim()
-  const relatedNotes = assignmentCategory
-    ? assignmentNotes.filter(note => {
-      const noteCategory = note.category?.trim()
-      return noteCategory === assignmentCategory
-    })
-    : [] // No notes for assignments without categories
+  // Filter notes that belong directly to this assignment
+  const relatedNotes = assignmentNotes.filter(note => {
+    // First check for direct assignment association
+    if (note.assignment_id) {
+      return note.assignment_id === assignment.id
+    }
+
+    // Fallback to category matching for legacy notes
+    const assignmentCategory = assignment.category?.trim() || 'General'
+    const noteCategory = note.category?.trim() || 'General'
+    return noteCategory === assignmentCategory
+  })
+
   const images = [
     '/wildan-kurniawan-fKdoeUJBh_o-unsplash.svg',
     '/amanda-sala-oHHc3UsNrqs-unsplash.svg',
@@ -749,7 +842,8 @@ function AssignmentCard({
         body: JSON.stringify({
           title: newNote.title.trim(),
           content: newNote.content,
-          category
+          category,
+          assignment_id: assignment.id
         })
       })
 
@@ -814,15 +908,18 @@ function AssignmentCard({
           <div className="flex-1">
             <CardTitle className={`text-lg ${assignment.completed ? 'line-through text-muted-foreground' : ''} flex items-center gap-2`}>
               {assignment.title}
+              {assignment.is_recurring && (
+                <Repeat className="h-4 w-4 text-blue-500" />
+              )}
               {assignment.category && (
                 <span className="flex items-center gap-1 whitespace-nowrap text-xs border border-primary/30 text-foreground px-2 py-0.5 rounded-full leading-4">
                   {assignment.category}
                 </span>
               )}
             </CardTitle>
-            <CardDescription className={`flex items-center gap-2 mt-0 ${getDateColor(assignment.due_date, assignment.completed)}`}>
+            <CardDescription className={`flex items-center gap-2 mt-0 ${getDateColor(selectedInstanceDate || assignment.due_date, assignment.completed)}`}>
               <Calendar className="h-3 w-3" />
-              {getDateLabel(assignment.due_date, assignment.completed)}
+              {selectedInstanceDate ? format(new Date(selectedInstanceDate), 'MMM dd, yyyy') : getDateLabel(assignment.due_date, assignment.completed)}
               {assignment.completed && (
                 <>
                   <CheckCircle2 className="h-3 w-4 te4t-green-500 ml-2" />
@@ -846,24 +943,60 @@ function AssignmentCard({
               )}
 
               {assignment.links && assignment.links.length > 0 && (
-                <div className="flex gap-2 items-center">
-                  {assignment.links.map((link, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          window.open(link.url, '_blank')
-                        }}
-                        rel="noopener noreferrer"
-                        className="cursor-pointer hover:text-primary/80"
-                      >
-                        <LinkIcon className="h-3 w-3" />
-                        {link.title}
-                      </Button>
-                    </div>
-                  ))}
+                <div className="flex gap-2 items-center flex-wrap">
+                  {assignment.links.map((link, index) => {
+                    const isVideo = link.type === 'video'
+                    const videoId = isVideo ? getYouTubeVideoId(link.url) : null
+
+                    if (isVideo && videoId) {
+                      return (
+                        <Dialog key={index}>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="cursor-pointer hover:text-primary/80 gap-2"
+                            >
+                              <Play className="h-3 w-3 text-foreground-muted" />
+                              {link.title}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent aria-describedby={`dialog-description-${link.title}`} className=" sm:max-w-6xl">
+                            <DialogHeader>
+                              <DialogTitle>{link.title}</DialogTitle>
+                            </DialogHeader>
+                            <div className="aspect-video">
+                              <iframe
+                                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+                                title={link.title}
+                                className="w-full h-full rounded-lg border"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowFullScreen
+                              />
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      )
+                    } else {
+                      return (
+                        <div key={index} className="flex items-center gap-2 text-sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              window.open(link.url, '_blank')
+                            }}
+                            rel="noopener noreferrer"
+                            className="cursor-pointer hover:text-primary/80"
+                          >
+                            <LinkIcon className="h-3 w-3" />
+                            {link.title}
+                          </Button>
+                        </div>
+                      )
+                    }
+                  })}
                 </div>
               )}
             </div>
@@ -894,6 +1027,8 @@ function AssignmentCard({
                 </div>
               </div>
             )}
+
+
           </CardContent>
           <CardFooter className="flex-col space-y-4 border-t border-gray-200 dark:border-gray-400">
             <div className="flex items-center justify-between w-full">
@@ -969,6 +1104,7 @@ function AssignmentCard({
         </div>
       )}
     </Card>
+
   )
 }
 

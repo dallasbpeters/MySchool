@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const category = url.searchParams.get('category')
 
     const supabase = await createClient()
-    
+
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
@@ -41,10 +41,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { 
+    const {
       category,
       title,
-      content
+      content,
+      assignment_id
     } = await request.json()
 
     if (!title?.trim()) {
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createClient()
-    
+
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
@@ -80,7 +81,8 @@ export async function POST(request: NextRequest) {
         student_id: user.id,
         category: category.trim(),
         title: title.trim(),
-        content: content
+        content: content,
+        assignment_id: assignment_id || null
       })
       .select()
       .single()
@@ -92,7 +94,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       note: noteData,
       message: `Note "${title.trim()}" created successfully`
@@ -118,7 +120,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const { 
+    const {
       title,
       content
     } = await request.json()
@@ -131,7 +133,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const supabase = await createClient()
-    
+
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
@@ -168,7 +170,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       note: noteData,
       message: `Note "${title.trim()}" updated successfully`
@@ -195,7 +197,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const supabase = await createClient()
-    
+
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
@@ -220,7 +222,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Note deleted successfully'
     })

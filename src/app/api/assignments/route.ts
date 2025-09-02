@@ -62,15 +62,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ assignments: [], error: assignmentsError.message })
     }
 
-    // Get completion status (only for actual students, not parents viewing)
+    // Get completion status 
+    console.log('API: Getting completions for role:', profile.role, 'studentId:', studentId, 'childId:', childId)
     let completions = []
-    if (profile.role === 'student' || (profile.role === 'parent' && childId)) {
-      const { data: completionData } = await supabase
-        .from('student_assignments')
-        .select('assignment_id, completed, completed_at')
-        .eq('student_id', studentId)
-      completions = completionData || []
-    }
+
+    // Always fetch completions for the target student
+    const { data: completionData } = await supabase
+      .from('student_assignments')
+      .select('assignment_id, completed, completed_at')
+      .eq('student_id', studentId)
+    console.log('API: Found completions:', completionData?.length || 0)
+    completions = completionData || []
 
     // Get all student assignments for these assignments to find assigned children
     const assignmentIds = assignmentsData?.map(a => a.id) || []

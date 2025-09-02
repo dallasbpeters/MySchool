@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import MultipleSelector, { Option } from '@/components/ui/multiselect'
-import { Plus, Trash2, Calendar, Link as LinkIcon, Repeat, Edit } from 'lucide-react'
+import { Plus, Trash2, Calendar, Link as LinkIcon, Repeat, Edit, Video, Play } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { MiniCalendar, MiniCalendarNavigation, MiniCalendarDays, MiniCalendarDay } from '@/components/ui/shadcn-io/mini-calendar'
@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast'
 interface Link {
   title: string
   url: string
+  type?: 'link' | 'video'
 }
 
 interface Assignment {
@@ -66,7 +67,7 @@ export default function ParentDashboard() {
     recurrence_end_date: ''
   })
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(new Date())
-  const [newLink, setNewLink] = useState({ title: '', url: '' })
+  const [newLink, setNewLink] = useState({ title: '', url: '', type: 'link' as 'link' | 'video' })
   const { toast } = useToast()
 
   useEffect(() => {
@@ -134,6 +135,27 @@ export default function ParentDashboard() {
 
   const createOrUpdateAssignment = async () => {
     setIsSaving(true)
+
+    // Validation
+    if (!newAssignment.title.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter an assignment title",
+        variant: "destructive"
+      })
+      setIsSaving(false)
+      return
+    }
+
+    if (newAssignment.is_recurring && newAssignment.recurrence_pattern.days.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one day for the recurring assignment",
+        variant: "destructive"
+      })
+      setIsSaving(false)
+      return
+    }
 
     try {
       const isEditing = !!editingAssignment
@@ -217,7 +239,7 @@ export default function ParentDashboard() {
         ...newAssignment,
         links: [...newAssignment.links, newLink]
       })
-      setNewLink({ title: '', url: '' })
+      setNewLink({ title: '', url: '', type: 'link' })
     }
   }
 
@@ -295,7 +317,8 @@ export default function ParentDashboard() {
                 Use the WYSIWYG editor to create rich content assignments
               </SheetDescription>
             </SheetHeader>
-            <div className="space-y-4 mt-6">
+
+            <div className="grid mt-6 flex-1 auto-rows-min gap-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Assignment Title</Label>
                 <Input
@@ -318,93 +341,128 @@ export default function ParentDashboard() {
                 />
               </div>
 
-              <div className="space-y-2">
-
-                {/* Mini Calendar */}
-                <div className="mt-2">
-                  <Label className="text-sm text-foreground mb-1 block">Due Date</Label>
-                  <MiniCalendar
-                    value={selectedCalendarDate}
-                    onValueChange={setSelectedCalendarDate}
-                    className="w-full"
-                  >
-                    <MiniCalendarNavigation direction="prev" />
-                    <MiniCalendarDays>
-                      {(date) => <MiniCalendarDay key={date.toISOString()} date={date} />}
-                    </MiniCalendarDays>
-                    <MiniCalendarNavigation direction="next" />
-                  </MiniCalendar>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="is_recurring"
-                    checked={newAssignment.is_recurring}
-                    onChange={(e) => setNewAssignment({ ...newAssignment, is_recurring: e.target.checked })}
-                    className="rounded"
-                  />
-                  <Label htmlFor="is_recurring" className="flex items-center gap-2 cursor-pointer">
-                    <Repeat className="h-4 w-4" />
-                    Make this a recurring assignment
-                  </Label>
-                </div>
-
-                {newAssignment.is_recurring && (
-                  <div className="space-y-3 p-3 border rounded-lg bg-muted/50">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Select recurring days:</Label>
-                      <div className="w-full flex items-center justify-center gap-2 rounded-lg border bg-background p-2">
-                        <div className="flex items-center justify-between gap-1">
-                          {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
-                            const isSelected = newAssignment.recurrence_pattern.days.includes(day)
-                            return (
-                              <Button
-                                key={day}
-                                type="button"
-                                onClick={() => {
-                                  const updatedDays = newAssignment.recurrence_pattern.days.includes(day)
-                                    ? newAssignment.recurrence_pattern.days.filter(d => d !== day)
-                                    : [...newAssignment.recurrence_pattern.days, day]
-
-                                  setNewAssignment({
-                                    ...newAssignment,
-                                    recurrence_pattern: {
-                                      ...newAssignment.recurrence_pattern,
-                                      days: updatedDays
-                                    }
-                                  })
-                                }}
-                                className="h-auto min-w-[3rem] flex-col gap-0 p-2 text-xs"
-                                size="sm"
-                                variant={isSelected ? 'default' : 'ghost'}
-                              >
-                                <span className={`font-medium text-[10px] text-muted-foreground ${isSelected ? 'text-primary-foreground/70' : ''}`}>
-                                  {day.slice(0, 3).toUpperCase()}
-                                </span>
-                                <span className="font-semibold text-sm">{day.slice(0, 1).toUpperCase()}</span>
-                              </Button>
-                            )
-                          })}
-                        </div>
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Assignment Type</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div
+                      className={`p-3 border rounded-lg cursor-pointer transition-all ${!newAssignment.is_recurring
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                        : 'border-border hover:border-primary/50'
+                        }`}
+                      onClick={() => setNewAssignment({ ...newAssignment, is_recurring: false })}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar className="h-4 w-4" />
+                        <span className="font-medium text-sm">One-time Assignment</span>
                       </div>
+                      <p className="text-xs text-muted-foreground">Has a specific due date</p>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="recurrence_end_date" className="text-sm font-medium">Stop repeating after (optional):</Label>
-                      <Input
-                        id="recurrence_end_date"
-                        type="date"
-                        value={newAssignment.recurrence_end_date}
-                        onChange={(e) => setNewAssignment({ ...newAssignment, recurrence_end_date: e.target.value })}
-                        min={newAssignment.due_date}
-                      />
+                    <div
+                      className={`p-3 border rounded-lg cursor-pointer transition-all ${newAssignment.is_recurring
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                        : 'border-border hover:border-primary/50'
+                        }`}
+                      onClick={() => setNewAssignment({ ...newAssignment, is_recurring: true })}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <Repeat className="h-4 w-4" />
+                        <span className="font-medium text-sm">Recurring Assignment</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Repeats on selected days</p>
                     </div>
                   </div>
+                </div>
+
+                {!newAssignment.is_recurring && (
+                  <div className="space-y-2">
+                    <Label className="text-sm text-foreground mb-1 block">Due Date</Label>
+                    <MiniCalendar
+                      value={selectedCalendarDate}
+                      onValueChange={setSelectedCalendarDate}
+                      className="w-full"
+                    >
+                      <MiniCalendarNavigation direction="prev" />
+                      <MiniCalendarDays>
+                        {(date) => <MiniCalendarDay key={date.toISOString()} date={date} />}
+                      </MiniCalendarDays>
+                      <MiniCalendarNavigation direction="next" />
+                    </MiniCalendar>
+                  </div>
                 )}
+
               </div>
+
+              {newAssignment.is_recurring && (
+                <div className="space-y-3 p-3 border rounded-lg bg-muted/50">
+                  <div className="space-y-2">
+                    <Label className="text-sm text-foreground mb-1 block">Start Date</Label>
+                    <MiniCalendar
+                      value={selectedCalendarDate}
+                      onValueChange={setSelectedCalendarDate}
+                      className="w-full"
+                    >
+                      <MiniCalendarNavigation direction="prev" />
+                      <MiniCalendarDays>
+                        {(date) => <MiniCalendarDay key={date.toISOString()} date={date} />}
+                      </MiniCalendarDays>
+                      <MiniCalendarNavigation direction="next" />
+                    </MiniCalendar>
+                    <p className="text-xs text-muted-foreground">The recurring pattern will begin on this date</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Select recurring days:</Label>
+                    <div className="w-full flex items-center justify-center gap-2 rounded-lg border bg-background p-2">
+                      <div className="flex items-center justify-between gap-1">
+                        {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
+                          const isSelected = newAssignment.recurrence_pattern.days.includes(day)
+                          return (
+                            <Button
+                              key={day}
+                              type="button"
+                              onClick={() => {
+                                const updatedDays = newAssignment.recurrence_pattern.days.includes(day)
+                                  ? newAssignment.recurrence_pattern.days.filter(d => d !== day)
+                                  : [...newAssignment.recurrence_pattern.days, day]
+
+                                setNewAssignment({
+                                  ...newAssignment,
+                                  recurrence_pattern: {
+                                    ...newAssignment.recurrence_pattern,
+                                    days: updatedDays
+                                  }
+                                })
+                              }}
+                              className="h-auto min-w-[3rem] flex-col gap-0 p-2 text-xs"
+                              size="sm"
+                              variant={isSelected ? 'default' : 'ghost'}
+                            >
+                              <span className={`font-medium text-[10px] text-muted-foreground ${isSelected ? 'text-primary-foreground/70' : ''}`}>
+                                {day.slice(0, 3).toUpperCase()}
+                              </span>
+                              <span className="font-semibold text-sm">{day.slice(0, 1).toUpperCase()}</span>
+                            </Button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="recurrence_end_date" className="text-sm font-medium">Stop repeating after (optional):</Label>
+                    <Input
+                      id="recurrence_end_date"
+                      type="date"
+                      value={newAssignment.recurrence_end_date}
+                      onChange={(e) => setNewAssignment({ ...newAssignment, recurrence_end_date: e.target.value })}
+                      min={newAssignment.due_date}
+                    />
+                  </div>
+                </div>
+              )}
+
 
               <div className="space-y-2">
                 <Label>Assignment Content</Label>
@@ -415,7 +473,7 @@ export default function ParentDashboard() {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 mt-4">
                 <Label>Assign to Children</Label>
                 {children.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
@@ -431,13 +489,20 @@ export default function ParentDashboard() {
                 )}
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 mt-4">
                 <Label>Links & Resources</Label>
                 <div className="space-y-2">
                   {newAssignment.links.map((link, index) => (
                     <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded">
-                      <LinkIcon className="h-4 w-4" />
+                      {link.type === 'video' ? (
+                        <Video className="h-4 w-4 text-red-500" />
+                      ) : (
+                        <LinkIcon className="h-4 w-4" />
+                      )}
                       <span className="flex-1">{link.title}</span>
+                      <span className="text-xs text-muted-foreground px-2 py-1 bg-background rounded">
+                        {link.type === 'video' ? 'Video' : 'Link'}
+                      </span>
                       <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary text-sm underline">
                         {link.url}
                       </a>
@@ -451,44 +516,76 @@ export default function ParentDashboard() {
                       </Button>
                     </div>
                   ))}
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Link title"
-                      value={newLink.title}
-                      onChange={(e) => setNewLink({ ...newLink, title: e.target.value })}
-                    />
-                    <Input
-                      placeholder="URL"
-                      value={newLink.url}
-                      onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
-                    />
-                    <Button type="button" onClick={addLink}>Add Link</Button>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={newLink.type === 'link' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setNewLink({ ...newLink, type: 'link' })}
+                        className="gap-1"
+                      >
+                        <LinkIcon className="h-3 w-3" />
+                        Link
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={newLink.type === 'video' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setNewLink({ ...newLink, type: 'video' })}
+                        className="gap-1"
+                      >
+                        <Video className="h-3 w-3" />
+                        Video
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder={newLink.type === 'video' ? 'Video title' : 'Link title'}
+                        value={newLink.title}
+                        onChange={(e) => setNewLink({ ...newLink, title: e.target.value })}
+                      />
+                      <Input
+                        placeholder={newLink.type === 'video' ? 'YouTube URL' : 'URL'}
+                        value={newLink.url}
+                        onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
+                      />
+                      <Button type="button" onClick={addLink}>
+                        Add {newLink.type === 'video' ? 'Video' : 'Link'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-2">
-                <Button onClick={createOrUpdateAssignment} disabled={isSaving}>
-                  {isSaving ? 'Saving...' : (editingAssignment ? 'Update Assignment' : 'Save Assignment')}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={resetForm}
-                >
-                  Cancel
-                </Button>
-              </div>
+
             </div>
+
+            <SheetFooter className="border-t border-border mt-4 py-4 bg-background">
+              <Button
+                variant="outline"
+                onClick={resetForm}
+              >
+                Cancel
+              </Button>
+              <Button onClick={createOrUpdateAssignment} disabled={isSaving}>
+                {isSaving ? 'Saving...' : (editingAssignment ? 'Update Assignment' : 'Save Assignment')}
+              </Button>
+            </SheetFooter>
           </SheetContent>
         </Sheet>
       </div>
-      {assignments.length > 0 && (
-        <Card className="mb-4">
-          <CardContent>
-            <ChartLineInteractive />
-          </CardContent>
-        </Card>
-      )}
+
+      {
+        assignments.length > 0 && (
+          <Card className="mb-4">
+            <CardContent>
+              <ChartLineInteractive />
+            </CardContent>
+          </Card>
+        )
+      }
+
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Assignments</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
@@ -551,6 +648,6 @@ export default function ParentDashboard() {
           ))}
         </div>
       </div>
-    </div>
+    </div >
   )
 }

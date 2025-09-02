@@ -7,6 +7,21 @@ import { cn } from "@/lib/utils"
 import { cva, VariantProps } from "class-variance-authority"
 
 
+const tabsListVariants = cva(
+  "inline-flex w-full items-start justify-center rounded-md p-1 gap-1 group-data-[state=active]:bg-background group-data-[state=active]:text-primary-foreground",
+  {
+    variants: {
+      variant: {
+        default: "text-muted-foreground/70 inline-flex w-full justify-start rounded-md p-1 gap-1",
+        secondary: "text-primary-foreground inline-flex w-fit items-center justify-center rounded-md p-1 gap-1",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+)
+
 const tabsTriggerVariants = cva(
   "hover:text-muted-foreground text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 inline-flex items-center justify-center gap-0.5 rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 cursor-pointer transition-colors",
   {
@@ -45,13 +60,15 @@ function Tabs({
 
 function TabsList({
   className,
+  variant,
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.List>) {
+}: React.ComponentProps<typeof TabsPrimitive.List> & VariantProps<typeof tabsListVariants>) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        "bg-muted text-muted-foreground/70 inline-flex w-fit items-center justify-center rounded-md p-1 gap-1",
+        tabsListVariants({ variant }),
+        "bg-muted",
         className
       )}
       {...props}

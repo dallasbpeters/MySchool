@@ -27,11 +27,11 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Only parents can access children data
-    if (userProfile?.role !== 'parent') {
+    // Only parents and admins can access children data
+    if (userProfile?.role !== 'parent' && userProfile?.role !== 'admin') {
       return NextResponse.json({
         children: [],
-        error: 'Only parents can access children data'
+        error: 'Only parents and admins can access children data'
       })
     }
 

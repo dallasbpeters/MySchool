@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ assignments: [], profile: null })
     }
 
-        // Determine which parent's assignments to fetch and which student to view as
+    // Determine which parent's assignments to fetch and which student to view as
     let parentId = profile.role === 'parent' ? user.id : profile.parent_id
     let studentId = childId || user.id
 
@@ -51,11 +51,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get assignments
+    // Get assignments - only those assigned to the specific student
     const { data: assignmentsData, error: assignmentsError } = await supabase
       .from('assignments')
-      .select('*')
+      .select(`
+        *,
+        student_assignments!inner(student_id)
+      `)
       .eq('parent_id', parentId)
+      .eq('student_assignments.student_id', studentId)
       .order('due_date', { ascending: true })
 
     if (assignmentsError) {

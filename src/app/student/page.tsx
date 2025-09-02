@@ -154,8 +154,7 @@ export default function StudentDashboard() {
   const { toast } = useToast()
 
   useEffect(() => {
-    fetchAssignments()
-    checkUserRole()
+    checkUserRole() // This will handle fetching assignments based on user role
     fetchNotes()
     fetchCategories()
   }, [])
@@ -541,6 +540,7 @@ export default function StudentDashboard() {
 
   const overdueAssignments = assignments.filter(a => {
     if (!a.is_recurring) {
+      // For regular assignments: overdue if past due date AND not completed
       return isDatePast(a.due_date) && !a.completed
     }
 

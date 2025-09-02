@@ -51,16 +51,34 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get assignments - only those assigned to the specific student
-    const { data: assignmentsData, error: assignmentsError } = await supabase
-      .from('assignments')
-      .select(`
-        *,
-        student_assignments!inner(student_id)
-      `)
-      .eq('parent_id', parentId)
-      .eq('student_assignments.student_id', studentId)
-      .order('due_date', { ascending: true })
+    // Get assignments based on context:
+    // - Parent dashboard (no childId): Get ALL assignments created by parent
+    // - Student view (childId provided or student user): Get only assigned assignments
+    let assignmentsData, assignmentsError
+
+    if (profile.role === 'parent' && !childId) {
+      // Parent dashboard - show all assignments they created
+      const result = await supabase
+        .from('assignments')
+        .select('*')
+        .eq('parent_id', parentId)
+        .order('due_date', { ascending: true })
+      assignmentsData = result.data
+      assignmentsError = result.error
+    } else {
+      // Student view - only show assignments assigned to specific student
+      const result = await supabase
+        .from('assignments')
+        .select(`
+          *,
+          student_assignments!inner(student_id)
+        `)
+        .eq('parent_id', parentId)
+        .eq('student_assignments.student_id', studentId)
+        .order('due_date', { ascending: true })
+      assignmentsData = result.data
+      assignmentsError = result.error
+    }
 
     if (assignmentsError) {
       return NextResponse.json({ assignments: [], error: assignmentsError.message })

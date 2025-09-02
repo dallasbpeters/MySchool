@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { StickyNote, Calendar, CheckCircle2, Link as LinkIcon, User, ChevronDown, BookOpen, Plus, Trash2, Repeat, Video, Play } from 'lucide-react'
+import { StickyNote, Calendar, CheckCircle2, Link as LinkIcon, User, ChevronDown, BookOpen, Plus, Trash2, Repeat, Video, Play, Edit } from 'lucide-react'
 import { format, isToday, isTomorrow, isPast } from 'date-fns'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -149,6 +149,8 @@ export default function StudentDashboard() {
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null)
   const [notes, setNotes] = useState<Note[]>([])
   const [selectedInstanceDates, setSelectedInstanceDates] = useState<Record<string, string>>({})
+  const [editingNote, setEditingNote] = useState<Note | null>(null)
+  const [editNoteData, setEditNoteData] = useState({ title: '', content: null as any })
 
 
   const { toast } = useToast()
@@ -309,6 +311,66 @@ export default function StudentDashboard() {
 
     } catch (error) {
       // Handle error silently
+    }
+  }
+
+  const startEditNote = (note: Note) => {
+    setEditingNote(note)
+    setEditNoteData({ title: note.title, content: note.content })
+  }
+
+  const cancelEditNote = () => {
+    setEditingNote(null)
+    setEditNoteData({ title: '', content: null })
+  }
+
+  const updateNote = async () => {
+    if (!editingNote) return
+
+    try {
+      if (!editNoteData.title.trim()) {
+        toast({
+          title: "Error",
+          description: "Please enter a title for the note",
+          variant: "destructive"
+        })
+        return
+      }
+
+      const response = await fetch(`/api/notes?id=${editingNote.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: editNoteData.title.trim(),
+          content: editNoteData.content,
+          category: editingNote.category // Keep existing category
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: data.message || "Note updated successfully",
+        })
+        cancelEditNote()
+        fetchNotes()
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to update note",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update note",
+        variant: "destructive"
+      })
     }
   }
 
@@ -886,24 +948,71 @@ export default function StudentDashboard() {
                           <CardHeader className="mb-4">
                             <div className="flex justify-between items-start">
                               <CardTitle className="text-lg">{note.title}</CardTitle>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deleteNote(note.id)}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => startEditNote(note)}
+                                  className="text-muted-foreground hover:text-foreground"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteNote(note.id)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                             <CardDescription className="flex items-center gap-2">
                               <Calendar className="h-4 w-4" />
                               {format(new Date(note.created_at), 'MMM dd, yyyy')}
                             </CardDescription>
                           </CardHeader>
-                          {note.content && (
-                            <CardContent>
-                              <NoteContent content={note.content} />
+                          {editingNote?.id === note.id ? (
+                            <CardContent className="space-y-4">
+                              <div>
+                                <Label htmlFor={`edit-note-title-${note.id}`}>Note Title</Label>
+                                <Input
+                                  id={`edit-note-title-${note.id}`}
+                                  value={editNoteData.title}
+                                  onChange={(e) => setEditNoteData({ ...editNoteData, title: e.target.value })}
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`edit-note-content-${note.id}`}>Content</Label>
+                                <div className="mt-1">
+                                  <WysiwygEditor
+                                    content={editNoteData.content}
+                                    onChange={(content) => setEditNoteData({ ...editNoteData, content })}
+                                    placeholder="Edit your note here..."
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  onClick={cancelEditNote}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  onClick={updateNote}
+                                >
+                                  Save Changes
+                                </Button>
+                              </div>
                             </CardContent>
+                          ) : (
+                            note.content && (
+                              <CardContent>
+                                <NoteContent content={note.content} />
+                              </CardContent>
+                            )
                           )}
                           <CardFooter className="mt-4 flex justify-between items-center">
                             <div className="text-sm text-muted-foreground">

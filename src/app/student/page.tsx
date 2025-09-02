@@ -195,8 +195,8 @@ export default function StudentDashboard() {
         setUserRole(data.profile.role)
 
         if (data.profile.role === 'parent') {
-          // For parents, don't load assignments initially - wait for child selection
-          // The API will return empty assignments for parents without childId
+          // For parents, don't load assignments initially - let first child be auto-selected
+          // Clear any existing assignments to prevent showing parent's own assignments
           setAssignments([])
           fetchChildren()
         } else {
@@ -246,12 +246,9 @@ export default function StudentDashboard() {
           const firstChild = data.children[0]
           setSelectedChildId(firstChild.id)
           setSelectedChildName(firstChild.name)
-          // Fetch assignments for the first child and set loading to false when done
+          // Fetch assignments for the first child
           fetchAssignments(firstChild.id)
         }
-      } else {
-        // No children found, stop loading
-        setLoading(false)
       }
     } catch (error) {
       // Handle error silently
@@ -268,6 +265,29 @@ export default function StudentDashboard() {
     setSelectedChildId(null)
     setSelectedChildName(null)
     fetchAssignments()
+  }
+
+  // Wrapper function that only allows toggling when appropriate
+  const handleToggle = (assignmentId: string, completed: boolean, instanceDate?: string) => {
+    // For students, always allow toggle
+    if (userRole === 'student') {
+      return toggleAssignment(assignmentId, completed, instanceDate)
+    }
+
+    // For parents, only allow toggle when a child is selected
+    if (userRole === 'parent' && selectedChildId) {
+      return toggleAssignment(assignmentId, completed, instanceDate)
+    }
+
+    // For parents in overview mode, show message to select a child
+    if (userRole === 'parent' && !selectedChildId) {
+      toast({
+        title: "Select a Child",
+        description: "Please select a child from the dropdown to interact with assignments",
+        variant: "default"
+      })
+      return
+    }
   }
 
   const fetchNotes = async () => {
@@ -596,7 +616,10 @@ export default function StudentDashboard() {
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold">
-            {selectedChildName ? `${selectedChildName}'s Dashboard` : 'Student Dashboard'}
+            {userRole === 'parent'
+              ? (selectedChildName ? `${selectedChildName}'s Dashboard` : 'Parent Dashboard')
+              : 'Student Dashboard'
+            }
           </h1>
           {userRole === 'parent' && children.length > 0 && (
             <DropdownMenu>
@@ -653,7 +676,7 @@ export default function StudentDashboard() {
                         image={true}
                         key={assignment.id}
                         assignment={assignment}
-                        onToggle={toggleAssignment}
+                        onToggle={handleToggle}
                         getDateLabel={getDateLabel}
                         getDateColor={getDateColor}
                         imageIndex={index}
@@ -679,7 +702,7 @@ export default function StudentDashboard() {
                         <AssignmentCard
                           image={true}
                           assignment={assignment}
-                          onToggle={toggleAssignment}
+                          onToggle={handleToggle}
                           getDateLabel={getDateLabel}
                           getDateColor={getDateColor}
                           imageIndex={index + overdueAssignments.length}
@@ -717,7 +740,7 @@ export default function StudentDashboard() {
                         image={true}
                         key={assignment.id}
                         assignment={assignment}
-                        onToggle={toggleAssignment}
+                        onToggle={handleToggle}
                         getDateLabel={getDateLabel}
                         getDateColor={getDateColor}
                         imageIndex={index + overdueAssignments.length + todayAssignments.length}
@@ -777,7 +800,7 @@ export default function StudentDashboard() {
                               image={false}
                               key={assignment.id}
                               assignment={assignment}
-                              onToggle={toggleAssignment}
+                              onToggle={handleToggle}
                               getDateLabel={getDateLabel}
                               getDateColor={getDateColor}
                               imageIndex={currentIndex}

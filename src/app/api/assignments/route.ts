@@ -34,24 +34,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ assignments: [], profile: null })
     }
 
-    // Determine which parent's assignments to fetch and which student to view as
+        // Determine which parent's assignments to fetch and which student to view as
     let parentId = profile.role === 'parent' ? user.id : profile.parent_id
-    let studentId: string
-
-    if (profile.role === 'parent') {
-      // Parents must specify a child to view assignments for
-      if (!childId) {
-        return NextResponse.json({
-          assignments: [],
-          profile: profile,
-          error: 'Parents must select a child to view assignments'
-        })
-      }
-      studentId = childId
-    } else {
-      // Students view their own assignments
-      studentId = user.id
-    }
+    let studentId = childId || user.id
 
     // If parent is requesting child view, verify the child belongs to them
     if (childId && profile.role === 'parent') {

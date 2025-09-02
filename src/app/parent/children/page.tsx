@@ -171,6 +171,7 @@ export default function ChildrenManagement() {
         const sortedCodes = result.data.sort((a: any, b: any) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
+        console.log('Fetched signup codes:', sortedCodes.map(c => ({ code: c.code, child_name: c.child_name, used: c.used })))
         setSignupCodes(sortedCodes)
       }
     } catch (error) {
@@ -544,7 +545,15 @@ export default function ChildrenManagement() {
             </Sheet>
 
             <div className="space-y-3">
-              {signupCodes.filter(code => !code.used).map((code) => (
+              {(() => {
+                const unusedCodes = signupCodes.filter(code => code.used === false || code.used === 'false' || !code.used)
+                console.log('Displaying signup codes:', {
+                  total: signupCodes.length,
+                  unused: unusedCodes.length,
+                  codes: signupCodes.map(c => ({ code: c.code, used: c.used, type: typeof c.used }))
+                })
+                return unusedCodes
+              })().map((code) => (
                 <Card key={code.id} className="border-green-600 bg-green-50 shadow-none">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-center">

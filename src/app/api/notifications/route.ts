@@ -42,17 +42,18 @@ export async function GET(request: NextRequest) {
           .from('assignments')
           .select(`
             id, title, due_date,
-            student_assignments!left(completed)
+            student_assignments!inner(completed, student_id)
           `)
           .eq('parent_id', parentId)
+          .eq('student_assignments.student_id', user.id)
           .lt('due_date', now.toISOString())
 
         if (assignments) {
           assignments.forEach(assignment => {
-            const completion = assignment.student_assignments?.find(
-              (sa: any) => sa.student_id === user.id
-            )
-            
+            // Since we're using inner join, we know this student is assigned
+            // Check if they've completed it
+            const completion = assignment.student_assignments?.[0] // Should only be one since we filtered by student_id
+
             if (!completion?.completed) {
               notifications.push({
                 id: `overdue-${assignment.id}`,
@@ -78,18 +79,18 @@ export async function GET(request: NextRequest) {
           .from('assignments')
           .select(`
             id, title, due_date,
-            student_assignments!left(completed)
+            student_assignments!inner(completed, student_id)
           `)
           .eq('parent_id', parentId)
+          .eq('student_assignments.student_id', user.id)
           .gte('due_date', today.toISOString())
           .lt('due_date', tomorrow.toISOString())
 
         if (todayAssignments) {
           todayAssignments.forEach(assignment => {
-            const completion = assignment.student_assignments?.find(
-              (sa: any) => sa.student_id === user.id
-            )
-            
+            // Since we're using inner join, we know this student is assigned
+            const completion = assignment.student_assignments?.[0] // Should only be one since we filtered by student_id
+
             if (!completion?.completed) {
               notifications.push({
                 id: `due-today-${assignment.id}`,
@@ -127,7 +128,7 @@ export async function GET(request: NextRequest) {
               const completion = assignment.student_assignments?.find(
                 (sa: any) => sa.student_id === child.id
               )
-              
+
               if (!completion?.completed) {
                 notifications.push({
                   id: `child-overdue-${child.id}-${assignment.id}`,
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest) {
       const typeOrder = { 'overdue': 0, 'child-overdue': 1, 'due-today': 2 }
       const aOrder = typeOrder[a.type as keyof typeof typeOrder] ?? 3
       const bOrder = typeOrder[b.type as keyof typeof typeOrder] ?? 3
-      
+
       if (aOrder !== bOrder) return aOrder - bOrder
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
@@ -157,7 +158,7 @@ export async function GET(request: NextRequest) {
     // Limit to most recent 10 notifications
     const limitedNotifications = notifications.slice(0, 10)
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       notifications: limitedNotifications,
       count: notifications.length
     })

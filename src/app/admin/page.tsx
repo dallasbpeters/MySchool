@@ -1,0 +1,633 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { WysiwygEditor } from '@/components/editor/wysiwyg-editor'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import MultipleSelector, { Option } from '@/components/ui/multiselect'
+import { AssignmentForm } from '@/components/assignment-form'
+import { Plus, Trash2, Calendar, Link as LinkIcon, Repeat, Edit, Video, Play, Users, Shield, Filter } from 'lucide-react'
+import { format } from 'date-fns'
+import { MiniCalendar, MiniCalendarNavigation, MiniCalendarDays, MiniCalendarDay } from '@/components/ui/shadcn-io/mini-calendar'
+import { useToast } from '@/hooks/use-toast'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+interface Link {
+  title: string
+  url: string
+  type?: 'link' | 'video'
+}
+
+interface Assignment {
+  id: string
+  title: string
+  content: any
+  links: Link[]
+  due_date: string
+  created_at: string
+  category?: string
+  is_recurring?: boolean
+  recurrence_pattern?: {
+    days: string[]
+    frequency?: 'weekly' | 'daily'
+  }
+  recurrence_end_date?: string
+  next_due_date?: string
+  assigned_children?: string[]
+  parent_name?: string
+}
+
+interface Family {
+  parent_id: string
+  parent_name: string
+  parent_email: string
+  children: Array<{
+    id: string
+    name: string
+    email: string
+  }>
+}
+
+export default function AdminDashboard() {
+  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [families, setFamilies] = useState<Family[]>([])
+  const [categories, setCategories] = useState<Option[]>([])
+  const [isCreating, setIsCreating] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null)
+  const [userRole, setUserRole] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const [selectedFamily, setSelectedFamily] = useState<string>('all')
+  const [newAssignment, setNewAssignment] = useState({
+    title: '',
+    content: null as any,
+    links: [] as Link[],
+    due_date: format(new Date(), 'yyyy-MM-dd'),
+    category: [] as Option[],
+    selectedChildren: [] as Option[],
+    is_recurring: false,
+    recurrence_pattern: {
+      days: [] as string[],
+      frequency: 'weekly' as 'weekly' | 'daily'
+    },
+    recurrence_end_date: ''
+  })
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(new Date())
+  const [newLink, setNewLink] = useState({ title: '', url: '', type: 'link' as 'link' | 'video' })
+  const { toast } = useToast()
+
+  useEffect(() => {
+    checkAdminAccess()
+  }, [])
+
+  // Update due date when calendar date is selected
+  useEffect(() => {
+    if (selectedCalendarDate) {
+      setNewAssignment(prev => ({
+        ...prev,
+        due_date: format(selectedCalendarDate, 'yyyy-MM-dd')
+      }))
+    }
+  }, [selectedCalendarDate])
+
+  const checkAdminAccess = async () => {
+    try {
+      // Try to fetch admin assignments directly - this will verify admin role
+      console.log('🔧 Admin: Fetching admin assignments...')
+      const response = await fetch('/api/admin/assignments')
+      const data = await response.json()
+
+      console.log('🔧 Admin API Response:', {
+        status: response.status,
+        ok: response.ok,
+        assignmentsCount: data.assignments?.length || 0,
+        error: data.error
+      })
+
+      if (response.ok && data.assignments) {
+        setUserRole('admin')
+        setAssignments(data.assignments)
+        console.log('🔧 Admin: Set assignments:', data.assignments.length)
+        await fetchAllFamilies() // Make sure families are loaded before enabling edit
+        fetchCategories()
+      } else {
+        // Not admin or error
+        setUserRole('unauthorized')
+        console.log('Admin access denied:', data.error)
+      }
+    } catch (error) {
+      console.error('Admin access check failed:', error)
+      setUserRole('unauthorized')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchAllAssignments = async () => {
+    try {
+      const response = await fetch('/api/admin/assignments')
+      const data = await response.json()
+
+      if (data.assignments) {
+        setAssignments(data.assignments)
+      }
+    } catch (error) {
+      console.error('Failed to fetch assignments:', error)
+    }
+  }
+
+  const fetchAllFamilies = async () => {
+    try {
+      console.log('🔧 Admin: Fetching all families...')
+      const response = await fetch('/api/admin/families')
+      const data = await response.json()
+
+      console.log('🔧 Admin: Families API response:', {
+        status: response.status,
+        ok: response.ok,
+        familiesCount: data.families?.length || 0,
+        error: data.error
+      })
+
+      if (data.families) {
+        setFamilies(data.families)
+        console.log('🔧 Admin: Set families:', data.families.length)
+      }
+    } catch (error) {
+      console.error('Failed to fetch families:', error)
+    }
+  }
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/assignments')
+      const data = await response.json()
+
+      if (data.assignments) {
+        const uniqueCategories = [...new Set(
+          data.assignments
+            .map((a: Assignment) => a.category)
+            .filter((c: string) => c && c.trim())
+        )]
+        setCategories(
+          uniqueCategories.map((cat: string) => ({ label: cat, value: cat }))
+        )
+      }
+    } catch (error) {
+      console.error('Failed to fetch categories:', error)
+    }
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4 max-w-4xl">
+        <p className="text-center text-2xl">Loading admin dashboard...</p>
+      </div>
+    )
+  }
+
+  // Show unauthorized message for non-admins
+  if (userRole !== 'admin') {
+    return (
+      <div className="container mx-auto p-4 max-w-4xl">
+        <Card>
+          <CardContent className="text-center py-12">
+            <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground mb-4">
+              You don't have admin privileges to access this page.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Current role: {userRole || 'Unknown'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const createOrUpdateAssignment = async () => {
+    setIsSaving(true)
+
+    // Validation
+    if (!newAssignment.title.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter an assignment title",
+        variant: "destructive"
+      })
+      setIsSaving(false)
+      return
+    }
+
+    if (newAssignment.selectedChildren.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one student for this assignment",
+        variant: "destructive"
+      })
+      setIsSaving(false)
+      return
+    }
+
+    if (newAssignment.is_recurring && newAssignment.recurrence_pattern.days.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one day for the recurring assignment",
+        variant: "destructive"
+      })
+      setIsSaving(false)
+      return
+    }
+
+    try {
+      const isEditing = !!editingAssignment
+      const url = isEditing ? `/api/admin/assignments?id=${editingAssignment.id}` : '/api/admin/assignments'
+      const method = isEditing ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: newAssignment.title,
+          content: newAssignment.content,
+          links: newAssignment.links,
+          due_date: newAssignment.due_date,
+          category: newAssignment.category.length > 0 ? newAssignment.category[0].value : '',
+          selectedChildren: newAssignment.selectedChildren.map(child => child.value),
+          is_recurring: newAssignment.is_recurring,
+          recurrence_pattern: newAssignment.is_recurring ? newAssignment.recurrence_pattern : null,
+          recurrence_end_date: newAssignment.is_recurring && newAssignment.recurrence_end_date ? newAssignment.recurrence_end_date : null
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || `Assignment ${isEditing ? 'update' : 'creation'} failed`)
+      }
+
+      // Success!
+      toast({
+        title: "Success",
+        description: data.message || `Assignment ${isEditing ? 'updated' : 'created'} successfully`,
+      })
+
+      resetForm()
+      fetchAllAssignments()
+
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || `An unexpected error occurred while ${editingAssignment ? 'updating' : 'creating'} the assignment`,
+        variant: "destructive"
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const deleteAssignment = async (id: string) => {
+    try {
+      const response = await fetch(`/api/admin/assignments?id=${id}`, {
+        method: 'DELETE'
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Delete failed')
+      }
+
+      toast({
+        title: "Success",
+        description: data.message || "Assignment deleted successfully",
+      })
+
+      fetchAllAssignments()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete assignment",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const addLink = () => {
+    if (newLink.title && newLink.url) {
+      setNewAssignment({
+        ...newAssignment,
+        links: [...newAssignment.links, newLink]
+      })
+      setNewLink({ title: '', url: '', type: 'link' })
+    }
+  }
+
+  const removeLink = (index: number) => {
+    setNewAssignment({
+      ...newAssignment,
+      links: newAssignment.links.filter((_, i) => i !== index)
+    })
+  }
+
+  const startEditAssignment = (assignment: Assignment) => {
+    setEditingAssignment(assignment)
+
+    console.log('🔧 Admin Edit: Starting edit for assignment:', {
+      title: assignment.title,
+      assigned_children: assignment.assigned_children,
+      families_count: families.length,
+      allChildrenOptions_count: allChildrenOptions.length
+    })
+
+    // Find the child options that are currently assigned to this assignment
+    const assignedChildOptions = assignment.assigned_children?.map(childName => {
+      // Find the child in all families
+      for (const family of families) {
+        const child = family.children.find(c => c.name === childName)
+        if (child) {
+          return { label: `${child.name} (${family.parent_name})`, value: child.id }
+        }
+      }
+      console.log('🔧 Admin Edit: Could not find child in families:', childName)
+      return { label: childName, value: childName } // Fallback if child not found
+    }).filter(Boolean) || []
+
+    console.log('🔧 Admin Edit: Mapped assigned children:', assignedChildOptions)
+
+    // Convert category string to Option array
+    const categoryOptions = assignment.category ?
+      [{ label: assignment.category, value: assignment.category }] : []
+
+    setNewAssignment({
+      title: assignment.title,
+      content: assignment.content,
+      links: assignment.links || [],
+      due_date: assignment.due_date,
+      category: categoryOptions,
+      selectedChildren: assignedChildOptions,
+      is_recurring: assignment.is_recurring || false,
+      recurrence_pattern: {
+        days: assignment.recurrence_pattern?.days || [],
+        frequency: assignment.recurrence_pattern?.frequency || 'weekly'
+      },
+      recurrence_end_date: assignment.recurrence_end_date || ''
+    })
+    setIsCreating(true)
+  }
+
+  const resetForm = () => {
+    setEditingAssignment(null)
+    setNewAssignment({
+      title: '',
+      content: null as any,
+      links: [] as Link[],
+      due_date: format(new Date(), 'yyyy-MM-dd'),
+      category: [] as Option[],
+      selectedChildren: [] as Option[],
+      is_recurring: false,
+      recurrence_pattern: {
+        days: [] as string[],
+        frequency: 'weekly' as 'weekly' | 'daily'
+      },
+      recurrence_end_date: ''
+    })
+    setIsCreating(false)
+  }
+
+  // Filter assignments by selected family
+  const filteredAssignments = selectedFamily === 'all'
+    ? assignments
+    : assignments.filter(a => {
+      const family = families.find(f => f.parent_name === a.parent_name)
+      return family?.parent_id === selectedFamily
+    })
+
+  // Get all children options for assignment
+  const allChildrenOptions = families.flatMap(family =>
+    family.children.map(child => ({
+      label: `${child.name} (${family.parent_name})`,
+      value: child.id
+    }))
+  )
+
+  return (
+    <div className="z-10 relative container mx-auto p-4 max-w-6xl">
+      <div className="gap-4 flex md:flex-row flex-col justify-between items-start md:items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Shield className="h-8 w-8 text-blue-600" />
+            Admin Dashboard
+          </h1>
+          <p className="text-muted-foreground">Manage assignments across all families</p>
+        </div>
+
+        <Button className="gap-2" onClick={() => setIsCreating(true)}>
+          <Plus className="h-4 w-4" />
+          Create Assignment
+        </Button>
+
+        <AssignmentForm
+          isOpen={isCreating}
+          onOpenChange={setIsCreating}
+          editingAssignment={editingAssignment}
+          assignmentData={newAssignment}
+          onAssignmentDataChange={setNewAssignment}
+          onSave={createOrUpdateAssignment}
+          onCancel={resetForm}
+          isSaving={isSaving}
+          categories={categories}
+          childrenOptions={allChildrenOptions}
+          selectedCalendarDate={selectedCalendarDate}
+          onCalendarDateChange={setSelectedCalendarDate}
+        />
+      </div>
+
+      <Tabs defaultValue="assignments" className="w-full">
+        <TabsList>
+          <TabsTrigger value="assignments">All Assignments</TabsTrigger>
+          <TabsTrigger value="families">Families</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="assignments" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold">
+              All Assignments ({filteredAssignments.length}
+              {selectedFamily !== 'all' && ` of ${assignments.length}`})
+            </h2>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  {selectedFamily === 'all'
+                    ? 'All Families'
+                    : families.find(f => f.parent_id === selectedFamily)?.parent_name || 'Unknown Family'
+                  }
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => setSelectedFamily('all')}
+                  className={selectedFamily === 'all' ? 'bg-accent' : ''}
+                >
+                  All Families ({assignments.length} assignments)
+                </DropdownMenuItem>
+                {families.map((family) => {
+                  const familyAssignmentCount = assignments.filter(a => a.parent_name === family.parent_name).length
+                  return (
+                    <DropdownMenuItem
+                      key={family.parent_id}
+                      onClick={() => setSelectedFamily(family.parent_id)}
+                      className={selectedFamily === family.parent_id ? 'bg-accent' : ''}
+                    >
+                      {family.parent_name} ({familyAssignmentCount} assignments)
+                    </DropdownMenuItem>
+                  )
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {assignments.length > 0 && (() => {
+            const parentBreakdown = assignments.reduce((acc, a) => {
+              acc[a.parent_name || 'Unknown'] = (acc[a.parent_name || 'Unknown'] || 0) + 1
+              return acc
+            }, {} as Record<string, number>)
+
+            const sampleTitles = assignments.slice(0, 5).map(a => `${a.title} (by ${a.parent_name})`)
+
+            console.log('🔧 Admin UI: Assignment breakdown:', parentBreakdown)
+            console.log('🔧 Admin UI: Sample titles:', sampleTitles)
+
+            return null
+          })()}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredAssignments.map((assignment) => (
+              <Card key={assignment.id} className="group">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        {assignment.title}
+                        {assignment.is_recurring && (
+                          <Repeat className="h-4 w-4 text-blue-500" />
+                        )}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-2 mt-1">
+                        <Calendar className="h-4 w-4" />
+                        Due: {format(new Date(assignment.due_date), 'MMM dd, yyyy')}
+                      </CardDescription>
+                      <CardDescription className="flex items-center gap-2 mt-1">
+                        <Users className="h-4 w-4" />
+                        Created by: {assignment.parent_name}
+                      </CardDescription>
+                    </div>
+                    <div className="hidden group-hover:flex gap-0 bg-background absolute top-0 right-0 rounded-lg">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="group-hover:text-foreground"
+                        onClick={() => startEditAssignment(assignment)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="hover:bg-red-500"
+                        onClick={() => deleteAssignment(assignment.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                {assignment.assigned_children && assignment.assigned_children.length > 0 && (
+                  <CardContent>
+                    <div className="space-y-1 flex items-center gap-2">
+                      <span className="text-sm font-medium">Assigned to:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {assignment.assigned_children.map((childName, index) => (
+                          <span key={index} className="bg-primary/30 text-foreground text-xs px-2 py-0.5 rounded-full leading-4">
+                            {childName}
+                          </span>
+                        ))}
+                        {assignment.category && (
+                          <span className="flex items-center gap-1 whitespace-nowrap text-xs border border-primary/30 text-foreground px-2 py-0.5 rounded-full leading-4">
+                            {assignment.category}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            ))}
+          </div>
+
+          {filteredAssignments.length === 0 && (
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-muted-foreground">
+                  {selectedFamily === 'all'
+                    ? 'No assignments found across all families.'
+                    : `No assignments found for ${families.find(f => f.parent_id === selectedFamily)?.parent_name || 'this family'}.`
+                  }
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="families" className="space-y-4">
+          <h2 className="text-2xl font-semibold">All Families ({families.length})</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {families.map((family) => (
+              <Card key={family.parent_id}>
+                <CardHeader>
+                  <CardTitle>{family.parent_name}</CardTitle>
+                  <CardDescription>{family.parent_email}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Children ({family.children.length}):</h4>
+                    {family.children.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No children registered</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {family.children.map((child) => (
+                          <div key={child.id} className="flex justify-between items-center text-sm">
+                            <span>{child.name}</span>
+                            <span className="text-xs text-muted-foreground">{child.email}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {families.length === 0 && (
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-muted-foreground">No families found.</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}

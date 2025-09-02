@@ -16,18 +16,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { UniversalVideoPlayer } from '@/components/universal-video-player'
 import { VideoPlayer, VideoPlayerContent, VideoPlayerControlBar, VideoPlayerPlayButton, VideoPlayerTimeRange, VideoPlayerVolumeRange, VideoPlayerMuteButton } from '@/components/ui/shadcn-io/video-player'
 import { Timeline, TimelineItem, TimelineHeader, TimelineContent } from '@/components/ui/timeline-view'
 import { RecurringInstancesGrid } from '@/components/ui/recurring-instances-grid'
 
 import ColourfulText from '@/components/ui/colourful-text'
 
-// Helper function to extract YouTube video ID from URL
-const getYouTubeVideoId = (url: string): string | null => {
-  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
-  const match = url.match(regex)
-  return match ? match[1] : null
-}
+// YouTube helper function moved to UniversalVideoPlayer component
 
 // Helper function to generate upcoming instances for recurring assignments
 const getRecurringInstances = (assignment: Assignment, daysAhead: number = 7): Array<{ date: string, dayName: string }> => {
@@ -128,6 +124,7 @@ interface Child {
   id: string
   name: string
   email: string
+  parent_name?: string // For admin view
 }
 
 interface Note {
@@ -167,6 +164,16 @@ export default function StudentDashboard() {
       const hash = window.location.hash
       if (hash.startsWith('#assignment-')) {
         const assignmentId = hash.replace('#assignment-', '')
+
+        // Switch to assignments tab first
+        const assignmentsTab = document.querySelector('[data-value="assignments"]') as HTMLElement
+        if (assignmentsTab) {
+          assignmentsTab.click()
+        }
+
+        // Expand the assignment card
+        setExpandedCardId(assignmentId)
+
         setTimeout(() => {
           const element = document.getElementById(`assignment-${assignmentId}`)
           if (element) {
@@ -174,7 +181,7 @@ export default function StudentDashboard() {
             // Clear the hash after scrolling
             window.history.replaceState(null, null, window.location.pathname)
           }
-        }, 500) // Wait for assignments to load and render
+        }, 600) // Slightly longer wait for tab switch + card expansion
       }
     }
 
@@ -192,14 +199,25 @@ export default function StudentDashboard() {
       const response = await fetch('/api/assignments')
       const data = await response.json()
 
+      console.log('🔧 Student Dashboard: Role check response:', {
+        status: response.status,
+        role: data.profile?.role,
+        hasAssignments: !!data.assignments,
+        assignmentsCount: data.assignments?.length || 0
+      })
+
       if (data.profile?.role) {
         setUserRole(data.profile.role)
 
         if (data.profile.role === 'parent') {
           // For parents, don't load assignments initially - let first child be auto-selected
-          // Clear any existing assignments to prevent showing parent's own assignments
           setAssignments([])
           fetchChildren()
+        } else if (data.profile.role === 'admin') {
+          // For admins, don't load assignments initially - let first student be auto-selected
+          console.log('🔧 Student Dashboard: Admin detected, fetching students...')
+          setAssignments([])
+          fetchChildren('admin')
         } else {
           // For students, load their assignments normally
           if (data.assignments) {
@@ -209,7 +227,7 @@ export default function StudentDashboard() {
         }
       }
     } catch (error) {
-      // Handle error silently
+      console.error('🔧 Student Dashboard: Role check failed:', error)
       setLoading(false)
     }
   }
@@ -234,21 +252,56 @@ export default function StudentDashboard() {
     }
   }
 
-  const fetchChildren = async () => {
+  const fetchChildren = async (roleOverride?: string) => {
     try {
-      const response = await fetch('/api/children')
-      const data = await response.json()
+      let response, data
+      const currentRole = roleOverride || userRole
 
-      if (data.children && data.children.length > 0) {
-        setChildren(data.children)
+      console.log('🔧 fetchChildren called with role:', currentRole)
 
-        // Auto-select first child if no child is currently selected
-        if (!selectedChildId) {
-          const firstChild = data.children[0]
-          setSelectedChildId(firstChild.id)
-          setSelectedChildName(firstChild.name)
-          // Fetch assignments for the first child
-          fetchAssignments(firstChild.id)
+      if (currentRole === 'admin') {
+        // Admin: fetch all students from all families
+        console.log('🔧 Admin: Fetching all students from all families...')
+        response = await fetch('/api/admin/students')
+        data = await response.json()
+
+        console.log('🔧 Admin: Students API response:', {
+          status: response.status,
+          ok: response.ok,
+          studentsCount: data.students?.length || 0,
+          error: data.error,
+          sampleStudents: data.students?.slice(0, 3).map((s: any) => `${s.name} (${s.parent_name})`) || []
+        })
+
+        if (data.students && data.students.length > 0) {
+          setChildren(data.students)
+
+          // Auto-select first student if no student is currently selected
+          if (!selectedChildId) {
+            const firstStudent = data.students[0]
+            setSelectedChildId(firstStudent.id)
+            setSelectedChildName(firstStudent.name)
+            console.log('🔧 Admin: Auto-selected first student:', firstStudent.name)
+            // Fetch assignments for the first student
+            fetchAssignments(firstStudent.id)
+          }
+        }
+      } else {
+        // Parent: fetch only their children
+        response = await fetch('/api/children')
+        data = await response.json()
+
+        if (data.children && data.children.length > 0) {
+          setChildren(data.children)
+
+          // Auto-select first child if no child is currently selected
+          if (!selectedChildId) {
+            const firstChild = data.children[0]
+            setSelectedChildId(firstChild.id)
+            setSelectedChildName(firstChild.name)
+            // Fetch assignments for the first child
+            fetchAssignments(firstChild.id)
+          }
         }
       }
     } catch (error) {
@@ -275,16 +328,18 @@ export default function StudentDashboard() {
       return toggleAssignment(assignmentId, completed, instanceDate)
     }
 
-    // For parents, only allow toggle when a child is selected
-    if (userRole === 'parent' && selectedChildId) {
+    // For parents and admins, only allow toggle when a child/student is selected
+    if ((userRole === 'parent' || userRole === 'admin') && selectedChildId) {
       return toggleAssignment(assignmentId, completed, instanceDate)
     }
 
-    // For parents in overview mode, show message to select a child
-    if (userRole === 'parent' && !selectedChildId) {
+    // For parents/admins in overview mode, show message to select a child/student
+    if ((userRole === 'parent' || userRole === 'admin') && !selectedChildId) {
       toast({
-        title: "Select a Child",
-        description: "Please select a child from the dropdown to interact with assignments",
+        title: userRole === 'admin' ? "Select a Student" : "Select a Child",
+        description: userRole === 'admin'
+          ? "Please select a student from the dropdown to interact with assignments"
+          : "Please select a child from the dropdown to interact with assignments",
         variant: "default"
       })
       return
@@ -678,12 +733,14 @@ export default function StudentDashboard() {
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold">
-            {userRole === 'parent'
-              ? (selectedChildName ? `${selectedChildName}'s Dashboard` : 'Parent Dashboard')
-              : 'Student Dashboard'
+            {userRole === 'admin'
+              ? (selectedChildName ? `${selectedChildName}'s Dashboard` : 'Admin Student View')
+              : userRole === 'parent'
+                ? (selectedChildName ? `${selectedChildName}'s Dashboard` : 'Parent Dashboard')
+                : 'Student Dashboard'
             }
           </h1>
-          {userRole === 'parent' && children.length > 0 && (
+          {(userRole === 'parent' || userRole === 'admin') && children.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2">
@@ -694,12 +751,12 @@ export default function StudentDashboard() {
               <DropdownMenuContent align="end">
                 {!selectedChildId && (
                   <DropdownMenuItem disabled className="text-muted-foreground">
-                    My View (Current)
+                    {userRole === 'admin' ? 'Admin View (Current)' : 'My View (Current)'}
                   </DropdownMenuItem>
                 )}
                 {selectedChildId && (
                   <DropdownMenuItem onClick={switchToOwnView}>
-                    My View
+                    {userRole === 'admin' ? 'Admin View' : 'My View'}
                   </DropdownMenuItem>
                 )}
                 {children.map((child) => (
@@ -709,7 +766,10 @@ export default function StudentDashboard() {
                     disabled={selectedChildId === child.id}
                     className={selectedChildId === child.id ? 'text-muted-foreground' : ''}
                   >
-                    {child.name} {selectedChildId === child.id && '(Current)'}
+                    {userRole === 'admin'
+                      ? `${child.name} ${(child as any).parent_name ? `(${(child as any).parent_name})` : ''}`
+                      : child.name
+                    } {selectedChildId === child.id && '(Current)'}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -1218,7 +1278,7 @@ function AssignmentCard({
         <div className="flex items-start gap-3">
 
           <div className="flex-1">
-            <CardTitle className={`text-lg ${assignment.completed ? 'line-through text-muted-foreground' : ''} flex items-center gap-2`}>
+            <CardTitle className={`text-lg ${assignment.completed ? 'line-through text-muted-foreground' : ''} group:hover-text-primary flex items-center gap-2`}>
               {assignment.title}
               {assignment.is_recurring && (
                 <Repeat className="h-4 w-4 text-blue-500" />
@@ -1264,36 +1324,14 @@ function AssignmentCard({
                 <div className="flex gap-2 items-center flex-wrap">
                   {assignment.links.map((link, index) => {
                     const isVideo = link.type === 'video'
-                    const videoId = isVideo ? getYouTubeVideoId(link.url) : null
 
-                    if (isVideo && videoId) {
+                    if (isVideo) {
                       return (
-                        <Dialog key={index}>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="cursor-pointer hover:text-primary/80 gap-2"
-                            >
-                              <Play className="h-3 w-3 text-foreground-muted" />
-                              {link.title}
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent aria-describedby={`dialog-description-${link.title}`} className=" sm:max-w-6xl">
-                            <DialogHeader>
-                              <DialogTitle>{link.title}</DialogTitle>
-                            </DialogHeader>
-                            <div className="aspect-video">
-                              <iframe
-                                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
-                                title={link.title}
-                                className="w-full h-full rounded-lg border"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                allowFullScreen
-                              />
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                        <UniversalVideoPlayer
+                          key={index}
+                          url={link.url}
+                          title={link.title}
+                        />
                       )
                     } else {
                       return (

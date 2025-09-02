@@ -18,8 +18,29 @@ export async function GET(request: NextRequest) {
       token_hash,
     })
     if (!error) {
-      // redirect user to specified redirect URL or root of app
-      redirect(next)
+      // Get user profile to determine correct redirect
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        // Redirect based on user role
+        if (profile?.role === 'admin') {
+          redirect('/admin')
+        } else if (profile?.role === 'parent') {
+          redirect('/parent')
+        } else if (profile?.role === 'student') {
+          redirect('/student')
+        } else {
+          redirect(next)
+        }
+      } else {
+        redirect(next)
+      }
     }
   }
 

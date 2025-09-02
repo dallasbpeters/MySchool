@@ -729,9 +729,9 @@ export default function StudentDashboard() {
               </TimelineItem>
             )}
 
-            <TimelineItem dotColor="default">
-              <TimelineHeader textColor="default">Upcoming</TimelineHeader>
-              {upcomingAssignments.length > 0 && (
+            {upcomingAssignments.length > 0 && (
+              <TimelineItem dotColor="default">
+                <TimelineHeader textColor="default">Upcoming</TimelineHeader>
                 <TimelineContent>
                   <div className={`grid gap-4 transition-all duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
                     }`}>
@@ -753,14 +753,48 @@ export default function StudentDashboard() {
                     ))}
                   </div>
                 </TimelineContent>
-              )}
-            </TimelineItem>
+              </TimelineItem>
+            )}
           </Timeline>
 
           {assignments.length === 0 && (
             <Card>
-              <CardContent className="text-center py-8">
-                <p className="text-muted-foreground">No assignments yet!</p>
+              <CardContent className="text-center py-12">
+                <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Assignments Yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  {userRole === 'parent'
+                    ? selectedChildName
+                      ? `${selectedChildName} doesn't have any assignments yet.`
+                      : "No assignments have been created yet."
+                    : "You don't have any assignments yet."
+                  }
+                </p>
+                {userRole === 'parent' && (
+                  <p className="text-sm text-muted-foreground">
+                    Visit the <strong>Parent Dashboard</strong> to create assignments for your children.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {assignments.length > 0 && overdueAssignments.length === 0 && todayAssignments.length === 0 && upcomingAssignments.length === 0 && (
+            <Card>
+              <CardContent className="text-center py-12">
+                <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">All Caught Up!</h3>
+                <p className="text-muted-foreground mb-4">
+                  {userRole === 'parent'
+                    ? selectedChildName
+                      ? `${selectedChildName} has completed all their current assignments.`
+                      : "All current assignments have been completed."
+                    : "You've completed all your current assignments."
+                  }
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Great work! Check back later for new assignments.
+                </p>
               </CardContent>
             </Card>
           )}

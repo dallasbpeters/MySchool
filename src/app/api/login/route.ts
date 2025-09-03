@@ -16,14 +16,14 @@ export async function POST(request: NextRequest) {
     try {
       supabase = await createClient()
     } catch (clientError) {
-      console.error('Failed to create Supabase client:', clientError)
+
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
       )
     }
 
-    console.log('Attempting login for:', email)
+
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -31,17 +31,17 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      console.error('Login error:', error.message)
+
       return NextResponse.json(
         { error: error.message },
         { status: 400 }
       )
     }
 
-    console.log('Login successful for:', email)
-    
+
+
     // Create response with session cookies
-    const response = NextResponse.json({ 
+    const response = NextResponse.json({
       success: true,
       user: data.user,
       session: data.session ? {
@@ -52,9 +52,9 @@ export async function POST(request: NextRequest) {
 
     // Set session cookies manually if session exists
     if (data.session) {
-      console.log('Setting session cookies...')
+
       const maxAge = 60 * 60 * 24 * 7 // 7 days
-      
+
       response.cookies.set('sb-access-token', data.session.access_token, {
         maxAge,
         httpOnly: true,
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         sameSite: 'lax',
         path: '/'
       })
-      
+
       response.cookies.set('sb-refresh-token', data.session.refresh_token, {
         maxAge,
         httpOnly: true,
@@ -71,11 +71,11 @@ export async function POST(request: NextRequest) {
         path: '/'
       })
     }
-    
+
     return response
 
   } catch (error: any) {
-    console.error('Login API error:', error)
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

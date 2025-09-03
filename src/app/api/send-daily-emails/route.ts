@@ -6,7 +6,7 @@ import { format } from 'date-fns'
 export async function GET(request: Request) {
   // This endpoint should be called by a cron job at 8:00 AM daily
   // You can use services like Vercel Cron Jobs, Railway, or Supabase Edge Functions
-  
+
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response('Unauthorized', { status: 401 })
@@ -24,31 +24,31 @@ export async function GET(request: Request) {
 
   try {
     const supabase = await createClient()
-    
+
     // Get all students with their parent's assignments for today
     const today = format(new Date(), 'yyyy-MM-dd')
-    
+
     const { data: students } = await supabase
       .from('profiles')
       .select('id, email, name, parent_id')
       .eq('role', 'student')
-    
+
     if (!students || students.length === 0) {
       return NextResponse.json({ message: 'No students found' })
     }
 
     const emailPromises = students.map(async (student: any) => {
       if (!student.parent_id) return null
-      
+
       // Get today's assignments for this student
       const { data: assignments } = await supabase
         .from('assignments')
         .select('*')
         .eq('parent_id', student.parent_id)
         .eq('due_date', today)
-      
+
       if (!assignments || assignments.length === 0) return null
-      
+
       // Create email HTML
       const emailHtml = `
         <!DOCTYPE html>
@@ -79,9 +79,9 @@ export async function GET(request: Request) {
                     ${assignment.links && assignment.links.length > 0 ? `
                       <div class="links">
                         <strong>Resources:</strong><br>
-                        ${(assignment.links as any[]).map(link => 
-                          `<a href="${link.url}" class="link">📎 ${link.title}</a><br>`
-                        ).join('')}
+                        ${(assignment.links as any[]).map(link =>
+        `<a href="${link.url}" class="link">📎 ${link.title}</a><br>`
+      ).join('')}
                       </div>
                     ` : ''}
                   </div>
@@ -100,7 +100,7 @@ export async function GET(request: Request) {
           </body>
         </html>
       `
-      
+
       // Send email
       return resend.emails.send({
         from: 'MySchool <noreply@myschool.app>',
@@ -109,10 +109,10 @@ export async function GET(request: Request) {
         html: emailHtml,
       })
     })
-    
+
     const emailResults = await Promise.all(emailPromises)
     const successfulEmails = emailResults.filter(result => result !== null)
-    
+
     // Create notifications for successfully sent emails
     if (successfulEmails.length > 0) {
       const notificationPromises = students.map(async (student: any) => {
@@ -130,17 +130,17 @@ export async function GET(request: Request) {
             }
           })
       })
-      
+
       await Promise.all(notificationPromises)
     }
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       message: 'Daily emails sent successfully',
       studentsCount: students.length,
       emailsSent: successfulEmails.length
     })
   } catch (error) {
-    console.error('Error sending daily emails:', error)
+
     return NextResponse.json(
       { error: 'Failed to send daily emails' },
       { status: 500 }

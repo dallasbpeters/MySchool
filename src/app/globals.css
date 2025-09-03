@@ -13,6 +13,26 @@
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
   }
+
+  .bg-grid-small {
+    background-image: linear-gradient(
+        to right,
+        hsl(var(--muted)) 1px,
+        transparent 1px
+      ),
+      linear-gradient(to bottom, hsl(var(--muted)) 1px, transparent 1px);
+    background-size: 20px 30px;
+    -webkit-mask-image: radial-gradient(
+      ellipse 70% 60% at 50% 100%,
+      #000 60%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 70% 60% at 50% 100%,
+      #000 60%,
+      transparent 100%
+    );
+  }
 }
 
 @theme {

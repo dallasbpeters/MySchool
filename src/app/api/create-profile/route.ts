@@ -6,7 +6,7 @@ export async function POST() {
 
   // Get the authenticated user
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  
+
   if (authError || !user) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
@@ -35,7 +35,7 @@ export async function POST() {
     .single()
 
   if (error) {
-    console.error('Profile creation error:', error)
+
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 

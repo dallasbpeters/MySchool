@@ -44,9 +44,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true })
 
     // Debug logging
-    if (children) {
-      console.log(`Found ${children.length} children for parent ${user.id}:`, children)
-    }
+
 
     if (childrenError) {
       return NextResponse.json({ children: [], error: childrenError.message })

@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { StickyNote, Calendar, CheckCircle2, Link as LinkIcon, User, ChevronDown, BookOpen, Plus, Trash2, Repeat, Video, Play, Edit } from 'lucide-react'
+import { StickyNote, Calendar, CheckCircle2, Link as LinkIcon, ChevronDown, BookOpen, Plus, Trash2, Repeat, Edit } from 'lucide-react'
 import { format, isToday, isTomorrow, isPast } from 'date-fns'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -15,11 +15,10 @@ import { WysiwygEditor } from '@/components/editor/wysiwyg-editor'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { UniversalVideoPlayer } from '@/components/universal-video-player'
-import { VideoPlayer, VideoPlayerContent, VideoPlayerControlBar, VideoPlayerPlayButton, VideoPlayerTimeRange, VideoPlayerVolumeRange, VideoPlayerMuteButton } from '@/components/ui/shadcn-io/video-player'
 import { Timeline, TimelineItem, TimelineHeader, TimelineContent } from '@/components/ui/timeline-view'
 import { RecurringInstancesGrid } from '@/components/ui/recurring-instances-grid'
+import PageGrid from '@/components/page-grid'
 
 import ColourfulText from '@/components/ui/colourful-text'
 
@@ -199,12 +198,15 @@ export default function StudentDashboard() {
       const response = await fetch('/api/assignments')
       const data = await response.json()
 
-      console.log('🔧 Student Dashboard: Role check response:', {
-        status: response.status,
-        role: data.profile?.role,
-        hasAssignments: !!data.assignments,
-        assignmentsCount: data.assignments?.length || 0
-      })
+
+
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}: Failed to fetch assignments`)
+      }
+
+      if (data.error && data.error !== 'No user found') {
+        throw new Error(data.error)
+      }
 
       if (data.profile?.role) {
         setUserRole(data.profile.role)
@@ -215,7 +217,7 @@ export default function StudentDashboard() {
           fetchChildren()
         } else if (data.profile.role === 'admin') {
           // For admins, don't load assignments initially - let first student be auto-selected
-          console.log('🔧 Student Dashboard: Admin detected, fetching students...')
+
           setAssignments([])
           fetchChildren('admin')
         } else {
@@ -225,9 +227,21 @@ export default function StudentDashboard() {
           }
           setLoading(false)
         }
+      } else if (data.error === 'No user found') {
+        // Handle case where user is not authenticated
+
+        setLoading(false)
+        // Could redirect to login or show appropriate message
+      } else {
+        throw new Error('Unable to determine user role')
       }
-    } catch (error) {
-      console.error('🔧 Student Dashboard: Role check failed:', error)
+    } catch (error: any) {
+
+      toast({
+        title: "Assignment Loading Error",
+        description: error.message || "Failed to load assignments. Please try refreshing the page.",
+        variant: "destructive"
+      })
       setLoading(false)
     }
   }
@@ -238,15 +252,18 @@ export default function StudentDashboard() {
       const response = await fetch(url)
       const data = await response.json()
 
+
+
       if (data.assignments) {
         setAssignments(data.assignments)
+
 
         if (data.profile?.role) {
           setUserRole(data.profile.role)
         }
       }
     } catch (error) {
-      // Handle error silently
+
     } finally {
       setLoading(false)
     }
@@ -257,21 +274,15 @@ export default function StudentDashboard() {
       let response, data
       const currentRole = roleOverride || userRole
 
-      console.log('🔧 fetchChildren called with role:', currentRole)
+
 
       if (currentRole === 'admin') {
         // Admin: fetch all students from all families
-        console.log('🔧 Admin: Fetching all students from all families...')
+
         response = await fetch('/api/admin/students')
         data = await response.json()
 
-        console.log('🔧 Admin: Students API response:', {
-          status: response.status,
-          ok: response.ok,
-          studentsCount: data.students?.length || 0,
-          error: data.error,
-          sampleStudents: data.students?.slice(0, 3).map((s: any) => `${s.name} (${s.parent_name})`) || []
-        })
+
 
         if (data.students && data.students.length > 0) {
           setChildren(data.students)
@@ -281,8 +292,7 @@ export default function StudentDashboard() {
             const firstStudent = data.students[0]
             setSelectedChildId(firstStudent.id)
             setSelectedChildName(firstStudent.name)
-            console.log('🔧 Admin: Auto-selected first student:', firstStudent.name)
-            // Fetch assignments for the first student
+
             fetchAssignments(firstStudent.id)
           }
         }
@@ -310,6 +320,7 @@ export default function StudentDashboard() {
   }
 
   const switchToChild = (childId: string, childName: string) => {
+
     setSelectedChildId(childId)
     setSelectedChildName(childName)
     fetchAssignments(childId)
@@ -378,6 +389,8 @@ export default function StudentDashboard() {
     setEditingNote(null)
     setEditNoteData({ title: '', content: null })
   }
+
+
 
   const updateNote = async () => {
     if (!editingNote) return
@@ -483,7 +496,7 @@ export default function StudentDashboard() {
   }
 
   const toggleAssignment = async (assignmentId: string, completed: boolean, instanceDate?: string) => {
-    console.log(`🎯 Toggle: ${assignmentId} → completed: ${completed}, instanceDate: ${instanceDate}`)
+
 
     // Optimistic update - immediately update the UI
     setAssignments(prevAssignments => {
@@ -511,7 +524,7 @@ export default function StudentDashboard() {
       })
 
       const toggledAssignment = updated.find(a => a.id === assignmentId)
-      console.log(`🎯 After optimistic update: ${toggledAssignment?.title} completed = ${toggledAssignment?.completed}`)
+
 
       return updated
     })
@@ -580,7 +593,7 @@ export default function StudentDashboard() {
         })
       } else {
         // Success - refetch assignments to ensure data is up to date
-        console.log(`🎯 Successfully toggled assignment: ${assignmentId}, instanceDate: ${instanceDate}`)
+
         fetchAssignments(selectedChildId)
       }
     } catch (error) {
@@ -729,266 +742,263 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="z-10 relative container mx-auto p-4 max-w-6xl">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold">
-            {userRole === 'admin'
-              ? (selectedChildName ? `${selectedChildName}'s Dashboard` : 'Admin Student View')
-              : userRole === 'parent'
-                ? (selectedChildName ? `${selectedChildName}'s Dashboard` : 'Parent Dashboard')
-                : 'Student Dashboard'
-            }
-          </h1>
-          {(userRole === 'parent' || userRole === 'admin') && children.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2">
-                  {selectedChildName || 'View as'}
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {!selectedChildId && (
-                  <DropdownMenuItem disabled className="text-muted-foreground">
-                    {userRole === 'admin' ? 'Admin View (Current)' : 'My View (Current)'}
-                  </DropdownMenuItem>
-                )}
-                {selectedChildId && (
-                  <DropdownMenuItem onClick={switchToOwnView}>
-                    {userRole === 'admin' ? 'Admin View' : 'My View'}
-                  </DropdownMenuItem>
-                )}
-                {children.map((child) => (
-                  <DropdownMenuItem
-                    key={child.id}
-                    onClick={() => switchToChild(child.id, child.name)}
-                    disabled={selectedChildId === child.id}
-                    className={selectedChildId === child.id ? 'text-muted-foreground' : ''}
-                  >
-                    {userRole === 'admin'
-                      ? `${child.name} ${(child as any).parent_name ? `(${(child as any).parent_name})` : ''}`
-                      : child.name
-                    } {selectedChildId === child.id && '(Current)'}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </div>
+    <>
+      <div className="z-10 relative container mx-auto p-4 max-w-6xl">
 
-      <Tabs defaultValue="assignments" className="w-full">
-        <TabsList variant="secondary" className="mb-2 md:mb-3">
-          <TabsTrigger value="assignments">Assignments</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
-          <TabsTrigger value="notes">My Notes</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="assignments">
-          <Timeline>
-            {overdueAssignments.length > 0 && (
-              <TimelineItem dotColor="red">
-                <TimelineHeader textColor="red">Overdue</TimelineHeader>
-                <TimelineContent>
-                  <div className={`grid gap-4 transition-grid-cols duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                    }`}>
-                    {overdueAssignments.map((assignment, index) => (
-                      <AssignmentCard
-                        image={true}
-                        key={assignment.id}
-                        assignment={assignment}
-                        onToggle={handleToggle}
-                        getDateLabel={getDateLabel}
-                        getDateColor={getDateColor}
-                        imageIndex={index}
-                        expandedCardId={expandedCardId}
-                        setExpandedCardId={setExpandedCardId}
-                        onNoteCreated={fetchNotes}
-                        selectedInstanceDate={selectedInstanceDates[assignment.id]}
-                      />
-                    ))}
-                  </div>
-                </TimelineContent>
-              </TimelineItem>
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-bold">
+              {userRole === 'admin'
+                ? (selectedChildName ? `${selectedChildName}'s Dashboard` : 'Admin Student Assignments')
+                : userRole === 'parent'
+                  ? (selectedChildName ? `${selectedChildName}'s Dashboard` : 'Parent Dashboard')
+                  : 'Student Dashboard'
+              }
+            </h1>
+            {(userRole === 'parent' || userRole === 'admin') && children.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2">
+                    {selectedChildName || 'View as'}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {!selectedChildId && (
+                    <DropdownMenuItem disabled className="text-muted-foreground">
+                      {userRole === 'admin' ? 'Admin View (Current)' : 'My View (Current)'}
+                    </DropdownMenuItem>
+                  )}
+                  {selectedChildId && (
+                    <DropdownMenuItem onClick={switchToOwnView}>
+                      {userRole === 'admin' ? 'Admin View' : 'My View'}
+                    </DropdownMenuItem>
+                  )}
+                  {children.map((child) => (
+                    <DropdownMenuItem
+                      key={child.id}
+                      onClick={() => switchToChild(child.id, child.name)}
+                      disabled={selectedChildId === child.id}
+                      className={selectedChildId === child.id ? 'text-muted-foreground' : ''}
+                    >
+                      {userRole === 'admin'
+                        ? `${child.name} ${(child as any).parent_name ? `(${(child as any).parent_name})` : ''}`
+                        : child.name
+                      } {selectedChildId === child.id && '(Current)'}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
+          </div>
+        </div>
 
-            {todayAssignments.length > 0 && (
-              <TimelineItem dotColor="default">
-                <TimelineHeader textColor="default">Today's Assignments</TimelineHeader>
-                <TimelineContent>
-                  <div className={`grid gap-4 transition-[grid-template-columns] duration-600 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                    }`}>
-                    {todayAssignments.map((assignment, index) => (
-                      <React.Fragment key={assignment.id}>
+        <Tabs defaultValue="assignments" className="w-full">
+          <TabsList variant="secondary" className="mb-2 md:mb-3">
+            <TabsTrigger value="assignments">Assignments</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="notes">My Notes</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="assignments">
+            <Timeline>
+              {overdueAssignments.length > 0 && (
+                <TimelineItem dotColor="red">
+                  <TimelineHeader textColor="red">Overdue</TimelineHeader>
+                  <TimelineContent>
+                    <div className={`grid gap-4 transition-grid-cols duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                      }`}>
+                      {overdueAssignments.map((assignment, index) => (
                         <AssignmentCard
                           image={true}
+                          key={assignment.id}
                           assignment={assignment}
                           onToggle={handleToggle}
                           getDateLabel={getDateLabel}
                           getDateColor={getDateColor}
-                          imageIndex={index + overdueAssignments.length}
+                          imageIndex={index}
+                          expandedCardId={expandedCardId}
+                          setExpandedCardId={setExpandedCardId}
+                          onNoteCreated={fetchNotes}
+                          selectedInstanceDate={selectedInstanceDates[assignment.id]}
+                        />
+                      ))}
+                    </div>
+                  </TimelineContent>
+                </TimelineItem>
+              )}
+
+              {todayAssignments.length > 0 && (
+                <TimelineItem dotColor="default">
+                  <TimelineHeader textColor="default">Today's Assignments</TimelineHeader>
+                  <TimelineContent>
+                    <div className={`grid gap-4 transition-[grid-template-columns] duration-600 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                      }`}>
+                      {todayAssignments.map((assignment, index) => (
+                        <React.Fragment key={assignment.id}>
+                          <AssignmentCard
+                            image={true}
+                            assignment={assignment}
+                            onToggle={handleToggle}
+                            getDateLabel={getDateLabel}
+                            getDateColor={getDateColor}
+                            imageIndex={index + overdueAssignments.length}
+                            expandedCardId={expandedCardId}
+                            setExpandedCardId={setExpandedCardId}
+                            onNoteCreated={fetchNotes}
+                            assignmentNotes={notes}
+                            selectedInstanceDate={selectedInstanceDates[assignment.id]}
+                          />
+                          {expandedCardId === assignment.id && (
+                            <RecurringInstancesGrid
+                              assignment={assignment}
+                              imageIndex={index + overdueAssignments.length}
+                              showImages={true}
+                              daysAhead={7}
+                              onInstanceClick={(date, dayName) => handleInstanceClick(assignment.id, date, dayName)}
+                              selectedInstanceDate={selectedInstanceDates[assignment.id]}
+                            />
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </TimelineContent>
+                </TimelineItem>
+              )}
+
+              {upcomingAssignments.length > 0 && (
+                <TimelineItem dotColor="default">
+                  <TimelineHeader textColor="default">Upcoming</TimelineHeader>
+                  <TimelineContent>
+                    <div className={`grid gap-4 transition-all duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                      }`}>
+                      {upcomingAssignments.map((assignment, index) => (
+                        <AssignmentCard
+                          image={true}
+                          key={assignment.id}
+                          assignment={assignment}
+                          onToggle={handleToggle}
+                          getDateLabel={getDateLabel}
+                          getDateColor={getDateColor}
+                          imageIndex={index + overdueAssignments.length + todayAssignments.length}
                           expandedCardId={expandedCardId}
                           setExpandedCardId={setExpandedCardId}
                           onNoteCreated={fetchNotes}
                           assignmentNotes={notes}
                           selectedInstanceDate={selectedInstanceDates[assignment.id]}
                         />
-                        {expandedCardId === assignment.id && (
-                          <RecurringInstancesGrid
-                            assignment={assignment}
-                            imageIndex={index + overdueAssignments.length}
-                            showImages={true}
-                            daysAhead={7}
-                            onInstanceClick={(date, dayName) => handleInstanceClick(assignment.id, date, dayName)}
-                            selectedInstanceDate={selectedInstanceDates[assignment.id]}
-                          />
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </TimelineContent>
-              </TimelineItem>
-            )}
+                      ))}
+                    </div>
+                  </TimelineContent>
+                </TimelineItem>
+              )}
+            </Timeline>
 
-            {upcomingAssignments.length > 0 && (
-              <TimelineItem dotColor="default">
-                <TimelineHeader textColor="default">Upcoming</TimelineHeader>
-                <TimelineContent>
-                  <div className={`grid gap-4 transition-all duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                    }`}>
-                    {upcomingAssignments.map((assignment, index) => (
-                      <AssignmentCard
-                        image={true}
-                        key={assignment.id}
-                        assignment={assignment}
-                        onToggle={handleToggle}
-                        getDateLabel={getDateLabel}
-                        getDateColor={getDateColor}
-                        imageIndex={index + overdueAssignments.length + todayAssignments.length}
-                        expandedCardId={expandedCardId}
-                        setExpandedCardId={setExpandedCardId}
-                        onNoteCreated={fetchNotes}
-                        assignmentNotes={notes}
-                        selectedInstanceDate={selectedInstanceDates[assignment.id]}
-                      />
-                    ))}
-                  </div>
-                </TimelineContent>
-              </TimelineItem>
-            )}
-          </Timeline>
-
-          {assignments.length === 0 && (
-            <Card>
-              <CardContent className="text-center py-12">
-                <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Assignments Yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  {userRole === 'parent'
-                    ? selectedChildName
-                      ? `${selectedChildName} doesn't have any assignments yet.`
-                      : "No assignments have been created yet."
-                    : "You don't have any assignments yet."
-                  }
-                </p>
-                {userRole === 'parent' && (
-                  <p className="text-sm text-muted-foreground">
-                    Visit the <strong>Parent Dashboard</strong> to create assignments for your children.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {assignments.length > 0 && overdueAssignments.length === 0 && todayAssignments.length === 0 && upcomingAssignments.length === 0 && (
-            <Card>
-              <CardContent className="text-center py-12">
-                <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">All Caught Up!</h3>
-                <p className="text-muted-foreground mb-4">
-                  {userRole === 'parent'
-                    ? selectedChildName
-                      ? `${selectedChildName} has completed all their current assignments.`
-                      : "All current assignments have been completed."
-                    : "You've completed all your current assignments."
-                  }
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Great work! Check back later for new assignments.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="timeline">
-          <div>
-
-            {assignments.filter(a => isDatePast(a.due_date) || isDateToday(a.due_date)).length > 0 ? (
-              <ol className="relative border-s border-grey-200 dark:border-gray-400">
-                {(() => {
-                  const sortedAssignments = assignments
-                    .filter(assignment => isDatePast(assignment.due_date) || isDateToday(assignment.due_date))
-                    .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
-
-                  const groupedByDate = sortedAssignments.reduce((acc, assignment) => {
-                    const dateKey = format(new Date(assignment.due_date), 'EEEE, MMMM dd, yyyy')
-                    if (!acc[dateKey]) {
-                      acc[dateKey] = []
+            {assignments.length === 0 && (
+              <Card className="relative" style={{ backgroundImage: 'url(/risky-ming-fFa5xAoT8ms-unsplash.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                <CardContent className="relative text-center py-40">
+                  <BookOpen className="h-16 w-16 text-primary mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Assignments Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {userRole === 'parent'
+                      ? selectedChildName
+                        ? `${selectedChildName} doesn't have any assignments yet.`
+                        : "No assignments have been created yet."
+                      : "You don't have any assignments yet."
                     }
-                    acc[dateKey].push(assignment)
-                    return acc
-                  }, {} as Record<string, Assignment[]>)
-
-                  let runningIndex = 0
-
-                  return Object.entries(groupedByDate).map(([date, dateAssignments]) => (
-                    <li key={date} className="mb-10 ms-4">
-                      <div className="absolute w-3 h-3 block bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
-                      <time className="block mb-2 text-lg font-medium leading-none text-foreground dark:text-foreground">{date}</time>
-                      <p className="text-sm text-muted-foreground mb-4">{dateAssignments.length} assignment{dateAssignments.length !== 1 ? 's' : ''}</p>
-                      <div className={`grid gap-4 transition-grid-cols duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
-                        {dateAssignments.map((assignment) => {
-                          const currentIndex = runningIndex++
-                          return (
-                            <AssignmentCard
-                              image={false}
-                              key={assignment.id}
-                              assignment={assignment}
-                              onToggle={handleToggle}
-                              getDateLabel={getDateLabel}
-                              getDateColor={getDateColor}
-                              imageIndex={currentIndex}
-                              expandedCardId={expandedCardId}
-                              setExpandedCardId={setExpandedCardId}
-                              onNoteCreated={fetchNotes}
-                              assignmentNotes={notes}
-                            />
-                          )
-                        })}
-                      </div>
-                    </li>
-                  ))
-                })()}
-              </ol>
-            ) : (
-              <Card>
-                <CardContent className="text-center py-8">
-                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No past assignments yet!</p>
+                  </p>
+                  {userRole === 'parent' && (
+                    <p className="text-sm text-muted-foreground">
+                      Visit the <strong>Parent Dashboard</strong> to create assignments for your children.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             )}
-          </div>
-        </TabsContent>
 
-        <TabsContent value="notes">
-          <div>
-            <h2 className="text-2xl font-semibold flex items-center gap-2 mb-4">
-              <BookOpen className="h-6 w-6" />
-              My Notes
-            </h2>
+            {assignments.length > 0 && overdueAssignments.length === 0 && todayAssignments.length === 0 && upcomingAssignments.length === 0 && (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">All Caught Up!</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {userRole === 'parent'
+                      ? selectedChildName
+                        ? `${selectedChildName} has completed all their current assignments.`
+                        : "All current assignments have been completed."
+                      : "You've completed all your current assignments."
+                    }
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Great work! Check back later for new assignments.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="timeline">
+            <div>
+
+              {assignments.filter(a => isDatePast(a.due_date) || isDateToday(a.due_date)).length > 0 ? (
+                <ol className="relative border-s border-grey-200 dark:border-gray-400">
+                  {(() => {
+                    const sortedAssignments = assignments
+                      .filter(assignment => isDatePast(assignment.due_date) || isDateToday(assignment.due_date))
+                      .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
+
+                    const groupedByDate = sortedAssignments.reduce((acc, assignment) => {
+                      const dateKey = format(new Date(assignment.due_date), 'EEEE, MMMM dd, yyyy')
+                      if (!acc[dateKey]) {
+                        acc[dateKey] = []
+                      }
+                      acc[dateKey].push(assignment)
+                      return acc
+                    }, {} as Record<string, Assignment[]>)
+
+                    let runningIndex = 0
+
+                    return Object.entries(groupedByDate).map(([date, dateAssignments]) => (
+                      <li key={date} className="mb-10 ms-4">
+                        <div className="absolute w-3 h-3 block bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
+                        <time className="block mb-2 text-lg font-medium leading-none text-foreground dark:text-foreground">{date}</time>
+                        <p className="text-sm text-muted-foreground mb-4">{dateAssignments.length} assignment{dateAssignments.length !== 1 ? 's' : ''}</p>
+                        <div className={`grid gap-4 transition-grid-cols duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+                          {dateAssignments.map((assignment) => {
+                            const currentIndex = runningIndex++
+                            return (
+                              <AssignmentCard
+                                image={false}
+                                key={assignment.id}
+                                assignment={assignment}
+                                onToggle={handleToggle}
+                                getDateLabel={getDateLabel}
+                                getDateColor={getDateColor}
+                                imageIndex={currentIndex}
+                                expandedCardId={expandedCardId}
+                                setExpandedCardId={setExpandedCardId}
+                                onNoteCreated={fetchNotes}
+                                assignmentNotes={notes}
+                              />
+                            )
+                          })}
+                        </div>
+                      </li>
+                    ))
+                  })()}
+                </ol>
+              ) : (
+                <Card>
+                  <CardContent className="text-center py-8">
+                    <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No past assignments yet!</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="notes">
 
             {Object.keys(groupNotesByCategory()).length > 0 ? (
               <Tabs defaultValue={Object.keys(groupNotesByCategory())[0]} className="w-full bg-background">
@@ -1002,7 +1012,7 @@ export default function StudentDashboard() {
 
                 {Object.entries(groupNotesByCategory()).map(([category, categoryNotes]) => (
                   <TabsContent key={category} value={category} className="mt-4">
-                    <div className="grid gap-4 md:grid-cols-1">
+                    <div className="grid gap-4 md:grid-cols-2">
                       {categoryNotes.map((note) => (
                         <Card key={note.id}>
                           <CardHeader className="mb-4">
@@ -1107,10 +1117,11 @@ export default function StudentDashboard() {
                 </CardContent>
               </Card>
             )}
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+      <PageGrid variant="grid" />
+    </>
   )
 }
 
@@ -1162,6 +1173,8 @@ function AssignmentCard({
     '/wildan-kurniawan-fKdoeUJBh_o-unsplash.svg',
     '/amanda-sala-oHHc3UsNrqs-unsplash.svg',
     '/eva-corbisier-6QxDZxUaScw-unsplash.svg',
+    '/risky-ming--AsW_zqKQ9E-unsplash.svg',
+    '/risky-ming-fFa5xAoT8ms-unsplash.svg',
     '/evelina-mitev-jV_8Fn1l1ec-unsplash.svg',
     '/gemma-evans-qVzRlSDe8OU-unsplash.svg',
     '/gemma-evans-swmWhdbcb6M-unsplash.svg',

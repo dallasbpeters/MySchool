@@ -332,7 +332,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
                 onClick={(e) => e.preventDefault()}
                 className="flex items-center space-x-2 text-primary hover:text-primary/90 transition-colors cursor-pointer"
               >
-                <div className="h-12">
+                <div className="h-10">
                   {logo}
                 </div>
               </button>

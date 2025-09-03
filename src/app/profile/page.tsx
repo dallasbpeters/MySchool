@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast'
 import { User, Mail, Calendar } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
+import PageGrid from '@/components/page-grid'
 
 interface Profile {
   id: string
@@ -90,92 +91,96 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="relative z-10 container mx-auto p-4 max-w-6xl">
-      <div className="space-y-6">
-        {/* Profile Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <h1 className="text-3xl font-bold">My Profile</h1>
+    <>
+      <div className="relative z-10 container mx-auto p-4 max-w-6xl">
+
+        <div className="space-y-6">
+          {/* Profile Header */}
+          <div className="flex items-center gap-4 mb-6">
+            <h1 className="text-3xl font-bold">My Profile</h1>
+          </div>
+
+          {/* Profile Info Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Profile Information
+              </CardTitle>
+              <CardDescription>
+                Your account details and information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Name</p>
+                      <p className="font-medium">{profile.name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="font-medium">{profile.email}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Role</p>
+                    <p className="font-medium">{getRoleDisplayName(profile.role)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Member since</p>
+                      <p className="font-medium">{formatDate(profile.created_at)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Assignment Progress Chart - Only show for users with children/assignments */}
+          {profile.role === 'parent' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Assignment Progress</CardTitle>
+                <CardDescription>
+                  Track completed assignments and streaks over time
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartLineInteractive />
+              </CardContent>
+            </Card>
+          )}
+
+          {profile.role === 'student' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>My Progress</CardTitle>
+                <CardDescription>
+                  Your assignment completion streak and progress
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    Student progress charts coming soon!
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
-
-        {/* Profile Info Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Profile Information
-            </CardTitle>
-            <CardDescription>
-              Your account details and information
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Name</p>
-                    <p className="font-medium">{profile.name}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="font-medium">{profile.email}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Role</p>
-                  <p className="font-medium">{getRoleDisplayName(profile.role)}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Member since</p>
-                    <p className="font-medium">{formatDate(profile.created_at)}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Assignment Progress Chart - Only show for users with children/assignments */}
-        {profile.role === 'parent' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Assignment Progress</CardTitle>
-              <CardDescription>
-                Track completed assignments and streaks over time
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartLineInteractive />
-            </CardContent>
-          </Card>
-        )}
-
-        {profile.role === 'student' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>My Progress</CardTitle>
-              <CardDescription>
-                Your assignment completion streak and progress
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  Student progress charts coming soon!
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
-    </div>
+      <PageGrid variant="grid" />
+    </>
   )
 }

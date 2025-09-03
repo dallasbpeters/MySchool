@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Plus, Copy, Users, Calendar, CheckCircle, Clock, Eye } from 'lucide-react'
+import { Plus, Copy, Users, Calendar, CheckCircle, Clock, Eye, Edit, Check, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import ColourfulText from '@/components/ui/colourful-text'
+import PageGrid from '@/components/page-grid'
 
 interface Child {
   id: string
@@ -47,6 +48,8 @@ export default function ChildrenManagement() {
   const [generatedCode, setGeneratedCode] = useState<string | null>(null)
   const [selectedChild, setSelectedChild] = useState<string | null>(null)
   const [user, setUser] = useState<any>(null)
+  const [editingChildId, setEditingChildId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
@@ -124,7 +127,9 @@ export default function ChildrenManagement() {
 
   // Show loading only while checking auth
   if (isLoading) {
-    return <div>Loading...</div>
+    return <div className="p-8 h-screen flex items-center justify-center text-center">
+      <ColourfulText text="Loading..." />
+    </div>
   }
 
   // If no user after loading, show login message
@@ -171,7 +176,7 @@ export default function ChildrenManagement() {
         const sortedCodes = result.data.sort((a: any, b: any) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
-        console.log('Fetched signup codes:', sortedCodes.map(c => ({ code: c.code, child_name: c.child_name, used: c.used })))
+
         setSignupCodes(sortedCodes)
       }
     } catch (error) {
@@ -378,218 +383,283 @@ export default function ChildrenManagement() {
     }
   }
 
+  const handleStartEditName = (child: Child) => {
+
+    setEditingChildId(child.id)
+    setEditingName(child.name)
+  }
+
+  const handleCancelEditName = () => {
+    setEditingChildId(null)
+    setEditingName('')
+  }
+
+  const handleSaveEditName = async (childId: string) => {
+
+
+    if (!editingName.trim()) {
+      toast({
+        title: "Error",
+        description: "Name cannot be empty",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      const response = await fetch('/api/profiles', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: editingName.trim(),
+          studentId: childId
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Update the children array with the new name
+        setChildren(prev => prev.map(child =>
+          child.id === childId
+            ? { ...child, name: editingName.trim() }
+            : child
+        ))
+
+        setEditingChildId(null)
+        setEditingName('')
+
+        toast({
+          title: "Success",
+          description: data.message || "Name updated successfully",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to update name",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update name",
+        variant: "destructive"
+      })
+    }
+  }
+
   return (
-    <div className="z-10 relative container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Students</h1>
-        <p className="text-muted-foreground">
-          Manage your students and track their assignment progress
-        </p>
-      </div>
+    <>
+      <div className="z-10 relative container mx-auto p-6">
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Existing Children */}
-        <Card className="gap-4">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Your Children ({children.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {children.length === 0 ? (
-              <p className="text-muted-foreground py-6">
-                No children registered yet. Generate a signup code to add your first child.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {children.map((child) => (
-                  <Card key={child.id} className="border-l-10 border-l-primary">
-                    <CardContent className="pt-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h3 className="font-semibold">{child.name}</h3>
-                          <p className="text-sm text-muted-foreground">{child.email}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Joined {format(new Date(child.created_at), 'MMM d, yyyy')}
-                          </p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedChild(selectedChild === child.id ? null : child.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Students</h1>
+          <p className="text-muted-foreground">
+            Manage your students and track their assignment progress
+          </p>
+        </div>
 
-                      {selectedChild === child.id && assignmentStatuses[child.id] && (
-                        <div className="mt-4 p-3 bg-muted rounded">
-                          <h4 className="text-sm font-medium mb-2">Assignment Progress</h4>
-                          {assignmentStatuses[child.id].length === 0 ? (
-                            <p className="text-xs text-muted-foreground">No assignments yet</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {assignmentStatuses[child.id].map((status) => (
-                                <div key={status.assignment_id} className="flex items-center justify-between text-xs">
-                                  <span className="flex-1">{status.assignment_title}</span>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground">
-                                      Due: {format(new Date(status.due_date), 'MMM d')}
-                                    </span>
-                                    {status.completed ? (
-                                      <CheckCircle className="h-4 w-4 text-green-500" />
-                                    ) : (
-                                      <Clock className="h-4 w-4 text-yellow-500" />
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Existing Children */}
 
-        {/* Signup Codes */}
-        <Card className="gap-4">
-          <CardHeader>
-            <CardTitle>Signup Codes</CardTitle>
-            <CardDescription>
-              Generate codes for your children to create their accounts
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Sheet open={isAddingChild} onOpenChange={(open) => !open && handleSheetClose()}>
-              <SheetTrigger asChild>
-                <Button
-                  className="w-full mb-4 gap-2"
-                  onClick={() => {
-                    // Reset all sheet state when opening
-                    setGeneratedCode(null)
-                    setNewChildName('')
-                    setIsAddingChild(true)
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add New Child
-                </Button>
-              </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>
-                    {generatedCode ? 'Signup Code Generated' : 'Generate Signup Code'}
-                  </SheetTitle>
-                  <SheetDescription>
-                    {generatedCode
-                      ? 'Your child can use this code to register their account'
-                      : 'Create a signup code for your child to register their account'
-                    }
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="space-y-4 mt-6">
-                  {generatedCode ? (
-                    // Show generated code with ColourfulText wrapper
-                    <div className="space-y-4">
-                      <div className="text-center">
-                        <div className="text-3xl font-mono bg-background p-4 rounded-lg border">
-                          <ColourfulText text={generatedCode} />
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          onClick={() => copyCode(generatedCode)}
-                          variant="outline"
-                          className="gap-2"
-                        >
-                          <Copy className="h-4 w-4" />
-                          Copy Code
-                        </Button>
-                      </div>
-
-                      <Button onClick={handleSheetClose} variant="outline" className="w-full">
-                        Done
-                      </Button>
-                    </div>
-                  ) : (
-                    // Show form to generate code
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="child_name">Child's Name</Label>
-                        <Input
-                          id="child_name"
-                          placeholder="Enter your child's name"
-                          value={newChildName}
-                          onChange={(e) => setNewChildName(e.target.value)}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button onClick={generateSignupCode} className="flex-1">
-                          Generate Code
-                        </Button>
-                        <Button variant="outline" onClick={handleSheetClose}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </SheetContent>
-            </Sheet>
-
-            <div className="space-y-3">
-              {(() => {
-                const unusedCodes = signupCodes.filter(code => !code.used)
-                console.log('Displaying signup codes:', {
-                  total: signupCodes.length,
-                  unused: unusedCodes.length,
-                  codes: signupCodes.map(c => ({ code: c.code, used: c.used, type: typeof c.used }))
-                })
-                return unusedCodes
-              })().map((code) => (
-                <Card key={code.id} className="border-green-600 bg-green-50 shadow-none">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <code className="bg-background px-2 py-1 rounded font-mono text-sm">
-                            {code.code}
-                          </code>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyCode(code.code)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <p className="text-sm font-medium mt-1">{code.child_name}</p>
+          {children.length === 0 ? (
+            <p className="text-muted-foreground py-6">
+              No children registered yet. Generate a signup code to add your first child.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {children.map((child) => (
+                <Card key={child.id} className="border-l-10 border-l-primary">
+                  <CardContent>
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        {editingChildId === child.id ? (
+                          <div className="flex items-center gap-2 mb-2">
+                            <Input
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              className="font-semibold border-dashed border-2"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveEditName(child.id)
+                                if (e.key === 'Escape') handleCancelEditName()
+                              }}
+                              autoFocus
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleSaveEditName(child.id)}
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={handleCancelEditName}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-semibold h-8">{child.name}</h3>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleStartEditName(child)}
+                              className="hidden group-hover:block text-muted-foreground hover:text-foreground"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                        <p className="text-sm text-muted-foreground">{child.email}</p>
                         <p className="text-xs text-muted-foreground">
-                          Expires {format(new Date(code.expires_at), 'MMM d, yyyy')}
+                          Joined {format(new Date(child.created_at), 'MMM d, yyyy')}
                         </p>
                       </div>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => deleteCode(code.id)}
-                      >
-                        Delete
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          )}
+
+          {/* Signup Codes */}
+          <Card className="gap-4">
+            <CardHeader>
+              <CardTitle>Signup Codes</CardTitle>
+              <CardDescription>
+                Generate codes for your children to create their accounts
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Sheet open={isAddingChild} onOpenChange={(open) => !open && handleSheetClose()}>
+                <SheetTrigger asChild>
+                  <Button
+                    className="w-full mb-4 gap-2"
+                    onClick={() => {
+                      // Reset all sheet state when opening
+                      setGeneratedCode(null)
+                      setNewChildName('')
+                      setIsAddingChild(true)
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add New Child
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetTitle>
+                      {generatedCode ? 'Signup Code Generated' : 'Generate Signup Code'}
+                    </SheetTitle>
+                    <SheetDescription>
+                      {generatedCode
+                        ? 'Your child can use this code to register their account'
+                        : 'Create a signup code for your child to register their account'
+                      }
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="space-y-4 mt-6">
+                    {generatedCode ? (
+                      // Show generated code with ColourfulText wrapper
+                      <div className="space-y-4">
+                        <div className="text-center">
+                          <div className="text-3xl font-mono bg-background p-4 rounded-lg border">
+                            <ColourfulText text={generatedCode} />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            onClick={() => copyCode(generatedCode)}
+                            variant="outline"
+                            className="gap-2"
+                          >
+                            <Copy className="h-4 w-4" />
+                            Copy Code
+                          </Button>
+                        </div>
+
+                        <Button onClick={handleSheetClose} variant="outline" className="w-full">
+                          Done
+                        </Button>
+                      </div>
+                    ) : (
+                      // Show form to generate code
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="child_name">Child's Name</Label>
+                          <Input
+                            id="child_name"
+                            placeholder="Enter your child's name"
+                            value={newChildName}
+                            onChange={(e) => setNewChildName(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button onClick={generateSignupCode} className="flex-1">
+                            Generate Code
+                          </Button>
+                          <Button variant="outline" onClick={handleSheetClose}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              <div className="space-y-3">
+                {(() => {
+                  const unusedCodes = signupCodes.filter(code => !code.used)
+                  return unusedCodes
+                })().map((code) => (
+                  <Card key={code.id} className="border-green-600 bg-green-50 shadow-none">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <code className="bg-background px-2 py-1 rounded font-mono text-sm">
+                              {code.code}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyCode(code.code)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="text-sm font-medium mt-1">{code.child_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Expires {format(new Date(code.expires_at), 'MMM d, yyyy')}
+                          </p>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteCode(code.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+      <PageGrid variant="grid" />
+    </>
   )
 }

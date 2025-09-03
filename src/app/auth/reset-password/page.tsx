@@ -20,18 +20,18 @@ export default function ResetPasswordPage() {
     let mounted = true
 
     const setupPasswordReset = async () => {
-      console.log('Setting up password reset...')
-      
+
+
       try {
         const supabase = createClient()
-        
+
         // Check if we already have a valid session
         const { data: { session } } = await supabase.auth.getSession()
-        console.log('Current session:', session ? 'exists' : 'none')
-        
+
+
         if (session?.user) {
           // Already have a session - ready for password reset
-          console.log('Valid session found, enabling reset form')
+
           if (mounted) {
             setIsValidSession(true)
             setIsCheckingSession(false)
@@ -46,12 +46,12 @@ export default function ResetPasswordPage() {
         const code = urlParams.get('code')
         const error = urlParams.get('error')
         const errorCode = urlParams.get('error_code')
-        
-        console.log('URL params:', { code: code ? 'present' : 'none', error, errorCode })
-        
+
+
+
         // Handle error states first
         if (error || errorCode) {
-          console.log('Error in URL, showing error state')
+
           if (mounted) {
             setIsValidSession(false)
             setIsCheckingSession(false)
@@ -61,17 +61,17 @@ export default function ResetPasswordPage() {
 
         // Exchange code for session if we have one
         if (code) {
-          console.log('Exchanging code for session...')
+
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-          
+
           if (exchangeError) {
-            console.error('Failed to exchange reset code:', exchangeError.message)
+
             if (mounted) {
               setIsValidSession(false)
               setIsCheckingSession(false)
             }
           } else {
-            console.log('Code exchange successful')
+
             // Wait for auth state change event or check session again
             const { data: { session: newSession } } = await supabase.auth.getSession()
             if (newSession?.user && mounted) {
@@ -83,14 +83,14 @@ export default function ResetPasswordPage() {
           }
         } else {
           // No code and no session - invalid access
-          console.log('No code or session, showing invalid state')
+
           if (mounted) {
             setIsValidSession(false)
             setIsCheckingSession(false)
           }
         }
       } catch (error) {
-        console.error('Password reset setup error:', error)
+
         if (mounted) {
           setIsValidSession(false)
           setIsCheckingSession(false)
@@ -144,15 +144,15 @@ export default function ResetPasswordPage() {
     const timeoutId = setTimeout(() => {
       setIsLoading(false)
       toast({
-        title: "Error", 
+        title: "Error",
         description: "Request timed out. Please try again.",
         variant: "destructive"
       })
     }, 10000) // 10 second timeout
 
     try {
-      console.log('Calling API route to update password...')
-      
+
+
       // Use our API route which handles the Supabase call server-side
       const response = await fetch('/api/reset-password', {
         method: 'POST',
@@ -172,9 +172,9 @@ export default function ResetPasswordPage() {
         throw new Error(data.error || 'Failed to update password')
       }
 
-      console.log('Password update successful via API route')
+
       toast({
-        title: "Success", 
+        title: "Success",
         description: "Password updated successfully! Redirecting to login..."
       })
 
@@ -183,7 +183,7 @@ export default function ResetPasswordPage() {
       setConfirmPassword('')
 
       // Redirect immediately without waiting for signOut
-      console.log('Redirecting to login...')
+
       setTimeout(() => {
         window.location.href = '/login'
       }, 1500)
@@ -195,8 +195,8 @@ export default function ResetPasswordPage() {
       })
 
     } catch (error: any) {
-      clearTimeout(timeoutId) 
-      console.error('Password update error:', error)
+      clearTimeout(timeoutId)
+
       toast({
         title: "Error",
         description: error.message || "Failed to update password. Please try again.",
@@ -225,7 +225,7 @@ export default function ResetPasswordPage() {
     const urlParams = new URLSearchParams(window.location.search)
     const errorCode = urlParams.get('error_code')
     const errorDescription = urlParams.get('error_description')
-    
+
     return (
       <div className="container mx-auto flex h-screen w-screen flex-col items-center justify-center">
         <Card className="mx-auto w-500 max-w-lg">

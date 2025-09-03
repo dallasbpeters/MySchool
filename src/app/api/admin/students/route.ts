@@ -67,10 +67,7 @@ export async function GET(request: NextRequest) {
       parent_name: parentNameMap.get(student.parent_id) || 'Unknown Parent'
     })) || []
 
-    console.log('🔧 Admin Students API: Returning students:', {
-      totalStudents: studentsWithParents.length,
-      studentNames: studentsWithParents.map(s => `${s.name} (${s.parent_name})`)
-    })
+
 
     return NextResponse.json({
       students: studentsWithParents

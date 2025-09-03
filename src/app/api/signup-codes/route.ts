@@ -6,7 +6,7 @@ export async function POST(request: Request) {
 
   // Get the authenticated user
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  
+
   if (authError || !user) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
@@ -28,13 +28,13 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      console.error('Signup code creation error:', error)
+
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, data })
   } catch (error) {
-    console.error('API error:', error)
+
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 }
@@ -44,7 +44,7 @@ export async function GET() {
 
   // Get the authenticated user
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  
+
   if (authError || !user) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
@@ -57,7 +57,7 @@ export async function GET() {
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('Fetch signup codes error:', error)
+
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
@@ -69,7 +69,7 @@ export async function DELETE(request: Request) {
 
   // Get the authenticated user
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  
+
   if (authError || !user) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
@@ -90,13 +90,13 @@ export async function DELETE(request: Request) {
       .eq('parent_id', user.id) // Ensure user can only delete their own codes
 
     if (error) {
-      console.error('Delete signup code error:', error)
+
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('API error:', error)
+
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 }

@@ -35,7 +35,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Determine which parent's assignments to fetch and which student to view as
-    let parentId = profile.role === 'parent' ? user.id : profile.parent_id
+    // For admins, we use the user.id as parentId but won't filter by it later
+    let parentId = profile.role === 'parent' ? user.id : (profile.role === 'admin' ? user.id : profile.parent_id)
     let studentId = childId || user.id
 
     // If parent is requesting child view, verify the child belongs to them
@@ -53,10 +54,16 @@ export async function GET(request: NextRequest) {
 
     // Get assignments based on context:
     // - Parent dashboard (no childId): Get ALL assignments created by parent
+    // - Admin dashboard (no childId): Get ALL assignments from all parents  
     // - Student view (childId provided or student user): Get only assigned assignments
     let assignmentsData, assignmentsError
 
-    if ((profile.role === 'parent' || profile.role === 'admin') && !childId) {
+    if (profile.role === 'admin' && !childId) {
+      // Admin dashboard - show all assignments from all parents
+      const { data, error } = await supabase.rpc('get_all_assignments_with_parents')
+      assignmentsData = data
+      assignmentsError = error
+    } else if (profile.role === 'parent' && !childId) {
       // Parent dashboard - show all assignments they created
       const result = await supabase
         .from('assignments')
@@ -67,17 +74,39 @@ export async function GET(request: NextRequest) {
       assignmentsError = result.error
     } else {
       // Student view - only show assignments assigned to specific student
-      const result = await supabase
-        .from('assignments')
-        .select(`
-          *,
-          student_assignments!inner(student_id)
-        `)
-        .eq('parent_id', parentId)
-        .eq('student_assignments.student_id', studentId)
-        .order('due_date', { ascending: true })
-      assignmentsData = result.data
-      assignmentsError = result.error
+      // First, get student assignments using elevated privileges
+      try {
+        const { data: studentAssignmentData, error: studentAssignmentError } = await supabase
+          .rpc('admin_get_student_assignments', {
+            p_student_id: studentId
+          })
+
+        if (studentAssignmentError) {
+          assignmentsError = studentAssignmentError
+          assignmentsData = []
+        } else if (!studentAssignmentData || studentAssignmentData.length === 0) {
+          // Student has no assignments
+          assignmentsData = []
+          assignmentsError = null
+        } else {
+          // Get the assignment IDs this student is assigned to
+          const studentAssignmentIds = studentAssignmentData.map((sa: any) => sa.assignment_id)
+
+          // Now fetch the actual assignments
+          // For admins, don't filter by parent_id since they can see all assignments
+          const result = await supabase
+            .from('assignments')
+            .select('*')
+            .in('id', studentAssignmentIds)
+            .order('due_date', { ascending: true })
+
+          assignmentsData = result.data
+          assignmentsError = result.error
+        }
+      } catch (rpcError: any) {
+        assignmentsError = rpcError
+        assignmentsData = []
+      }
     }
 
     if (assignmentsError) {
@@ -85,7 +114,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get completion status 
-    console.log('API: Getting completions for role:', profile.role, 'studentId:', studentId, 'childId:', childId)
+
     let completions = []
 
     // Always fetch completions for the target student
@@ -93,7 +122,7 @@ export async function GET(request: NextRequest) {
       .from('student_assignments')
       .select('assignment_id, completed, completed_at, instance_date')
       .eq('student_id', studentId)
-    console.log('API: Found completions:', completionData?.length || 0)
+
     completions = completionData || []
 
     // Get all student assignments for these assignments to find assigned children
@@ -129,7 +158,7 @@ export async function GET(request: NextRequest) {
     allStudentAssignments?.forEach((sa: any) => {
       // Debug: log if we find parents in student_assignments (this shouldn't happen)
       if (sa.profiles.role === 'parent') {
-        console.log('WARNING: Found parent in student_assignments:', sa)
+
       }
 
       // Only include actual students (role = 'student'), not parents
@@ -331,8 +360,15 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // Get user profile to check if admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
     // Update the assignment
-    const { data: assignmentData, error: assignmentError } = await supabase
+    let updateQuery = supabase
       .from('assignments')
       .update({
         title: title.trim(),
@@ -346,7 +382,13 @@ export async function PUT(request: NextRequest) {
         next_due_date: is_recurring ? due_date : null
       })
       .eq('id', assignmentId)
-      .eq('parent_id', user.id) // Ensure user can only update their own assignments
+
+    // Only filter by parent_id for non-admin users
+    if (profile?.role !== 'admin') {
+      updateQuery = updateQuery.eq('parent_id', user.id)
+    }
+
+    const { data: assignmentData, error: assignmentError } = await updateQuery
       .select()
       .single()
 
@@ -439,12 +481,25 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    // Get user profile to check if admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
     // Delete the assignment (this will cascade to student_assignments due to foreign key)
-    const { error: deleteError } = await supabase
+    let deleteQuery = supabase
       .from('assignments')
       .delete()
       .eq('id', assignmentId)
-      .eq('parent_id', user.id) // Ensure user can only delete their own assignments
+
+    // Only filter by parent_id for non-admin users
+    if (profile?.role !== 'admin') {
+      deleteQuery = deleteQuery.eq('parent_id', user.id)
+    }
+
+    const { error: deleteError } = await deleteQuery
 
     if (deleteError) {
       return NextResponse.json(

@@ -48,13 +48,13 @@ export function useNotifications(userId?: string): NotificationsData {
         .limit(50)
 
       if (error) {
-        console.error('Error fetching notifications:', error)
+
         return
       }
 
       setNotifications((data as Notification[]) || [])
     } catch (error) {
-      console.error('Error fetching notifications:', error)
+
     } finally {
       setLoading(false)
     }
@@ -74,7 +74,7 @@ export function useNotifications(userId?: string): NotificationsData {
         )
       )
     } catch (error) {
-      console.error('Error marking notification as read:', error)
+
     }
   }
 
@@ -93,7 +93,7 @@ export function useNotifications(userId?: string): NotificationsData {
         prev.map(notif => ({ ...notif, read: true }))
       )
     } catch (error) {
-      console.error('Error marking all notifications as read:', error)
+
     }
   }
 

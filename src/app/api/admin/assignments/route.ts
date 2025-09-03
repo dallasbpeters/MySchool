@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    console.log('🔧 Admin API: User role check:', { userId: user.id, role: profile?.role })
+
 
     if (!profile || profile.role !== 'admin') {
-      console.log('🔧 Admin API: Access denied for role:', profile?.role)
+
       return NextResponse.json({
         assignments: [],
         error: 'Admin access required'
@@ -38,23 +38,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Get ALL assignments across all families - admin bypass
-    console.log('🔧 Admin API: Fetching ALL assignments as admin...')
+
 
     // Use the RPC function which bypasses RLS
     const { data: assignmentsData, error: assignmentsError } = await supabase
       .rpc('get_all_assignments_with_parents')
 
-    console.log('🔧 Admin API: RPC query results:', {
-      assignmentsCount: assignmentsData?.length,
-      assignmentsError: assignmentsError?.message,
-      sampleData: assignmentsData?.slice(0, 2)
-    })
 
-    console.log('🔧 Admin API: Raw assignments query result:', {
-      count: assignmentsData?.length || 0,
-      error: assignmentsError?.message,
-      sampleTitles: assignmentsData?.slice(0, 3).map(a => a.title) || []
-    })
+
+
 
     if (assignmentsError) {
       return NextResponse.json({ assignments: [], error: assignmentsError.message })
@@ -62,23 +54,42 @@ export async function GET(request: NextRequest) {
 
     // Get all student assignments to find assigned children
     const assignmentIds = assignmentsData?.map(a => a.id) || []
-    const { data: allStudentAssignments } = await supabase
+
+
+    const { data: allStudentAssignments, error: studentAssignmentsError } = await supabase
       .from('student_assignments')
       .select(`
         assignment_id,
         student_id,
-        profiles!inner(name, role)
+        profiles(name, role, parent_id)
       `)
       .in('assignment_id', assignmentIds)
+      .not('profiles', 'is', null)
+      .eq('profiles.role', 'student')
 
-    // Create map for assigned children
+
+
+    // Create maps for assigned children (names and full details)
     const assignedChildrenMap = new Map()
+    const assignedChildrenDetailsMap = new Map()
+
     allStudentAssignments?.forEach((sa: any) => {
       if (sa.profiles.role === 'student') {
+        // Map for names (backward compatibility)
         if (!assignedChildrenMap.has(sa.assignment_id)) {
           assignedChildrenMap.set(sa.assignment_id, [])
         }
         assignedChildrenMap.get(sa.assignment_id).push(sa.profiles.name)
+
+        // Map for full details (includes IDs for editing)
+        if (!assignedChildrenDetailsMap.has(sa.assignment_id)) {
+          assignedChildrenDetailsMap.set(sa.assignment_id, [])
+        }
+        assignedChildrenDetailsMap.get(sa.assignment_id).push({
+          id: sa.student_id,
+          name: sa.profiles.name,
+          parent_id: sa.profiles.parent_id
+        })
       }
     })
 
@@ -86,16 +97,11 @@ export async function GET(request: NextRequest) {
       ...a,
       links: Array.isArray(a.links) ? a.links : [],
       assigned_children: assignedChildrenMap.get(a.id) || [],
+      assigned_children_details: assignedChildrenDetailsMap.get(a.id) || [], // Include full details for editing
       parent_name: a.parent_name || 'Unknown Parent' // Comes directly from RPC function
     })) || []
 
-    console.log('🔧 Admin API: Returning assignments:', {
-      totalAssignments: assignmentsWithDetails.length,
-      parentBreakdown: assignmentsWithDetails.reduce((acc, a) => {
-        acc[a.parent_name] = (acc[a.parent_name] || 0) + 1
-        return acc
-      }, {} as Record<string, number>)
-    })
+
 
     return NextResponse.json({
       assignments: assignmentsWithDetails
@@ -184,7 +190,7 @@ export async function POST(request: NextRequest) {
       })
       .select()
 
-    console.log('🔧 Admin API: Create result:', { assignmentData, assignmentError })
+
 
     if (assignmentError) {
       return NextResponse.json(
@@ -301,21 +307,45 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update the assignment using admin RPC function to bypass RLS
-    const { data: assignmentData, error: assignmentError } = await supabase
-      .rpc('admin_update_assignment', {
-        assignment_id: assignmentId,
-        assignment_title: title.trim(),
-        assignment_content: content,
-        assignment_links: links || [],
-        assignment_due_date: due_date,
-        assignment_category: category || '',
-        assignment_is_recurring: is_recurring || false,
-        assignment_recurrence_pattern: is_recurring ? recurrence_pattern : null,
-        assignment_recurrence_end_date: is_recurring && recurrence_end_date ? recurrence_end_date : null,
-        assignment_next_due_date: is_recurring ? due_date : null
-      })
+    const rpcParams = {
+      assignment_id: assignmentId,
+      assignment_title: title.trim(),
+      assignment_content: content,
+      assignment_links: links || [],
+      assignment_due_date: due_date,
+      assignment_category: category || '',
+      assignment_is_recurring: is_recurring || false,
+      assignment_recurrence_pattern: is_recurring ? recurrence_pattern : null,
+      assignment_recurrence_end_date: is_recurring && recurrence_end_date ? recurrence_end_date : null,
+      assignment_next_due_date: is_recurring ? due_date : null
+    }
 
-    console.log('🔧 Admin API: Update RPC result:', { assignmentData, assignmentError })
+    // DEBUG: Log parameters being sent to RPC - this won't be stripped
+    const debugInfo = `[ADMIN API DEBUG] Updating assignment ${assignmentId} with params: ${JSON.stringify(rpcParams, null, 2)}`
+    process.stdout.write(debugInfo + '\n')
+    
+    // DEBUG: Log the request body that was received
+    const requestBodyDebug = `[ADMIN API DEBUG] Original request body: ${JSON.stringify({ title, content, links, due_date, category }, null, 2)}`
+    process.stdout.write(requestBodyDebug + '\n')
+
+    const { data: assignmentData, error: assignmentError } = await supabase
+      .rpc('admin_update_assignment', rpcParams)
+
+    // DEBUG: Log RPC result
+    const debugResult = `[ADMIN API DEBUG] RPC result - Data: ${JSON.stringify(assignmentData, null, 2)}, Error: ${JSON.stringify(assignmentError, null, 2)}`
+    process.stdout.write(debugResult + '\n')
+
+    // DEBUG: Verify database state after RPC call
+    if (!assignmentError && assignmentData) {
+      const { data: dbVerify, error: dbVerifyError } = await supabase
+        .from('assignments')
+        .select('id, title, links, updated_at')
+        .eq('id', assignmentId)
+        .single()
+      
+      const dbDebug = `[ADMIN API DEBUG] Post-RPC DB state - Data: ${JSON.stringify(dbVerify, null, 2)}, Error: ${JSON.stringify(dbVerifyError, null, 2)}`
+      process.stdout.write(dbDebug + '\n')
+    }
 
     if (assignmentError) {
       return NextResponse.json(
@@ -427,7 +457,7 @@ export async function DELETE(request: NextRequest) {
         assignment_id: assignmentId
       })
 
-    console.log('🔧 Admin API: Delete RPC result:', { deleteResult, deleteError })
+
 
     if (deleteError) {
       return NextResponse.json(

@@ -8,19 +8,24 @@ export async function GET(request: NextRequest) {
   if (code) {
     const supabase = await createClient()
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-    
+
     if (data.user && !error) {
+
+
       // Check if profile exists, create one if not
       let userProfile
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: profileError } = await supabase
         .from('profiles')
         .select('id, role')
         .eq('id', data.user.id)
         .single()
 
+
+
       if (!existingProfile) {
+
         // Create profile for new Google OAuth user
-        const { data: newProfile } = await supabase
+        const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
             id: data.user.id,
@@ -30,6 +35,8 @@ export async function GET(request: NextRequest) {
           })
           .select('role')
           .single()
+
+
         userProfile = newProfile
       } else {
         userProfile = existingProfile
@@ -44,6 +51,7 @@ export async function GET(request: NextRequest) {
       } else if (userProfile?.role === 'student') {
         redirectPath = '/student'
       }
+
 
       return NextResponse.redirect(new URL(redirectPath, requestUrl.origin))
     }

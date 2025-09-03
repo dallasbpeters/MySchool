@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!profile || profile.role !== 'parent') {
+    if (!profile || (profile.role !== 'parent' && profile.role !== 'admin')) {
       return NextResponse.json({ chartData: [], error: 'Access denied' })
     }
 
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Chart data error:', error)
+
     return NextResponse.json({
       chartData: [],
       children: [],

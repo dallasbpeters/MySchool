@@ -76,8 +76,20 @@ export function WysiwygEditor({
     editorProps: {
       attributes: {
         class: cn(
-          'prose prose-sm max-w-none min-h-[300px] px-4 py-3 focus:outline-none',
-          'prose-headings:font-semibold prose-p:my-2',
+          'min-h-[300px] px-4 py-3 focus:outline-none',
+          // Explicit styling for rich text elements
+          '[&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mt-6 [&_h1]:mb-4',
+          '[&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mt-5 [&_h2]:mb-3',
+          '[&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2',
+          '[&_p]:my-2 [&_p]:leading-relaxed',
+          '[&_ul]:list-disc [&_ul]:ml-6 [&_ul]:my-4',
+          '[&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:my-4',
+          '[&_li]:mb-1',
+          '[&_blockquote]:border-l-4 [&_blockquote]:border-primary/30 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:my-4 [&_blockquote]:text-muted-foreground',
+          '[&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono',
+          '[&_strong]:font-semibold',
+          '[&_em]:italic',
+          '[&_u]:underline',
           '[&_.ProseMirror-placeholder]:text-muted-foreground [&_.ProseMirror-placeholder]:opacity-50',
           className
         )

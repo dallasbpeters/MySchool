@@ -162,15 +162,17 @@ export function ConnectedNavbar() {
 
   // Define navigation links based on user role
   const getNavigationLinks = (): Navbar05NavItem[] => {
-    if (userRole === 'parent') {
+    if (userRole === 'parent' || userRole === 'admin') {
       return [
         { href: '/parent', label: 'Dashboard' },
         { href: '/parent/children', label: 'Students' },
-        { href: '/student', label: 'Student View' }
+        { href: '/student', label: 'Student Assignments' },
+        { href: '/calendar', label: 'Calendar' }
       ]
     } else if (userRole === 'student') {
       return [
-        { href: '/student', label: 'My Assignments' }
+        { href: '/student', label: 'My Assignments' },
+        { href: '/calendar', label: 'Calendar' },
       ]
     } else {
       return [

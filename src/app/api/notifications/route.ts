@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     try {
       supabase = await createClient()
     } catch (clientError) {
-      console.error('Failed to create Supabase client:', clientError)
+
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Notifications API error:', error)
+
     return NextResponse.json({ notifications: [], count: 0 })
   }
 }

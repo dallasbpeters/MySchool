@@ -1,1 +1,2 @@
 - dont run npm run dev. I most likely have a server already running.
+- use the mcp tool to interact with Supabase

@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url)
     const category = url.searchParams.get('category')
+    const studentId = url.searchParams.get('studentId') // Allow specifying student ID
 
     const supabase = await createClient()
 
@@ -15,10 +16,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ notes: [], error: 'No user found' })
     }
 
+    // Determine which student's notes to fetch
+    let targetStudentId = studentId || user.id
+
+    // If studentId is provided, verify the user has access to view that student's notes
+    if (studentId && studentId !== user.id) {
+      // Get user profile to check role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profile?.role === 'parent') {
+        // Verify this child belongs to the parent
+        const { data: child } = await supabase
+          .from('profiles')
+          .select('parent_id')
+          .eq('id', studentId)
+          .single()
+
+        if (!child || child.parent_id !== user.id) {
+          return NextResponse.json({ notes: [], error: 'Access denied' })
+        }
+      } else if (profile?.role !== 'admin') {
+        // Only admins and parents can view other students' notes
+        return NextResponse.json({ notes: [], error: 'Access denied' })
+      }
+    }
+
     let query = supabase
       .from('assignment_notes')
       .select('*')
-      .eq('student_id', user.id)
+      .eq('student_id', targetStudentId)
       .order('created_at', { ascending: false })
 
     // Filter by category if provided

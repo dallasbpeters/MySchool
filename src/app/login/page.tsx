@@ -1,6 +1,9 @@
 import { LoginForm } from "@/components/login-form"
 import { Logo } from "@/components/ui/Logo"
 import { LoginHeading } from "@/components/ui/aceternity/LoginHeading"
+import Image from "next/image"
+import PageGrid from "@/components/page-grid"
+import Background from "@/components/background"
 
 export default function LoginPage() {
   return (
@@ -25,21 +28,8 @@ export default function LoginPage() {
               {/* Magenta Orb Grid Background */}
               <div className="min-h-screen w-full relative">
                 {/* Diagonal Fade Grid Background - Top Right */}
-                <div
-                  className="absolute inset-0 z-0"
-                  style={{
-                    backgroundImage: `
-        linear-gradient(to right, color-mix(in srgb, var(--color-primary) 20%, transparent) 1px, transparent 1px),
-        linear-gradient(to bottom, color-mix(in srgb, var(--color-primary) 20%, transparent) 1px, transparent 1px)
-      `,
-                    backgroundSize: "20px 30px",
-                    WebkitMaskImage:
-                      "radial-gradient(ellipse 80% 80% at 100% 0%, #000 50%, transparent 90%)",
-                    maskImage:
-                      "radial-gradient(ellipse 80% 80% at 100% 0%, #000 50%, transparent 90%)",
-                  }}
-                />
-                <LoginHeading />
+                <Background className="min-h-screen w-full absolute z-9" />
+                <LoginHeading className="min-h-screen w-full absolute z-10" />
               </div>
             </div>
           </div>
@@ -47,6 +37,7 @@ export default function LoginPage() {
 
         </div>
       </div>
+      <PageGrid variant="grid" />
     </div>
   )
 }

@@ -294,6 +294,7 @@ export default function StudentDashboard() {
             setSelectedChildName(firstStudent.name)
 
             fetchAssignments(firstStudent.id)
+            fetchNotes(firstStudent.id)
           }
         }
       } else {
@@ -311,6 +312,7 @@ export default function StudentDashboard() {
             setSelectedChildName(firstChild.name)
             // Fetch assignments for the first child
             fetchAssignments(firstChild.id)
+            fetchNotes(firstChild.id)
           }
         }
       }
@@ -324,12 +326,14 @@ export default function StudentDashboard() {
     setSelectedChildId(childId)
     setSelectedChildName(childName)
     fetchAssignments(childId)
+    fetchNotes(childId)
   }
 
   const switchToOwnView = () => {
     setSelectedChildId(null)
     setSelectedChildName(null)
     fetchAssignments()
+    fetchNotes()
   }
 
   // Wrapper function that only allows toggling when appropriate
@@ -357,9 +361,11 @@ export default function StudentDashboard() {
     }
   }
 
-  const fetchNotes = async () => {
+  const fetchNotes = async (childId?: string) => {
     try {
-      const response = await fetch('/api/notes')
+      const studentId = childId || selectedChildId
+      const url = studentId ? `/api/notes?studentId=${studentId}` : '/api/notes'
+      const response = await fetch(url)
       const data = await response.json()
 
       if (data.notes) {
@@ -1287,23 +1293,27 @@ function AssignmentCard({
           {relatedNotes.length}
         </span>
       )}
+      {assignment.is_recurring && (
+        <Repeat className=" absolute top-4 left-4 h-4 w-4 text-white" />
+      )}
       <CardHeader onClick={handleToggleExpand} className="cursor-pointer pb-3 z-10">
         <div className="flex items-start gap-3">
 
-          <div className="flex-1">
+          <div className="grow-1">
+
             <CardTitle className={`text-lg ${assignment.completed ? 'line-through text-muted-foreground' : ''} group:hover-text-primary flex items-center gap-2`}>
-              {assignment.title}
-              {assignment.is_recurring && (
-                <Repeat className="h-4 w-4 text-blue-500" />
-              )}
+              <span className="line-clamp-4 md:line-clamp-3">
+                {assignment.title}
+              </span>
               {isCompletedRecurring && (
                 <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
                   <CheckCircle2 className="h-3 w-3" />
                   Will hide when closed
                 </span>
               )}
+
               {assignment.category && (
-                <span className="flex items-center gap-1 whitespace-nowrap text-xs border border-primary/30 text-foreground px-2 py-0.5 rounded-full leading-4">
+                <span className="grow-0 w-fit flex items-center gap-1 whitespace-nowrap text-xs border border-primary/30 text-foreground px-2 py-0.5 rounded-full leading-4">
                   {assignment.category}
                 </span>
               )}

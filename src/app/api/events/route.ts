@@ -1,12 +1,28 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
+interface Assignment {
+  id: string
+  title: string
+  content?: string
+  due_date: string
+  is_recurring?: boolean
+  recurrence_pattern?: {
+    days: string[]
+    frequency: string
+  }
+  parent_id: string
+  links?: string[]
+  [key: string]: unknown
+}
+
 export async function GET(request: NextRequest) {
   try {
     let supabase
     try {
       supabase = await createClient()
     } catch (clientError) {
+      console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
@@ -34,7 +50,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get events and assignments based on user role
-    let eventsQuery = supabase
+    const eventsQuery = supabase
       .from('events')
       .select(`
         id,
@@ -74,7 +90,7 @@ export async function GET(request: NextRequest) {
 
         // Map student names to assignments
         const studentMap = new Map()
-        studentAssignments?.forEach((sa: any) => {
+        studentAssignments?.forEach((sa: { assignment_id: string; profiles: { name: string } }) => {
           if (!studentMap.has(sa.assignment_id)) {
             studentMap.set(sa.assignment_id, [])
           }
@@ -82,7 +98,7 @@ export async function GET(request: NextRequest) {
         })
 
         // Add student names to assignments
-        assignmentsData = allAssignments.map((assignment: any) => ({
+        assignmentsData = allAssignments.map((assignment: Assignment) => ({
           ...assignment,
           assigned_students: studentMap.get(assignment.id) || []
         }))
@@ -305,6 +321,7 @@ export async function POST(request: NextRequest) {
     try {
       supabase = await createClient()
     } catch (clientError) {
+      console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
@@ -389,6 +406,7 @@ export async function PUT(request: NextRequest) {
     try {
       supabase = await createClient()
     } catch (clientError) {
+      console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
@@ -464,6 +482,7 @@ export async function DELETE(request: NextRequest) {
     try {
       supabase = await createClient()
     } catch (clientError) {
+      console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }

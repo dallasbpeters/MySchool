@@ -1,12 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     let supabase
     try {
       supabase = await createClient()
     } catch (clientError) {
+      console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
@@ -54,12 +55,12 @@ export async function GET(request: NextRequest) {
 
     // Create parent name lookup map
     const parentNameMap = new Map()
-    parentsData?.forEach((parent: any) => {
+    parentsData?.forEach((parent: { id: string; name: string }) => {
       parentNameMap.set(parent.id, parent.name)
     })
 
     // Format students with parent information
-    const studentsWithParents = studentsData?.map((student: any) => ({
+    const studentsWithParents = studentsData?.map((student: { id: string; name: string; parent_id: string; email: string; created_at: string }) => ({
       id: student.id,
       name: student.name,
       email: student.email,
@@ -73,7 +74,8 @@ export async function GET(request: NextRequest) {
       students: studentsWithParents
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('Error in GET /api/admin/students:', error)
     return NextResponse.json({ students: [], error: 'Internal server error' })
   }
 }

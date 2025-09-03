@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import MultipleSelector, { Option } from '@/components/ui/multiselect'
 import { AssignmentForm } from '@/components/assignment-form'
-import { Plus, Trash2, Calendar, Link as LinkIcon, Repeat, Edit, Play, Users, Shield, Filter } from 'lucide-react'
+import { Plus, Trash2, Calendar, Repeat, Edit, Users, Shield, Filter } from 'lucide-react'
 import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -18,10 +17,16 @@ interface Link {
   type?: 'link' | 'video'
 }
 
+interface ChildDetail {
+  id: string
+  name: string
+  parent_id: string
+}
+
 interface Assignment {
   id: string
   title: string
-  content: any
+  content: string | null
   links: Link[]
   due_date: string
   created_at: string
@@ -34,6 +39,7 @@ interface Assignment {
   recurrence_end_date?: string
   next_due_date?: string
   assigned_children?: string[]
+  assigned_children_details?: ChildDetail[]
   parent_name?: string
 }
 
@@ -60,7 +66,7 @@ export default function AdminDashboard() {
   const [selectedFamily, setSelectedFamily] = useState<string>('all')
   const [newAssignment, setNewAssignment] = useState({
     title: '',
-    content: null as any,
+    content: null,
     links: [] as Link[],
     due_date: format(new Date(), 'yyyy-MM-dd'),
     category: [] as Option[],
@@ -73,24 +79,11 @@ export default function AdminDashboard() {
     recurrence_end_date: ''
   })
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(new Date())
-  const [newLink, setNewLink] = useState({ title: '', url: '', type: 'link' as 'link' | 'video' })
+  // Temporarily comment out unused link state
+  // const [newLink, setNewLink] = useState({ title: '', url: '', type: 'link' as 'link' | 'video' })
   const { toast } = useToast()
 
-  useEffect(() => {
-    checkAdminAccess()
-  }, [])
-
-  // Update due date when calendar date is selected
-  useEffect(() => {
-    if (selectedCalendarDate) {
-      setNewAssignment(prev => ({
-        ...prev,
-        due_date: format(selectedCalendarDate, 'yyyy-MM-dd')
-      }))
-    }
-  }, [selectedCalendarDate])
-
-  const checkAdminAccess = async () => {
+  const checkAdminAccess = useCallback(async () => {
     try {
       // Try to fetch admin assignments directly - this will verify admin role
       const response = await fetch('/api/admin/assignments')
@@ -107,12 +100,26 @@ export default function AdminDashboard() {
 
       }
     } catch (error) {
-
+      console.error('Failed to check admin access:', error)
       setUserRole('unauthorized')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    checkAdminAccess()
+  }, [checkAdminAccess])
+
+  // Update due date when calendar date is selected
+  useEffect(() => {
+    if (selectedCalendarDate) {
+      setNewAssignment(prev => ({
+        ...prev,
+        due_date: format(selectedCalendarDate, 'yyyy-MM-dd')
+      }))
+    }
+  }, [selectedCalendarDate])
 
   const fetchAllAssignments = async () => {
     try {
@@ -123,7 +130,7 @@ export default function AdminDashboard() {
         setAssignments(data.assignments)
       }
     } catch (error) {
-
+      console.error('Failed to fetch assignments:', error)
     }
   }
 
@@ -136,7 +143,7 @@ export default function AdminDashboard() {
         setFamilies(data.families)
       }
     } catch (error) {
-
+      console.error('Failed to fetch assignments:', error)
     }
   }
 
@@ -156,7 +163,7 @@ export default function AdminDashboard() {
         )
       }
     } catch (error) {
-
+      console.error('Failed to fetch assignments:', error)
     }
   }
 
@@ -178,7 +185,7 @@ export default function AdminDashboard() {
             <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
             <p className="text-muted-foreground mb-4">
-              You don't have admin privileges to access this page.
+              You don&apos;t have admin privileges to access this page.
             </p>
             <p className="text-sm text-muted-foreground">
               Current role: {userRole || 'Unknown'}
@@ -261,10 +268,10 @@ export default function AdminDashboard() {
       resetForm()
       fetchAllAssignments()
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || `An unexpected error occurred while ${editingAssignment ? 'updating' : 'creating'} the assignment`,
+        description: (error as Error).message || `An unexpected error occurred while ${editingAssignment ? 'updating' : 'creating'} the assignment`,
         variant: "destructive"
       })
     } finally {
@@ -290,31 +297,32 @@ export default function AdminDashboard() {
       })
 
       fetchAllAssignments()
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete assignment",
+        description: (error as Error).message || "Failed to delete assignment",
         variant: "destructive"
       })
     }
   }
 
-  const addLink = () => {
-    if (newLink.title && newLink.url) {
-      setNewAssignment({
-        ...newAssignment,
-        links: [...newAssignment.links, newLink]
-      })
-      setNewLink({ title: '', url: '', type: 'link' })
-    }
-  }
+  // Remove unused link management functions for now
+  // const addLink = () => {
+  //   if (newLink.title && newLink.url) {
+  //     setNewAssignment({
+  //       ...newAssignment,
+  //       links: [...newAssignment.links, newLink]
+  //     })
+  //     setNewLink({ title: '', url: '', type: 'link' })
+  //   }
+  // }
 
-  const removeLink = (index: number) => {
-    setNewAssignment({
-      ...newAssignment,
-      links: newAssignment.links.filter((_, i) => i !== index)
-    })
-  }
+  // const removeLink = (index: number) => {
+  //   setNewAssignment({
+  //     ...newAssignment,
+  //     links: newAssignment.links.filter((_, i) => i !== index)
+  //   })
+  // }
 
   const startEditAssignment = (assignment: Assignment) => {
     setEditingAssignment(assignment)
@@ -322,9 +330,9 @@ export default function AdminDashboard() {
     // Use assigned_children_details if available, otherwise fall back to assigned_children
     let assignedChildOptions: Option[] = []
 
-    if ((assignment as any).assigned_children_details?.length > 0) {
+    if (assignment.assigned_children_details?.length > 0) {
       // Use the detailed information that includes student IDs
-      assignedChildOptions = (assignment as any).assigned_children_details.map((child: any) => {
+      assignedChildOptions = assignment.assigned_children_details.map((child: ChildDetail) => {
         // Find parent name
         const family = families.find(f => f.parent_id === child.parent_id)
         const parentName = family?.parent_name || 'Unknown Parent'
@@ -372,7 +380,7 @@ export default function AdminDashboard() {
     setEditingAssignment(null)
     setNewAssignment({
       title: '',
-      content: null as any,
+      content: null,
       links: [] as Link[],
       due_date: format(new Date(), 'yyyy-MM-dd'),
       category: [] as Option[],
@@ -490,10 +498,10 @@ export default function AdminDashboard() {
             </div>
 
             {assignments.length > 0 && (() => {
-              const parentBreakdown = assignments.reduce((acc, a) => {
-                acc[a.parent_name || 'Unknown'] = (acc[a.parent_name || 'Unknown'] || 0) + 1
-                return acc
-              }, {} as Record<string, number>)
+              // const parentBreakdown = assignments.reduce((acc, a) => {
+              //   acc[a.parent_name || 'Unknown'] = (acc[a.parent_name || 'Unknown'] || 0) + 1
+              //   return acc
+              // }, {} as Record<string, number>)
 
               return null
             })()}

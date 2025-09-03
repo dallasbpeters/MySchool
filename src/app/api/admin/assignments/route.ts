@@ -1,12 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     let supabase
     try {
       supabase = await createClient()
     } catch (clientError) {
+      console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
@@ -67,13 +68,17 @@ export async function GET(request: NextRequest) {
       .not('profiles', 'is', null)
       .eq('profiles.role', 'student')
 
+    if (studentAssignmentsError) {
+      console.error('Error fetching student assignments:', studentAssignmentsError)
+    }
+
 
 
     // Create maps for assigned children (names and full details)
     const assignedChildrenMap = new Map()
     const assignedChildrenDetailsMap = new Map()
 
-    allStudentAssignments?.forEach((sa: any) => {
+    allStudentAssignments?.forEach((sa: { assignment_id: string; student_id: string; profiles: { name: string; role: string; parent_id: string } }) => {
       if (sa.profiles.role === 'student') {
         // Map for names (backward compatibility)
         if (!assignedChildrenMap.has(sa.assignment_id)) {
@@ -93,7 +98,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    const assignmentsWithDetails = assignmentsData?.map((a: any) => ({
+    const assignmentsWithDetails = assignmentsData?.map((a: { id: string; links?: string[]; parent_name?: string;[key: string]: unknown }) => ({
       ...a,
       links: Array.isArray(a.links) ? a.links : [],
       assigned_children: assignedChildrenMap.get(a.id) || [],
@@ -107,7 +112,8 @@ export async function GET(request: NextRequest) {
       assignments: assignmentsWithDetails
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('Error in GET /api/admin/assignments:', error)
     return NextResponse.json({ assignments: [], error: 'Internal server error' })
   }
 }
@@ -144,6 +150,7 @@ export async function POST(request: NextRequest) {
     try {
       supabase = await createClient()
     } catch (clientError) {
+      console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
@@ -234,7 +241,8 @@ export async function POST(request: NextRequest) {
       message: `Assignment "${title.trim()}" created successfully`
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('Error in admin assignments route:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -277,6 +285,7 @@ export async function PUT(request: NextRequest) {
     try {
       supabase = await createClient()
     } catch (clientError) {
+      console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
@@ -323,7 +332,7 @@ export async function PUT(request: NextRequest) {
     // DEBUG: Log parameters being sent to RPC - this won't be stripped
     const debugInfo = `[ADMIN API DEBUG] Updating assignment ${assignmentId} with params: ${JSON.stringify(rpcParams, null, 2)}`
     process.stdout.write(debugInfo + '\n')
-    
+
     // DEBUG: Log the request body that was received
     const requestBodyDebug = `[ADMIN API DEBUG] Original request body: ${JSON.stringify({ title, content, links, due_date, category }, null, 2)}`
     process.stdout.write(requestBodyDebug + '\n')
@@ -342,7 +351,7 @@ export async function PUT(request: NextRequest) {
         .select('id, title, links, updated_at')
         .eq('id', assignmentId)
         .single()
-      
+
       const dbDebug = `[ADMIN API DEBUG] Post-RPC DB state - Data: ${JSON.stringify(dbVerify, null, 2)}, Error: ${JSON.stringify(dbVerifyError, null, 2)}`
       process.stdout.write(dbDebug + '\n')
     }
@@ -398,7 +407,8 @@ export async function PUT(request: NextRequest) {
       message: `Assignment "${title.trim()}" updated successfully`
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('Error in admin assignments route:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -422,6 +432,7 @@ export async function DELETE(request: NextRequest) {
     try {
       supabase = await createClient()
     } catch (clientError) {
+      console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
@@ -457,6 +468,10 @@ export async function DELETE(request: NextRequest) {
         assignment_id: assignmentId
       })
 
+    if (deleteResult) {
+      console.log('Assignment deleted successfully:', deleteResult)
+    }
+
 
 
     if (deleteError) {
@@ -471,7 +486,8 @@ export async function DELETE(request: NextRequest) {
       message: 'Assignment deleted successfully'
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('Error in admin assignments route:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

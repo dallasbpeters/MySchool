@@ -121,7 +121,7 @@ const EVENTS = [
 const mockGenerator = (numberOfEvents: number): IEvent[] => {
   const result: IEvent[] = [
     {
-      id: 1204,
+      id: "1204",
       startDate: new Date("2025-09-20T00:00:00-03:00").toISOString(),
       endDate: new Date("2025-09-20T23:59:00-03:00").toISOString(),
       title: "My wedding :)",
@@ -144,7 +144,7 @@ const mockGenerator = (numberOfEvents: number): IEvent[] => {
 
   // Create an event happening now
   const currentEvent = {
-    id: currentId++,
+    id: String(currentId++),
     startDate: new Date(now.getTime() - 30 * 60000).toISOString(),
     endDate: new Date(now.getTime() + 30 * 60000).toISOString(),
     title: EVENTS[Math.floor(Math.random() * EVENTS.length)],
@@ -208,7 +208,7 @@ const mockGenerator = (numberOfEvents: number): IEvent[] => {
     }
 
     result.push({
-      id: currentId++,
+      id: String(currentId++),
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
       title: EVENTS[Math.floor(Math.random() * EVENTS.length)],

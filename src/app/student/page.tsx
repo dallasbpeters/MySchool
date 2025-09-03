@@ -103,7 +103,7 @@ const isDatePast = (dateStr: string) => {
 interface Assignment {
   id: string
   title: string
-  content: any
+  content: string | null
   links: Array<{ title: string; url: string; type?: 'link' | 'video' }>
   due_date: string
   completed?: boolean

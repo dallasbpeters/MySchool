@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ notifications: [], count: 0 })
     }
 
-    const notifications: any[] = []
+    const notifications: Array<{ id: string; message: string; type: string; created_at: string; read: boolean }> = []
     const now = new Date()
 
     if (profile.role === 'student') {
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
           if (assignments) {
             assignments.forEach(assignment => {
               const completion = assignment.student_assignments?.find(
-                (sa: any) => sa.student_id === child.id
+                (sa: { student_id: string; completed: boolean }) => sa.student_id === child.id
               )
 
               if (!completion?.completed) {
@@ -163,7 +163,8 @@ export async function GET(request: NextRequest) {
       count: notifications.length
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error("API error:", error)
 
     return NextResponse.json({ notifications: [], count: 0 })
   }

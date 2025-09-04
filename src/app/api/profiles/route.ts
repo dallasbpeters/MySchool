@@ -88,7 +88,8 @@ export async function PUT(request: NextRequest) {
       message: 'Name updated successfully'
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error("API error:", error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

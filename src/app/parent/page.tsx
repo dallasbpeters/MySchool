@@ -25,7 +25,7 @@ interface Link {
 interface Assignment {
   id: string
   title: string
-  content: any
+  content: string | null
   links: Link[]
   due_date: string
   created_at: string
@@ -59,7 +59,7 @@ export default function ParentDashboard() {
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null)
   const [newAssignment, setNewAssignment] = useState({
     title: '',
-    content: null as any,
+    content: null,
     links: [] as Link[],
     due_date: format(new Date(), 'yyyy-MM-dd'),
     category: [] as Option[],
@@ -141,7 +141,7 @@ export default function ParentDashboard() {
       setUserRole(role)
 
       let assignmentsData = []
-      let parentNames = new Set<string>()
+      const parentNames = new Set<string>()
 
       if (role === 'admin') {
         // Admin: fetch from admin API to get all assignments with parent names
@@ -246,10 +246,11 @@ export default function ParentDashboard() {
       resetForm()
       fetchAssignments()
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : `An unexpected error occurred while ${editingAssignment ? 'updating' : 'creating'} the assignment`
       toast({
         title: "Error",
-        description: error.message || `An unexpected error occurred while ${editingAssignment ? 'updating' : 'creating'} the assignment`,
+        description: errorMessage,
         variant: "destructive"
       })
     } finally {
@@ -275,10 +276,11 @@ export default function ParentDashboard() {
       })
 
       fetchAssignments()
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete assignment"
       toast({
         title: "Error",
-        description: error.message || "Failed to delete assignment",
+        description: errorMessage,
         variant: "destructive"
       })
     }
@@ -334,7 +336,7 @@ export default function ParentDashboard() {
     setEditingAssignment(null)
     setNewAssignment({
       title: '',
-      content: null as any,
+      content: null,
       links: [] as Link[],
       due_date: format(new Date(), 'yyyy-MM-dd'),
       category: [] as Option[],

@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     // Create profile in database
     try {
-      const profileData: any = {
+      const profileData: { id: string; email: string; name: string; role: string; parent_id?: string } = {
         id: data.user.id,
         email: email,
         name: childName,
@@ -131,14 +131,15 @@ export async function POST(request: NextRequest) {
     } catch (profileError) {
       // Handle error silently
     }
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: true,
       user: data.user,
       session: data.session
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error("API error:", error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

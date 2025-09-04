@@ -22,13 +22,13 @@ export class FetchSupabaseClient {
     }
   }
 
-  async query(table: string, select: string = '*', limit?: number, filters?: Record<string, any>, accessToken?: string) {
+  async query(table: string, select: string = '*', limit?: number, filters?: Record<string, unknown>, accessToken?: string) {
     const url = new URL(`${this.baseUrl}/${table}`)
     url.searchParams.set('select', select)
     if (limit) {
       url.searchParams.set('limit', limit.toString())
     }
-    
+
     // Add filters (e.g., { code: 'eq.ABC123', used: 'eq.false' })
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -43,15 +43,15 @@ export class FetchSupabaseClient {
     })
 
     const data = await response.json()
-    
+
     if (!response.ok) {
       return { data: null, error: data }
     }
-    
+
     return { data, error: null }
   }
 
-  async insert(table: string, values: any, accessToken?: string) {
+  async insert(table: string, values: unknown, accessToken?: string) {
     const url = `${this.baseUrl}/${table}`
 
     const response = await fetch(url, {
@@ -61,17 +61,17 @@ export class FetchSupabaseClient {
     })
 
     const data = await response.json()
-    
+
     if (!response.ok) {
       return { data: null, error: data }
     }
-    
+
     return { data, error: null }
   }
 
-  async update(table: string, values: any, filters: Record<string, any>, accessToken?: string) {
+  async update(table: string, values: unknown, filters: Record<string, unknown>, accessToken?: string) {
     const url = new URL(`${this.baseUrl}/${table}`)
-    
+
     // Add filters to URL
     Object.entries(filters).forEach(([key, value]) => {
       url.searchParams.set(key, value)
@@ -85,17 +85,17 @@ export class FetchSupabaseClient {
     })
 
     const data = await response.json()
-    
+
     if (!response.ok) {
       return { data: null, error: data }
     }
-    
+
     return { data, error: null }
   }
 
-  async delete(table: string, filters: Record<string, any>, accessToken?: string) {
+  async delete(table: string, filters: Record<string, unknown>, accessToken?: string) {
     const url = new URL(`${this.baseUrl}/${table}`)
-    
+
     // Add filters to URL
     Object.entries(filters).forEach(([key, value]) => {
       url.searchParams.set(key, value)
@@ -108,11 +108,11 @@ export class FetchSupabaseClient {
     })
 
     const data = await response.json()
-    
+
     if (!response.ok) {
       return { data: null, error: data }
     }
-    
+
     return { data, error: null }
   }
 }

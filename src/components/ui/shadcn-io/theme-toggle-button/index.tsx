@@ -177,7 +177,7 @@ export const ThemeToggleButton = ({
     
     // Toggle the theme with view transition
     if ('startViewTransition' in document) {
-      (document as any).startViewTransition(() => {
+      (document as Record<string, unknown>).startViewTransition(() => {
         setTheme(theme === 'light' ? 'dark' : 'light');
       });
     } else {
@@ -215,7 +215,7 @@ export const ThemeToggleButton = ({
 export const useThemeTransition = () => {
   const startTransition = useCallback((updateFn: () => void) => {
     if ('startViewTransition' in document) {
-      (document as any).startViewTransition(updateFn);
+      (document as Record<string, unknown>).startViewTransition(updateFn);
     } else {
       updateFn();
     }

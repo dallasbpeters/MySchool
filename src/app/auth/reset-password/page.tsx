@@ -194,7 +194,8 @@ export default function ResetPasswordPage() {
         // Ignore signout errors since we're already redirecting
       })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      console.error('Reset password error:', error)
       clearTimeout(timeoutId)
 
       toast({

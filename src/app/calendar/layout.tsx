@@ -39,12 +39,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         }
 
         setError(null)
-      } catch (error: any) {
-
-        setError(error.message)
+      } catch (error: unknown) {
+        console.error('Calendar fetch error:', error)
+        setError((error as Error).message)
         toast({
           title: "Calendar Error",
-          description: error.message || "Failed to load calendar data. Please try refreshing the page.",
+          description: (error as Error).message || "Failed to load calendar data. Please try refreshing the page.",
           variant: "destructive"
         })
       } finally {

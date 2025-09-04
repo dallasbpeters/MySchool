@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'No students found' })
     }
 
-    const emailPromises = students.map(async (student: any) => {
+    const emailPromises = students.map(async (student: { id: string; name: string; parent_id: string; email?: string }) => {
       if (!student.parent_id) return null
 
       // Get today's assignments for this student
@@ -73,13 +73,13 @@ export async function GET(request: Request) {
                 <p>Hi ${student.name || 'Student'}! Here are your assignments for ${format(new Date(), 'MMMM dd, yyyy')}</p>
               </div>
               <div class="content">
-                ${assignments.map((assignment: any) => `
+                ${assignments.map((assignment: { title: string; links?: Array<{ url: string; title: string }> }) => `
                   <div class="assignment">
                     <h3>${assignment.title}</h3>
                     ${assignment.links && assignment.links.length > 0 ? `
                       <div class="links">
                         <strong>Resources:</strong><br>
-                        ${(assignment.links as any[]).map(link =>
+                        ${assignment.links.map(link =>
         `<a href="${link.url}" class="link">📎 ${link.title}</a><br>`
       ).join('')}
                       </div>
@@ -115,7 +115,7 @@ export async function GET(request: Request) {
 
     // Create notifications for successfully sent emails
     if (successfulEmails.length > 0) {
-      const notificationPromises = students.map(async (student: any) => {
+      const notificationPromises = students.map(async (student: { id: string; name: string; parent_id: string }) => {
         return supabase
           .from('notifications')
           .insert({

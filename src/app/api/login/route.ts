@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     try {
       supabase = await createClient()
     } catch (clientError) {
-
+      console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
 
     return response
 
-  } catch (error: any) {
-
+  } catch (error: unknown) {
+    console.error('Error in POST /api/login:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

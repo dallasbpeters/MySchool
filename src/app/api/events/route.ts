@@ -16,7 +16,7 @@ interface Assignment {
   [key: string]: unknown
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     let supabase
     try {
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
 
       // Group by assignment and collect student names
       const assignmentMap = new Map()
-      childrenAssignments?.forEach((assignment: any) => {
+      childrenAssignments?.forEach((assignment: Assignment & { profiles?: { name: string } }) => {
         const assignmentId = assignment.id
         if (!assignmentMap.has(assignmentId)) {
           assignmentMap.set(assignmentId, {
@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
             assigned_students: []
           })
         }
-        const studentName = assignment.student_assignments?.profiles?.name
+        const studentName = (assignment as unknown as { student_assignments?: { profiles?: { name: string } } }).student_assignments?.profiles?.name
         if (studentName && !assignmentMap.get(assignmentId).assigned_students.includes(studentName)) {
           assignmentMap.get(assignmentId).assigned_students.push(studentName)
         }
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
         `)
         .eq('student_assignments.student_id', user.id)
 
-      assignmentsData = studentAssignments?.map((assignment: any) => ({
+      assignmentsData = studentAssignments?.map((assignment: Assignment) => ({
         ...assignment,
         assigned_students: [profile.name || 'Me']
       })) || []
@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Format regular events for Big Calendar component
-    const formattedEvents = eventsData?.map((event: any) => ({
+    const formattedEvents = eventsData?.map((event: { id: string; title: string; description?: string; start_date: string; end_date: string; color: string; user_id: string; profiles?: { name: string } }) => ({
       id: event.id, // Keep as string UUID
       title: event.title,
       description: event.description || '',
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
     })) || []
 
     // Get completion data for assignments to determine colors
-    let assignmentCompletionMap = new Map()
+    const assignmentCompletionMap = new Map()
     if (assignmentsData && assignmentsData.length > 0) {
       const assignmentIds = assignmentsData.map(a => a.id)
       const { data: completionData } = await supabase
@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
         .in('assignment_id', assignmentIds)
 
       // Create a map of assignment completion status
-      completionData?.forEach((completion: any) => {
+      completionData?.forEach((completion: { assignment_id: string; student_id: string; completed: boolean }) => {
         const key = completion.assignment_id
         if (!assignmentCompletionMap.has(key)) {
           assignmentCompletionMap.set(key, { completed: [], incomplete: [] })
@@ -194,7 +194,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Format assignments as calendar events
-    const assignmentEvents = assignmentsData?.map((assignment: any) => {
+    const assignmentEvents = assignmentsData?.map((assignment: Assignment & { assigned_students?: string[]; profiles?: { name: string }; parent_name?: string }) => {
       const completionData = assignmentCompletionMap.get(assignment.id)
       const now = new Date()
       now.setHours(0, 0, 0, 0) // Reset to start of today for date-only comparison
@@ -287,7 +287,8 @@ export async function GET(request: NextRequest) {
       users: usersData
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('Error in GET /api/events:', error)
     return NextResponse.json({ events: [], users: [], error: 'Internal server error' })
   }
 }
@@ -366,7 +367,8 @@ export async function POST(request: NextRequest) {
       message: `Event "${title.trim()}" created successfully`
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('Error in POST /api/events:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -458,7 +460,8 @@ export async function PUT(request: NextRequest) {
       message: `Event "${title.trim()}" updated successfully`
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('Error in POST /api/events:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -517,7 +520,8 @@ export async function DELETE(request: NextRequest) {
       message: 'Event deleted successfully'
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('Error in POST /api/events:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

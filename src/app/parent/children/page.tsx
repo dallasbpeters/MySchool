@@ -47,7 +47,7 @@ export default function ChildrenManagement() {
   const [newChildName, setNewChildName] = useState('')
   const [generatedCode, setGeneratedCode] = useState<string | null>(null)
   const [selectedChild, setSelectedChild] = useState<string | null>(null)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null)
   const [editingChildId, setEditingChildId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const [accessToken, setAccessToken] = useState<string | null>(null)
@@ -82,11 +82,15 @@ export default function ChildrenManagement() {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
         if (session?.user) {
-          setUser(session.user)
+          const userObject = {
+            id: session.user.id,
+            email: session.user.email || 'user@example.com'
+          }
+          setUser(userObject)
           setAccessToken(session.access_token)
           setIsLoading(false)
-          fetchChildren(session.user)
-          fetchSignupCodes(session.user)
+          fetchChildren(userObject)
+          fetchSignupCodes(userObject)
         } else {
           // Try to get user from profiles
           const { data: profiles, error: profileError } = await supabase
@@ -157,7 +161,7 @@ export default function ChildrenManagement() {
       if (data.children) {
         setChildren(data.children)
         // Fetch assignment statuses for each child
-        data.children.forEach((child: any) => fetchAssignmentStatus(child.id))
+        data.children.forEach((child: { id: string }) => fetchAssignmentStatus(child.id))
       }
     } catch (error) {
       // Handle error silently
@@ -173,7 +177,7 @@ export default function ChildrenManagement() {
 
       if (response.ok && result.success && result.data) {
         // Sort by created_at descending (newest first)
-        const sortedCodes = result.data.sort((a: any, b: any) =>
+        const sortedCodes = result.data.sort((a: { created_at: string }, b: { created_at: string }) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
 
@@ -595,7 +599,7 @@ export default function ChildrenManagement() {
                       // Show form to generate code
                       <>
                         <div className="space-y-2">
-                          <Label htmlFor="child_name">Child's Name</Label>
+                          <Label htmlFor="child_name">Child&apos;s Name</Label>
                           <Input
                             id="child_name"
                             placeholder="Enter your child's name"

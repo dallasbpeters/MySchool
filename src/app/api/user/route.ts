@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
       }
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error("API error:", error)
 
     return NextResponse.json({ user: null })
   }

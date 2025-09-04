@@ -6,9 +6,9 @@ import { cn } from '@/lib/utils';
 
 gsap.registerPlugin(InertiaPlugin);
 
-const throttle = (func: (...args: any[]) => void, limit: number) => {
+const throttle = (func: (...args: unknown[]) => void, limit: number) => {
   let lastCall = 0;
-  return function (this: any, ...args: any[]) {
+  return function (this: unknown, ...args: unknown[]) {
     const now = performance.now();
     if (now - lastCall >= limit) {
       lastCall = now;
@@ -64,7 +64,7 @@ export const DotPattern = forwardRef<HTMLDivElement, DotPatternProps>(({
   returnDuration = 1.5,
   ...props
 }, ref) => {
-  const domProps = { ...props } as any;
+  const domProps = { ...props } as Record<string, unknown>;
   delete domProps.dotSize;
   delete domProps.gap;
   delete domProps.baseColor;

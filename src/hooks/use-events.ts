@@ -46,7 +46,7 @@ export function useEvents() {
       window.location.reload()
 
       return data.event
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
         description: error.message || "Failed to create event",
@@ -91,7 +91,7 @@ export function useEvents() {
       window.location.reload()
 
       return data.event
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
         description: error.message || "Failed to update event",
@@ -125,7 +125,7 @@ export function useEvents() {
       window.location.reload()
 
       return true
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
         description: error.message || "Failed to delete event",

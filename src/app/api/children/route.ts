@@ -1,12 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     let supabase
     try {
       supabase = await createClient()
     } catch (clientError) {
+      console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
@@ -54,7 +55,8 @@ export async function GET(request: NextRequest) {
       children: children || []
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('Error in GET /api/children:', error)
     return NextResponse.json({ children: [], error: 'Internal server error' })
   }
 }

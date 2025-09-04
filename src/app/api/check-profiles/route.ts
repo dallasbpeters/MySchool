@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient()
 
@@ -16,7 +16,8 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ profiles })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error: unknown) {
+    console.error('Error in GET /api/check-profiles:', error)
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 })
   }
 }

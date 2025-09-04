@@ -135,7 +135,8 @@ export function LoginForm({
           window.location.href = '/'
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      console.error('Form error:', error)
       toast({
         title: "Error",
         description: error.message,
@@ -172,7 +173,8 @@ export function LoginForm({
       })
 
       setShowForgotPassword(false)
-    } catch (error: any) {
+    } catch (error: unknown) {
+      console.error('Form error:', error)
       toast({
         title: "Error",
         description: error.message,
@@ -260,7 +262,7 @@ export function LoginForm({
                       type="button"
 
                       variant={role === 'parent' ? 'default' : 'outline'}
-                      size="fullWidth"
+                      className="w-full"
                       onClick={() => setRole('parent')}
                     >
                       Parent
@@ -268,7 +270,7 @@ export function LoginForm({
                     <Button
                       type="button"
                       variant={role === 'student' ? 'default' : 'outline'}
-                      size="fullWidth"
+                      className="w-full"
                       onClick={() => setRole('student')}
                     >
                       Student

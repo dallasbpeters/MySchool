@@ -1,7 +1,7 @@
 import { LoginForm } from "@/components/login-form"
 import { Logo } from "@/components/ui/Logo"
 import { LoginHeading } from "@/components/ui/aceternity/LoginHeading"
-import Image from "next/image"
+import Link from "next/link"
 import PageGrid from "@/components/page-grid"
 import Background from "@/components/background"
 
@@ -10,9 +10,9 @@ export default function LoginPage() {
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="z-100 flex flex-col gap-4 p-6 md:p-10">
         <div className="flex justify-center gap-2 md:justify-start">
-          <a href="/" className="max-w-[100px] flex items-center gap-2 font-medium">
+          <Link href="/" className="max-w-[100px] flex items-center gap-2 font-medium">
             <Logo />
-          </a>
+          </Link>
         </div>
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full md:max-w-md max-w-lg">

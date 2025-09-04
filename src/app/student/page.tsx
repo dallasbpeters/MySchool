@@ -19,8 +19,10 @@ import { UniversalVideoPlayer } from '@/components/universal-video-player'
 import { Timeline, TimelineItem, TimelineHeader, TimelineContent } from '@/components/ui/timeline-view'
 import { RecurringInstancesGrid } from '@/components/ui/recurring-instances-grid'
 import PageGrid from '@/components/page-grid'
+import { Badge } from '@/components/ui/badge'
 
 import ColourfulText from '@/components/ui/colourful-text'
+import NoAssignments from '@/components/no-assignments'
 
 // YouTube helper function moved to UniversalVideoPlayer component
 
@@ -129,7 +131,7 @@ interface Child {
 interface Note {
   id: string
   title: string
-  content: any
+  content: string | null
   category: string
   created_at: string
   assignment_id?: string
@@ -146,7 +148,7 @@ export default function StudentDashboard() {
   const [notes, setNotes] = useState<Note[]>([])
   const [selectedInstanceDates, setSelectedInstanceDates] = useState<Record<string, string>>({})
   const [editingNote, setEditingNote] = useState<Note | null>(null)
-  const [editNoteData, setEditNoteData] = useState({ title: '', content: null as any })
+  const [editNoteData, setEditNoteData] = useState<{ title: string; content: string | null }>({ title: '', content: null })
 
 
   const { toast } = useToast()
@@ -235,11 +237,11 @@ export default function StudentDashboard() {
       } else {
         throw new Error('Unable to determine user role')
       }
-    } catch (error: any) {
-
+    } catch (error: unknown) {
+      console.error('Error checking user role:', error)
       toast({
         title: "Assignment Loading Error",
-        description: error.message || "Failed to load assignments. Please try refreshing the page.",
+        description: (error as Error).message || "Failed to load assignments. Please try refreshing the page.",
         variant: "destructive"
       })
       setLoading(false)
@@ -271,7 +273,8 @@ export default function StudentDashboard() {
 
   const fetchChildren = async (roleOverride?: string) => {
     try {
-      let response, data
+      let response: Response
+      let data: any
       const currentRole = roleOverride || userRole
 
 
@@ -529,9 +532,6 @@ export default function StudentDashboard() {
         return assignment
       })
 
-      const toggledAssignment = updated.find(a => a.id === assignmentId)
-
-
       return updated
     })
 
@@ -788,7 +788,7 @@ export default function StudentDashboard() {
                       className={selectedChildId === child.id ? 'text-muted-foreground' : ''}
                     >
                       {userRole === 'admin'
-                        ? `${child.name} ${(child as any).parent_name ? `(${(child as any).parent_name})` : ''}`
+                        ? `${child.name} ${(child as { parent_name?: string }).parent_name ? `(${(child as { parent_name?: string }).parent_name})` : ''}`
                         : child.name
                       } {selectedChildId === child.id && '(Current)'}
                     </DropdownMenuItem>
@@ -836,7 +836,7 @@ export default function StudentDashboard() {
 
               {todayAssignments.length > 0 && (
                 <TimelineItem dotColor="default">
-                  <TimelineHeader textColor="default">Today's Assignments</TimelineHeader>
+                  <TimelineHeader textColor="default">Today&apos;s Assignments</TimelineHeader>
                   <TimelineContent>
                     <div className={`grid gap-4 transition-[grid-template-columns] duration-600 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
                       }`}>
@@ -901,7 +901,8 @@ export default function StudentDashboard() {
             </Timeline>
 
             {assignments.length === 0 && (
-              <Card className="relative" style={{ backgroundImage: 'url(/risky-ming-fFa5xAoT8ms-unsplash.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+              <Card className="relative">
+                <NoAssignments className="absolute h-full w-full inset-0 z-0" />
                 <CardContent className="relative text-center py-40">
                   <BookOpen className="h-16 w-16 text-primary mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No Assignments Yet</h3>
@@ -1159,7 +1160,7 @@ function AssignmentCard({
   const expanded = expandedCardId === assignment.id
   const cardRef = useRef<HTMLDivElement>(null)
   const [isCreatingNote, setIsCreatingNote] = useState(false)
-  const [newNote, setNewNote] = useState({ title: '', content: null as any })
+  const [newNote, setNewNote] = useState<{ title: string; content: string | null }>({ title: '', content: null })
   const { toast } = useToast()
 
   // Filter notes that belong directly to this assignment
@@ -1281,7 +1282,7 @@ function AssignmentCard({
   const isCompletedRecurring = assignment.completed && assignment.is_recurring && expanded
 
   return (
-    <Card ref={cardRef} id={`assignment-${assignment.id}`} className={`self-start overflow-hidden relative ${expanded ? 'shadow-lg ring-0!' : ''} ${assignment.completed ? 'bg-muted/30 opacity-75' : ''} ${isCompletedRecurring ? 'border-green-200 bg-green-50/50' : ''}`}>
+    <Card ref={cardRef} id={`assignment-${assignment.id}`} className={`self-start overflow-hidden relative md:pb-0 ${expanded ? 'md:pb-6 shadow-lg ring-0!' : ''} ${assignment.completed ? 'bg-muted/30 opacity-75' : ''} ${isCompletedRecurring ? 'border-green-200 bg-green-50/50' : ''}`}>
       {image && (
         <CardMedia onClick={handleToggleExpand} className="cursor-pointer">
           <Image src={images[imageIndex % images.length]} alt={assignment.title} width={1200} height={1200} loading="eager" className="z-0 h-100 object-cover" />
@@ -1313,9 +1314,15 @@ function AssignmentCard({
               )}
 
               {assignment.category && (
-                <span className="grow-0 w-fit flex items-center gap-1 whitespace-nowrap text-xs border border-primary/30 text-foreground px-2 py-0.5 rounded-full leading-4">
-                  {assignment.category}
-                </span>
+                <>
+                  <Badge variant="outline">
+                    <span
+                      className="size-1.5 rounded-full bg-green-500"
+                      aria-hidden="true"
+                    ></span>
+                    {assignment.category}
+                  </Badge>
+                </>
               )}
             </CardTitle>
             <CardDescription className={`flex items-center gap-2 mt-0 ${getDateColor(selectedInstanceDate || assignment.due_date, assignment.completed)}`}>
@@ -1516,7 +1523,7 @@ function AssignmentCard({
 }
 
 // Separate component for rendering note content to avoid hook rule violations
-function NoteContent({ content }: { content: any }) {
+function NoteContent({ content }: { content: string | null }) {
   const editor = useEditor({
     extensions: [
       StarterKit

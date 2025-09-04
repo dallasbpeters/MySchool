@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Determine which student's notes to fetch
-    let targetStudentId = studentId || user.id
+    const targetStudentId = studentId || user.id
 
     // If studentId is provided, verify the user has access to view that student's notes
     if (studentId && studentId !== user.id) {
@@ -64,7 +64,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ notes: notes || [] })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error("API error:", error)
     return NextResponse.json({ notes: [], error: 'Internal server error' })
   }
 }
@@ -130,7 +131,8 @@ export async function POST(request: NextRequest) {
       message: `Note "${title.trim()}" created successfully`
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error("API error:", error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -206,7 +208,8 @@ export async function PUT(request: NextRequest) {
       message: `Note "${title.trim()}" updated successfully`
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error("API error:", error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -257,7 +260,8 @@ export async function DELETE(request: NextRequest) {
       message: 'Note deleted successfully'
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error("API error:", error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

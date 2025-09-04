@@ -13,7 +13,7 @@ import {
 export const description = "An interactive line chart showing completed assignments per child"
 
 export function ChartLineInteractive() {
-  const [chartData, setChartData] = React.useState<any[]>([])
+  const [chartData, setChartData] = React.useState<Record<string, unknown>[]>([])
   const [children, setChildren] = React.useState<string[]>([])
   const [chartConfig, setChartConfig] = React.useState<ChartConfig>({})
   const [activeChart, setActiveChart] = React.useState<string>("")

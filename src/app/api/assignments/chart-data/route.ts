@@ -1,13 +1,27 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { eachDayOfInterval, format, subDays } from 'date-fns'
 
-export async function GET(request: NextRequest) {
+interface Child {
+  id: string
+  name: string
+}
+
+interface CompletedAssignment {
+  completed_at: string
+  student_id: string
+  profiles: {
+    name: string
+  }
+}
+
+export async function GET() {
   try {
     let supabase
     try {
       supabase = await createClient()
     } catch (clientError) {
+      console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
@@ -57,20 +71,20 @@ export async function GET(request: NextRequest) {
         student_id,
         profiles!inner(name)
       `)
-      .in('student_id', children.map((c: any) => c.id))
+      .in('student_id', children.map((c: Child) => c.id))
       .eq('completed', true)
       .gte('completed_at', startDate.toISOString())
       .lte('completed_at', endDate.toISOString())
 
     // Generate chart data for each day
     const chartData = eachDayOfInterval({ start: startDate, end: endDate }).map(date => {
-      const dayData: any = {
+      const dayData: Record<string, string | number> = {
         date: format(date, 'yyyy-MM-dd')
       }
 
       // Count completed assignments for each child on this day
-      children.forEach((child: any) => {
-        const completedCount = completedAssignments?.filter((assignment: any) => {
+      children.forEach((child: Child) => {
+        const completedCount = completedAssignments?.filter((assignment: CompletedAssignment) => {
           const completedDate = new Date(assignment.completed_at)
           const dayStart = new Date(date)
           dayStart.setHours(0, 0, 0, 0)
@@ -90,7 +104,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Create chart config
-    const chartConfig: any = {
+    const chartConfig: Record<string, { label: string; color?: string }> = {
       assignments: {
         label: "Completed Assignments",
       }
@@ -98,7 +112,7 @@ export async function GET(request: NextRequest) {
 
     // Add each child to config with a unique color
     const colors = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)']
-    children.forEach((child: any, index: number) => {
+    children.forEach((child: Child, index: number) => {
       chartConfig[child.name] = {
         label: child.name,
         color: colors[index % colors.length]
@@ -107,12 +121,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       chartData,
-      children: children.map((c: any) => c.name),
+      children: children.map((c: Child) => c.name),
       chartConfig
     })
 
-  } catch (error: any) {
-
+  } catch (error: unknown) {
+    console.error('Error in GET /api/assignments/chart-data:', error)
     return NextResponse.json({
       chartData: [],
       children: [],

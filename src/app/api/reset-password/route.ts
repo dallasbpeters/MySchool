@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error("API error:", error)
 
     return NextResponse.json(
       { error: 'Internal server error' },

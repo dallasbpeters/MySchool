@@ -20,7 +20,7 @@ interface Link {
 interface Assignment {
   id: string
   title: string
-  content: any
+  content: string | null
   links: Link[]
   due_date: string
   created_at: string
@@ -37,7 +37,7 @@ interface Assignment {
 
 interface AssignmentFormData {
   title: string
-  content: any
+  content: string | null
   links: Link[]
   due_date: string
   category: Option[]

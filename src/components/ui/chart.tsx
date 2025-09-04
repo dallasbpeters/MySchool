@@ -121,15 +121,15 @@ function ChartTooltipContent({
   labelKey,
 }: {
   active?: boolean
-  payload?: any[]
+  payload?: unknown[]
   label?: string
   className?: string
   indicator?: "line" | "dot" | "dashed"
   hideLabel?: boolean
   hideIndicator?: boolean
-  labelFormatter?: (label: any, payload: any[]) => React.ReactNode
+  labelFormatter?: (label: unknown, payload: unknown[]) => React.ReactNode
   labelClassName?: string
-  formatter?: (value: any, name: any, entry: any, index: number) => React.ReactNode
+  formatter?: (value: unknown, name: unknown, entry: unknown, index: number) => React.ReactNode
   color?: string
   nameKey?: string
   labelKey?: string
@@ -265,7 +265,7 @@ function ChartLegendContent({
   verticalAlign = "bottom",
   nameKey,
 }: React.ComponentProps<"div"> & {
-  payload?: any[]
+  payload?: unknown[]
   verticalAlign?: "top" | "bottom"
   hideIcon?: boolean
   nameKey?: string
@@ -284,7 +284,7 @@ function ChartLegendContent({
         className
       )}
     >
-      {payload.map((item: any) => {
+      {payload.map((item: unknown) => {
         const key = `${nameKey || item.dataKey || "value"}`
         const itemConfig = getPayloadConfigFromPayload(config, item, key)
 

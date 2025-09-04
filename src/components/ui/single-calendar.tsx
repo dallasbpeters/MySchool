@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 import type { DayPickerSingleProps } from "react-day-picker";
 
-function SingleCalendar({ className, classNames, showOutsideDays = true, selected, ...props }: DayPickerSingleProps) {
+function SingleCalendar({ className, classNames, showOutsideDays = true, selected, ...props }: DayPickerSingleProps & { className?: string; classNames?: Record<string, string>; showOutsideDays?: boolean; initialFocus?: boolean }) {
   const [currentMonth, setCurrentMonth] = React.useState<Date | undefined>(selected instanceof Date ? selected : undefined);
 
   return (
@@ -48,10 +48,7 @@ function SingleCalendar({ className, classNames, showOutsideDays = true, selecte
         day_hidden: "invisible",
         ...classNames,
       }}
-      components={{
-        IconLeft: ({ className, ...props }) => <ChevronLeft className={cn("h-4 w-4", className)} {...props} />,
-        IconRight: ({ className, ...props }) => <ChevronRight className={cn("h-4 w-4", className)} {...props} />,
-      }}
+
       {...props}
     />
   );

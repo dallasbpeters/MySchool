@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
     })
 
     const assignedChildrenMap = new Map()
-    allStudentAssignments?.forEach((sa: any) => {
+    allStudentAssignments?.forEach((sa: { assignment_id: string; profiles: { name: string; role: string } }) => {
       // Debug: log if we find parents in student_assignments (this shouldn't happen)
       if (sa.profiles.role === 'parent') {
 

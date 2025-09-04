@@ -30,8 +30,8 @@ import {
 import { cn } from '@/lib/utils'
 
 interface WysiwygEditorProps {
-  content?: any
-  onChange?: (content: any) => void
+  content?: string | null
+  onChange?: (content: string | null) => void
   placeholder?: string
   className?: string
 }

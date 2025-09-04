@@ -23,7 +23,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -40,11 +40,11 @@ export async function updateSession(request: NextRequest) {
   // issues with users being randomly logged out.
 
   // Skip auth check for password reset page with code parameter
-  const isPasswordResetWithCode = 
-    request.nextUrl.pathname === '/auth/reset-password' && 
-    (request.nextUrl.searchParams.has('code') || 
-     request.nextUrl.searchParams.has('error') ||
-     request.nextUrl.searchParams.has('error_code'))
+  const isPasswordResetWithCode =
+    request.nextUrl.pathname === '/auth/reset-password' &&
+    (request.nextUrl.searchParams.has('code') ||
+      request.nextUrl.searchParams.has('error') ||
+      request.nextUrl.searchParams.has('error_code'))
 
   // IMPORTANT: DO NOT REMOVE auth.getUser() except for specific auth flows
   if (!isPasswordResetWithCode) {

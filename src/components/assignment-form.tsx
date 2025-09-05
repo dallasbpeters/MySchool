@@ -80,6 +80,7 @@ export function AssignmentForm({
 }: AssignmentFormProps) {
   const [newLink, setNewLink] = useState({ title: '', url: '', type: 'link' as 'link' | 'video' })
 
+
   const addLink = () => {
     if (newLink.title && newLink.url) {
       onAssignmentDataChange({

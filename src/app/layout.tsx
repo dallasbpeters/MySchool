@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { ConnectedNavbar } from '@/components/connected-navbar'
 import { ThemeProvider } from '@/components/theme-provider'
 
+
 const font = Schibsted_Grotesk({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
@@ -30,7 +31,6 @@ export default function RootLayout({
         >
 
           <div className="min-h-screen w-full bg-background relative">
-            {/* Bottom Fade Grid Background */}
             <ConnectedNavbar />
             {children}
             <Toaster />

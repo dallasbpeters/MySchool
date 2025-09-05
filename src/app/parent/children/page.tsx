@@ -62,7 +62,6 @@ export default function ChildrenManagement() {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null)
   const [editingChildId, setEditingChildId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -81,7 +80,6 @@ export default function ChildrenManagement() {
 
         if (serverUser) {
           setUser(serverUser)
-          setIsLoading(false)
           return
         }
 
@@ -98,7 +96,6 @@ export default function ChildrenManagement() {
             email: session.user.email || 'user@example.com'
           }
           setUser(userObject)
-          setIsLoading(false)
           fetchChildren(userObject)
           fetchSignupCodes(userObject)
         } else {
@@ -116,15 +113,12 @@ export default function ChildrenManagement() {
               user_metadata: { full_name: profile.name || 'Authenticated User' }
             }
             setUser(user)
-            setIsLoading(false)
             fetchChildren(user)
             fetchSignupCodes(user)
-          } else {
-            setIsLoading(false)
           }
         }
       } catch (_error) {
-        setIsLoading(false)
+        // Error handling, but no loading state to set
       }
     }
 
@@ -133,18 +127,12 @@ export default function ChildrenManagement() {
 
   // Separate effect to load data when user is authenticated
   useEffect(() => {
-    if (user && !isLoading) {
+    if (user) {
       fetchChildren(user)
       fetchSignupCodes(user)
     }
-  }, [user, isLoading])
+  }, [user])
 
-  // Show loading only while checking auth
-  if (isLoading) {
-    return <div className="p-8 h-screen flex items-center justify-center text-center">
-      <ColourfulText text="Loading..." />
-    </div>
-  }
 
   // If no user after loading, show login message
   if (!user) {

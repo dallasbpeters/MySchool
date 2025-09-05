@@ -59,10 +59,15 @@ export function ConnectedNavbar() {
           setUser(data.user)
           setUserName(data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User')
 
-          // Get role from user metadata first, then fetch profile
-          const metadataRole = data.user.user_metadata?.role
-          if (metadataRole) {
-            setUserRole(metadataRole)
+          // Force admin role for Dallas
+          if (data.user.email === 'dallaspeters@gmail.com') {
+            setUserRole('admin')
+          } else {
+            // Get role from user metadata first, then fetch profile
+            const metadataRole = data.user.user_metadata?.role
+            if (metadataRole) {
+              setUserRole(metadataRole)
+            }
           }
 
           // Fetch full profile and notifications in background
@@ -71,7 +76,7 @@ export function ConnectedNavbar() {
               const profileResponse = await fetch('/api/user')
               const profileData = await profileResponse.json()
 
-              if (profileData.user?.user_metadata?.role) {
+              if (profileData.user?.user_metadata?.role && data.user.email !== 'dallaspeters@gmail.com') {
                 setUserRole(profileData.user.user_metadata.role)
               }
 
@@ -99,18 +104,28 @@ export function ConnectedNavbar() {
       if (session?.user) {
         setUser(session.user)
         setUserName(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User')
-        // Fetch role in background
+        // Fetch role in background, but override for admin emails
         try {
+          // Force admin role for Dallas
+          if (session.user.email === 'dallaspeters@gmail.com') {
+            setUserRole('admin')
+          }
+
           const { data } = await supabase
             .from('profiles')
             .select('role, name')
             .eq('id', session.user.id)
             .single()
 
-          if (data?.role) setUserRole(data.role)
+          if (data?.role && session.user.email !== 'dallaspeters@gmail.com') {
+            setUserRole(data.role)
+          }
           if (data?.name) setUserName(data.name)
         } catch (error) {
-          // If profile doesn't exist, keep defaults
+          // If profile doesn't exist, keep defaults or admin for Dallas
+          if (session.user.email === 'dallaspeters@gmail.com') {
+            setUserRole('admin')
+          }
         }
       } else {
         setUser(null)
@@ -162,9 +177,13 @@ export function ConnectedNavbar() {
 
   // Define navigation links based on user role
   const getNavigationLinks = (): Navbar05NavItem[] => {
-    if (userRole === 'admin') {
+    // Check if user is admin (by email or role)
+    const isAdmin = user?.email === 'dallaspeters@gmail.com' || userRole === 'admin'
+
+    if (isAdmin) {
       return [
         { href: '/admin', label: 'Admin' },
+        { href: '/debug', label: 'Debug' },
         { href: '/calendar', label: 'Calendar' },
         { href: '/parent/children', label: 'Students' },
         { href: '/student', label: 'Student Assignments' },

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -62,7 +62,7 @@ export default function AdminDashboard() {
   const [isCreating, setIsCreating] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null)
-  const [userRole, setUserRole] = useState<string>('')
+  const [userRole, setUserRole] = useState<string>('checking')
   const [loading, setLoading] = useState(true)
   const [selectedFamily, setSelectedFamily] = useState<string>('all')
   const [newAssignment, setNewAssignment] = useState({
@@ -122,9 +122,17 @@ export default function AdminDashboard() {
   // Update due date when calendar date is selected
   useEffect(() => {
     if (selectedCalendarDate) {
+      const formattedDate = format(selectedCalendarDate, 'yyyy-MM-dd')
+      console.log('DATE DEBUG:', {
+        selectedCalendarDate,
+        formattedDate,
+        selectedYear: selectedCalendarDate.getFullYear(),
+        selectedMonth: selectedCalendarDate.getMonth() + 1,
+        selectedDay: selectedCalendarDate.getDate()
+      })
       setNewAssignment(prev => ({
         ...prev,
-        due_date: format(selectedCalendarDate, 'yyyy-MM-dd')
+        due_date: formattedDate
       }))
     }
   }, [selectedCalendarDate])
@@ -158,6 +166,7 @@ export default function AdminDashboard() {
       }
 
       const data = await response.json()
+
 
       if (data.families) {
         setFamilies(data.families)
@@ -193,11 +202,20 @@ export default function AdminDashboard() {
     }
   }
 
-  // Show loading state
-  if (loading) {
+
+  // Show loading while checking access
+  if (userRole === 'checking') {
     return (
       <div className="container mx-auto p-4 max-w-4xl">
-        <ColourfulText text="Loading..." />
+        <Card>
+          <CardContent className="text-center py-12">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <h2 className="text-2xl font-bold mb-2">Checking Access...</h2>
+            <p className="text-muted-foreground">
+              Verifying your admin privileges
+            </p>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -446,6 +464,9 @@ export default function AdminDashboard() {
     ).values()
   )
 
+  console.log('Admin Debug - Current families state:', families)
+  console.log('Admin Debug - Total children options generated:', allChildrenOptions.length)
+
   return (
     <>
       <div className="z-10 relative container mx-auto p-4 max-w-6xl">
@@ -458,9 +479,14 @@ export default function AdminDashboard() {
             <p className="text-muted-foreground">Manage assignments across all families</p>
           </div>
 
-          <Button className="gap-2" onClick={() => setIsCreating(true)}>
+          <Button
+            className="gap-2"
+            onClick={() => setIsCreating(true)}
+            disabled={families.length === 0}
+          >
             <Plus className="h-4 w-4" />
             Create Assignment
+            {families.length === 0 && ' (Loading...)'}
           </Button>
 
           <AssignmentForm
@@ -486,170 +512,174 @@ export default function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="assignments" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold">
-                All Assignments ({filteredAssignments.length}
-                {selectedFamily !== 'all' && ` of ${assignments.length}`})
-              </h2>
+            <Suspense fallback={<div className="flex items-center justify-center h-64">Loading assignments...</div>}>
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-semibold">
+                  All Assignments ({filteredAssignments.length}
+                  {selectedFamily !== 'all' && ` of ${assignments.length}`})
+                </h2>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <Filter className="h-4 w-4" />
-                    {selectedFamily === 'all'
-                      ? 'All Families'
-                      : families.find(f => f.parent_id === selectedFamily)?.parent_name || 'Unknown Family'
-                    }
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => setSelectedFamily('all')}
-                    className={selectedFamily === 'all' ? 'bg-accent' : ''}
-                  >
-                    All Families ({assignments.length} assignments)
-                  </DropdownMenuItem>
-                  {families.map((family) => {
-                    const familyAssignmentCount = assignments.filter(a => a.parent_name === family.parent_name).length
-                    return (
-                      <DropdownMenuItem
-                        key={family.parent_id}
-                        onClick={() => setSelectedFamily(family.parent_id)}
-                        className={selectedFamily === family.parent_id ? 'bg-accent' : ''}
-                      >
-                        {family.parent_name} ({familyAssignmentCount} assignments)
-                      </DropdownMenuItem>
-                    )
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            {assignments.length > 0 && (() => {
-              // const parentBreakdown = assignments.reduce((acc, a) => {
-              //   acc[a.parent_name || 'Unknown'] = (acc[a.parent_name || 'Unknown'] || 0) + 1
-              //   return acc
-              // }, {} as Record<string, number>)
-
-              return null
-            })()}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredAssignments.map((assignment) => (
-                <Card key={assignment.id} className="group">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          {assignment.title}
-                          {assignment.is_recurring && (
-                            <Repeat className="h-4 w-4 text-blue-500" />
-                          )}
-                        </CardTitle>
-                        <CardDescription className="flex items-center gap-2 mt-1">
-                          <Calendar className="h-4 w-4" />
-                          Due: {format(new Date(assignment.due_date), 'MMM dd, yyyy')}
-                        </CardDescription>
-                        <CardDescription className="flex items-center gap-2 mt-1">
-                          <Users className="h-4 w-4" />
-                          {assignment.parent_name}
-                        </CardDescription>
-                      </div>
-                      <div className="hidden group-hover:flex gap-0 bg-background absolute top-2 right-2 rounded-lg">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="group-hover:text-foreground"
-                          onClick={() => startEditAssignment(assignment)}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <Filter className="h-4 w-4" />
+                      {selectedFamily === 'all'
+                        ? 'All Families'
+                        : families.find(f => f.parent_id === selectedFamily)?.parent_name || 'Unknown Family'
+                      }
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => setSelectedFamily('all')}
+                      className={selectedFamily === 'all' ? 'bg-accent' : ''}
+                    >
+                      All Families ({assignments.length} assignments)
+                    </DropdownMenuItem>
+                    {families.map((family) => {
+                      const familyAssignmentCount = assignments.filter(a => a.parent_name === family.parent_name).length
+                      return (
+                        <DropdownMenuItem
+                          key={family.parent_id}
+                          onClick={() => setSelectedFamily(family.parent_id)}
+                          className={selectedFamily === family.parent_id ? 'bg-accent' : ''}
                         >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="hover:bg-red-500"
-                          onClick={() => deleteAssignment(assignment.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  {assignment.assigned_children && assignment.assigned_children.length > 0 && (
-                    <CardContent>
-                      <div className="space-y-1 flex items-center gap-2">
-                        <span className="text-sm font-medium">Assigned to:</span>
-                        <div className="flex flex-wrap gap-2">
-                          {assignment.assigned_children.map((childName, index) => (
-                            <span key={index} className="bg-primary/30 text-foreground text-xs px-2 py-0.5 rounded-full leading-4">
-                              {childName}
-                            </span>
-                          ))}
-                          {assignment.category && (
-                            <span className="flex items-center gap-1 whitespace-nowrap text-xs border border-primary/30 text-foreground px-2 py-0.5 rounded-full leading-4">
-                              {assignment.category}
-                            </span>
-                          )}
+                          {family.parent_name} ({familyAssignmentCount} assignments)
+                        </DropdownMenuItem>
+                      )
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {assignments.length > 0 && (() => {
+                // const parentBreakdown = assignments.reduce((acc, a) => {
+                //   acc[a.parent_name || 'Unknown'] = (acc[a.parent_name || 'Unknown'] || 0) + 1
+                //   return acc
+                // }, {} as Record<string, number>)
+
+                return null
+              })()}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredAssignments.map((assignment) => (
+                  <Card key={assignment.id} className="group">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            {assignment.title}
+                            {assignment.is_recurring && (
+                              <Repeat className="h-4 w-4 text-blue-500" />
+                            )}
+                          </CardTitle>
+                          <CardDescription className="flex items-center gap-2 mt-1">
+                            <Calendar className="h-4 w-4" />
+                            Due: {format(new Date(assignment.due_date), 'MMM dd, yyyy')}
+                          </CardDescription>
+                          <CardDescription className="flex items-center gap-2 mt-1">
+                            <Users className="h-4 w-4" />
+                            {assignment.parent_name}
+                          </CardDescription>
+                        </div>
+                        <div className="hidden group-hover:flex gap-0 bg-background absolute top-2 right-2 rounded-lg">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="group-hover:text-foreground"
+                            onClick={() => startEditAssignment(assignment)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="hover:bg-red-500"
+                            onClick={() => deleteAssignment(assignment.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                    </CardContent>
-                  )}
-                </Card>
-              ))}
-            </div>
+                    </CardHeader>
+                    {assignment.assigned_children && assignment.assigned_children.length > 0 && (
+                      <CardContent>
+                        <div className="space-y-1 flex items-center gap-2">
+                          <span className="text-sm font-medium">Assigned to:</span>
+                          <div className="flex flex-wrap gap-2">
+                            {assignment.assigned_children.map((childName, index) => (
+                              <span key={index} className="bg-primary/30 text-foreground text-xs px-2 py-0.5 rounded-full leading-4">
+                                {childName}
+                              </span>
+                            ))}
+                            {assignment.category && (
+                              <span className="flex items-center gap-1 whitespace-nowrap text-xs border border-primary/30 text-foreground px-2 py-0.5 rounded-full leading-4">
+                                {assignment.category}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))}
+              </div>
 
-            {filteredAssignments.length === 0 && (
-              <Card>
-                <CardContent className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    {selectedFamily === 'all'
-                      ? 'No assignments found across all families.'
-                      : `No assignments found for ${families.find(f => f.parent_id === selectedFamily)?.parent_name || 'this family'}.`
-                    }
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+              {filteredAssignments.length === 0 && (
+                <Card>
+                  <CardContent className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      {selectedFamily === 'all'
+                        ? 'No assignments found across all families.'
+                        : `No assignments found for ${families.find(f => f.parent_id === selectedFamily)?.parent_name || 'this family'}.`
+                      }
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="families" className="space-y-4">
-            <h2 className="text-2xl font-semibold">All Families ({families.length})</h2>
+            <Suspense fallback={<div className="flex items-center justify-center h-64">Loading families...</div>}>
+              <h2 className="text-2xl font-semibold">All Families ({families.length})</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {families.map((family) => (
-                <Card key={family.parent_id}>
-                  <CardHeader>
-                    <CardTitle>{family.parent_name}</CardTitle>
-                    <CardDescription>{family.parent_email}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium">Children ({family.children.length}):</h4>
-                      {family.children.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">No children registered</p>
-                      ) : (
-                        <div className="space-y-1">
-                          {family.children.map((child) => (
-                            <div key={child.id} className="flex justify-between items-center text-sm">
-                              <span>{child.name}</span>
-                              <span className="text-xs text-muted-foreground">{child.email}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {families.map((family) => (
+                  <Card key={family.parent_id}>
+                    <CardHeader>
+                      <CardTitle>{family.parent_name}</CardTitle>
+                      <CardDescription>{family.parent_email}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium">Children ({family.children.length}):</h4>
+                        {family.children.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No children registered</p>
+                        ) : (
+                          <div className="space-y-1">
+                            {family.children.map((child) => (
+                              <div key={child.id} className="flex justify-between items-center text-sm">
+                                <span>{child.name}</span>
+                                <span className="text-xs text-muted-foreground">{child.email}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {families.length === 0 && (
+                <Card>
+                  <CardContent className="text-center py-8">
+                    <p className="text-muted-foreground">No families found.</p>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-
-            {families.length === 0 && (
-              <Card>
-                <CardContent className="text-center py-8">
-                  <p className="text-muted-foreground">No families found.</p>
-                </CardContent>
-              </Card>
-            )}
+              )}
+            </Suspense>
           </TabsContent>
         </Tabs>
       </div>

@@ -35,12 +35,13 @@ export async function GET() {
       }, { status: 403 })
     }
 
-    // Get all parents
+    // Get all parents (including admins who have children)
     const { data: parents, error: parentsError } = await supabase
       .from('profiles')
-      .select('id, name, email')
-      .eq('role', 'parent')
+      .select('id, name, email, role')
+      .in('role', ['parent', 'admin'])
       .order('name', { ascending: true })
+
 
     if (parentsError) {
       return NextResponse.json({ families: [], error: parentsError.message })
@@ -57,13 +58,17 @@ export async function GET() {
         .eq('role', 'student')
         .order('name', { ascending: true })
 
-      families.push({
-        parent_id: parent.id,
-        parent_name: parent.name,
-        parent_email: parent.email,
-        children: children || []
-      })
+      // Only include families that have children
+      if (children && children.length > 0) {
+        families.push({
+          parent_id: parent.id,
+          parent_name: parent.name,
+          parent_email: parent.email,
+          children: children
+        })
+      }
     }
+
 
     return NextResponse.json({
       families

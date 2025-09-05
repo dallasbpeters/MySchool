@@ -71,7 +71,7 @@ export function WysiwygEditor({
     content,
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
-      onChange?.(JSON.stringify(editor.getJSON()))
+      onChange?.(editor.getHTML())
     },
     editorProps: {
       attributes: {

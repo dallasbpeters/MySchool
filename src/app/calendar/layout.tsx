@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { CalendarProvider } from "@/calendar/contexts/calendar-context"
 import type { IEvent, IUser } from '@/calendar/interfaces'
 import PageGrid from '@/components/page-grid'
@@ -10,7 +10,6 @@ import ColourfulText from '@/components/ui/colourful-text'
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = useState<IEvent[]>([])
   const [users, setUsers] = useState<IUser[]>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
@@ -47,22 +46,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           description: (error as Error).message || "Failed to load calendar data. Please try refreshing the page.",
           variant: "destructive"
         })
-      } finally {
-        setLoading(false)
       }
     }
     fetchData()
   }, [toast])
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-64 bg-background">
-        <div className="text-center">
-          <ColourfulText text="Loading calendar..." />
-        </div>
-      </div>
-    )
-  }
 
   if (error) {
     return (
@@ -85,7 +73,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <CalendarProvider events={events} users={users}>
       <PageGrid variant="grid" />
-      {children}
+      <Suspense fallback={<div className="flex items-center justify-center h-64">Loading calendar...</div>}>
+        {children}
+      </Suspense>
     </CalendarProvider>
   )
 }

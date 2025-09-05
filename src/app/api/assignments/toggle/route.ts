@@ -46,11 +46,11 @@ export async function POST(request: NextRequest) {
     // Determine target student ID
     let targetStudentId: string
 
-    if (userProfile?.role === 'parent') {
-      // For parents, studentId must be provided (child's ID)
+    if (userProfile?.role === 'parent' || userProfile?.role === 'admin') {
+      // For parents and admins, studentId must be provided (child's ID)
       if (!studentId) {
         return NextResponse.json(
-          { error: 'Parent must specify which child to toggle assignment for' },
+          { error: `${userProfile?.role === 'admin' ? 'Admin' : 'Parent'} must specify which student to toggle assignment for` },
           { status: 400 }
         )
       }
@@ -62,28 +62,32 @@ export async function POST(request: NextRequest) {
 
 
 
-    // If toggling for another student, verify the user is their parent
+    // If toggling for another student, verify the user is their parent or admin
     if (studentId && studentId !== user.id) {
-      const { data: childProfile, error: childError } = await supabase
-        .from('profiles')
-        .select('parent_id, role')
-        .eq('id', studentId)
-        .single()
+      // Admins can toggle for any student
+      if (userProfile?.role === 'admin') {
+        // No additional verification needed for admin
+      } else {
+        // For parents, verify they are the parent of the student
+        const { data: childProfile, error: childError } = await supabase
+          .from('profiles')
+          .select('parent_id, role')
+          .eq('id', studentId)
+          .single()
 
+        if (childError) {
+          return NextResponse.json(
+            { error: `Failed to verify student: ${childError.message}` },
+            { status: 400 }
+          )
+        }
 
-
-      if (childError) {
-        return NextResponse.json(
-          { error: `Failed to verify student: ${childError.message}` },
-          { status: 400 }
-        )
-      }
-
-      if (!childProfile || childProfile.parent_id !== user.id) {
-        return NextResponse.json(
-          { error: 'Not authorized to toggle assignments for this student' },
-          { status: 403 }
-        )
+        if (!childProfile || childProfile.parent_id !== user.id) {
+          return NextResponse.json(
+            { error: 'Not authorized to toggle assignments for this student' },
+            { status: 403 }
+          )
+        }
       }
     }
 

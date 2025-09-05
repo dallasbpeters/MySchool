@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     let supabase
     try {
       supabase = await createClient()
-    } catch (clientError) {
+    } catch {
 
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },

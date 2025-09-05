@@ -89,7 +89,7 @@ export default function ResetPasswordPage() {
             setIsCheckingSession(false)
           }
         }
-      } catch (error) {
+      } catch (_error) {
 
         if (mounted) {
           setIsValidSession(false)
@@ -200,7 +200,7 @@ export default function ResetPasswordPage() {
 
       toast({
         title: "Error",
-        description: error.message || "Failed to update password. Please try again.",
+        description: (error as Error).message || "Failed to update password. Please try again.",
         variant: "destructive"
       })
     } finally {

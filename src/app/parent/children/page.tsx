@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Plus, Copy, Users, Calendar, CheckCircle, Clock, Eye, Edit, Check, X } from 'lucide-react'
+import { Plus, Copy, Edit, Check, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import ColourfulText from '@/components/ui/colourful-text'
@@ -31,26 +31,37 @@ interface SignupCode {
   created_at: string
 }
 
-interface AssignmentStatus {
+
+interface StudentAssignmentData {
   assignment_id: string
-  assignment_title: string
-  due_date: string
   completed: boolean
   completed_at: string | null
+  assignments: {
+    id: string
+    title: string
+    due_date: string
+  }[]
+}
+
+interface SignupCodeData {
+  id: string
+  code: string
+  child_name: string
+  used: boolean
+  used_by: string | null
+  expires_at: string
+  created_at: string
 }
 
 export default function ChildrenManagement() {
   const [children, setChildren] = useState<Child[]>([])
   const [signupCodes, setSignupCodes] = useState<SignupCode[]>([])
-  const [assignmentStatuses, setAssignmentStatuses] = useState<Record<string, AssignmentStatus[]>>({})
   const [isAddingChild, setIsAddingChild] = useState(false)
   const [newChildName, setNewChildName] = useState('')
   const [generatedCode, setGeneratedCode] = useState<string | null>(null)
-  const [selectedChild, setSelectedChild] = useState<string | null>(null)
   const [user, setUser] = useState<{ id: string; email: string } | null>(null)
   const [editingChildId, setEditingChildId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
-  const [accessToken, setAccessToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
@@ -58,7 +69,7 @@ export default function ChildrenManagement() {
     const initUser = async () => {
       try {
         // Test with custom fetch client to bypass SDK issues
-        const { data, error } = await fetchClient.query('profiles', 'count', 1)
+        const { error } = await fetchClient.query('profiles', 'count', 1)
 
         if (error) {
           throw error
@@ -75,11 +86,11 @@ export default function ChildrenManagement() {
         }
 
         // Fallback: try to get profile data from database
-        const { data: profiles, error: profileError } = await fetchClient.query('profiles', 'id,email,name,role', 1)
+        const { error: _profileError } = await fetchClient.query('profiles', 'id,email,name,role', 1)
 
         // Test auth
         const supabase = createClient()
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        const { data: { session }, error: _sessionError } = await supabase.auth.getSession()
 
         if (session?.user) {
           const userObject = {
@@ -87,13 +98,12 @@ export default function ChildrenManagement() {
             email: session.user.email || 'user@example.com'
           }
           setUser(userObject)
-          setAccessToken(session.access_token)
           setIsLoading(false)
           fetchChildren(userObject)
           fetchSignupCodes(userObject)
         } else {
           // Try to get user from profiles
-          const { data: profiles, error: profileError } = await supabase
+          const { data: profiles, error: _profileError } = await supabase
             .from('profiles')
             .select('id, email, name, role')
             .limit(1)
@@ -113,7 +123,7 @@ export default function ChildrenManagement() {
             setIsLoading(false)
           }
         }
-      } catch (error) {
+      } catch (_error) {
         setIsLoading(false)
       }
     }
@@ -163,7 +173,7 @@ export default function ChildrenManagement() {
         // Fetch assignment statuses for each child
         data.children.forEach((child: { id: string }) => fetchAssignmentStatus(child.id))
       }
-    } catch (error) {
+    } catch (_error) {
       // Handle error silently
     }
   }
@@ -183,7 +193,7 @@ export default function ChildrenManagement() {
 
         setSignupCodes(sortedCodes)
       }
-    } catch (error) {
+    } catch (_error) {
       // Handle error silently
     }
   }
@@ -201,18 +211,8 @@ export default function ChildrenManagement() {
       .eq('student_id', childId)
 
     if (!error && data) {
-      const statuses = data.map((item: any) => ({
-        assignment_id: item.assignment_id,
-        assignment_title: item.assignments.title,
-        due_date: item.assignments.due_date,
-        completed: item.completed,
-        completed_at: item.completed_at
-      }))
-
-      setAssignmentStatuses(prev => ({
-        ...prev,
-        [childId]: statuses
-      }))
+      // Assignment status data loaded successfully
+      // This data could be used for displaying assignment completion status
     }
   }
 
@@ -259,7 +259,7 @@ export default function ChildrenManagement() {
     saveCodeToDatabase(optimisticCode)
   }
 
-  const saveCodeToDatabase = async (codeData: any) => {
+  const saveCodeToDatabase = async (codeData: SignupCodeData) => {
     try {
       if (!user?.id) {
         toast({
@@ -316,7 +316,7 @@ export default function ChildrenManagement() {
           }
         }, 500)
       }
-    } catch (error) {
+    } catch (_error) {
       // Handle error silently
     }
   }
@@ -329,7 +329,7 @@ export default function ChildrenManagement() {
     })
   }
 
-  const copyGeneratedCodeWithWrapper = async (code: string) => {
+  const _copyGeneratedCodeWithWrapper = async (code: string) => {
     const wrappedCode = `@ColourfulText("${code}")`
     await navigator.clipboard.writeText(wrappedCode)
     toast({
@@ -373,7 +373,7 @@ export default function ChildrenManagement() {
           })
         }
       }
-    } catch (error) {
+    } catch (_error) {
 
       // Restore the code on error
       if (codeToDelete) {
@@ -446,7 +446,7 @@ export default function ChildrenManagement() {
           variant: "destructive"
         })
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update name",

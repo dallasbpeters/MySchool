@@ -79,10 +79,13 @@ export function EventBlock({ event, className }: IProps) {
             <p className="truncate font-semibold">{event.title}</p>
           </div>
 
-          {durationInMinutes > 25 && (
+          {durationInMinutes > 25 && !event.isAllDay && (
             <p>
               {format(start, "h:mm a")} - {format(end, "h:mm a")}
             </p>
+          )}
+          {event.isAllDay && (
+            <p className="text-xs opacity-75">All day</p>
           )}
         </div>
       </EventDetailsDialog>

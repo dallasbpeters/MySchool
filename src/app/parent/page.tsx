@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import MultipleSelector, { Option } from '@/components/ui/multiselect'
-import { Plus, Trash2, Calendar, Link as LinkIcon, Repeat, Edit, Video, Play } from 'lucide-react'
+import { Plus, Trash2, Calendar, Link as LinkIcon, Repeat, Edit, Video } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { MiniCalendar, MiniCalendarNavigation, MiniCalendarDays, MiniCalendarDay } from '@/components/ui/shadcn-io/mini-calendar'
@@ -104,7 +104,7 @@ export default function ParentDashboard() {
       if (data.children) {
         setChildren(data.children)
       }
-    } catch (error) {
+    } catch (_error) {
       // Handle error silently
     }
   }
@@ -124,7 +124,7 @@ export default function ParentDashboard() {
           uniqueCategories.map((cat: string) => ({ label: cat, value: cat }))
         )
       }
-    } catch (error) {
+    } catch (_error) {
       // Handle error silently
     }
   }
@@ -178,7 +178,7 @@ export default function ParentDashboard() {
       setAssignments(assignmentsData)
 
 
-    } catch (error) {
+    } catch (_error) {
 
     }
   }

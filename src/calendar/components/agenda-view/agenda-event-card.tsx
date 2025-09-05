@@ -93,7 +93,7 @@ export function AgendaEventCard({ event, eventCurrentDay, eventTotalDays }: IPro
           <div className="flex items-center gap-1">
             <Clock className="size-3 shrink-0" />
             <p className="text-xs text-foreground">
-              {format(startDate, "h:mm a")} - {format(endDate, "h:mm a")}
+              {event.isAllDay ? "All day" : `${format(startDate, "h:mm a")} - ${format(endDate, "h:mm a")}`}
             </p>
           </div>
 

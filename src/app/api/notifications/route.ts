@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     let supabase
     try {
       supabase = await createClient()
-    } catch (clientError) {
+    } catch {
 
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ notifications: [], count: 0 })
     }
 
-    const notifications: Array<{ id: string; message: string; type: string; created_at: string; read: boolean }> = []
+    const notifications: Array<{ id: string; title: string; message: string; type: string; href: string; created_at: string; read?: boolean }> = []
     const now = new Date()
 
     if (profile.role === 'student') {

@@ -71,12 +71,18 @@ export function ClientContainer({ view }: IProps) {
   }, [selectedDate, selectedUserId, events, view]);
 
   const singleDayEvents = filteredEvents.filter(event => {
+    // All-day events are always single day for display purposes
+    if (event.isAllDay) return true;
+
     const startDate = parseISO(event.startDate);
     const endDate = parseISO(event.endDate);
     return isSameDay(startDate, endDate);
   });
 
   const multiDayEvents = filteredEvents.filter(event => {
+    // All-day events are handled as single day events
+    if (event.isAllDay) return false;
+
     const startDate = parseISO(event.startDate);
     const endDate = parseISO(event.endDate);
     return !isSameDay(startDate, endDate);

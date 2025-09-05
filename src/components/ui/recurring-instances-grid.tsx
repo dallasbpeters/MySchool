@@ -133,7 +133,7 @@ export const RecurringInstancesGrid = ({
         Upcoming Occurrences
       </h4>
       <div className="flex gap-3 overflow-x-auto py-2">
-        {instances.map((instance, index) => {
+        {instances.map((instance, _index) => {
           const isSelected = selectedInstanceDate === instance.date
           return (
             <Card

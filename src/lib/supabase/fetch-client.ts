@@ -32,7 +32,7 @@ export class FetchSupabaseClient {
     // Add filters (e.g., { code: 'eq.ABC123', used: 'eq.false' })
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
-        url.searchParams.set(key, value)
+        url.searchParams.set(key, String(value))
       })
     }
 
@@ -42,12 +42,12 @@ export class FetchSupabaseClient {
       headers: this.getHeaders(accessToken)
     })
 
-    const data = await response.json()
-
     if (!response.ok) {
-      return { data: null, error: data }
+      const errorData = await response.json().catch(() => ({ error: 'Request failed' }))
+      return { data: null, error: errorData }
     }
 
+    const data = await response.json()
     return { data, error: null }
   }
 
@@ -60,12 +60,12 @@ export class FetchSupabaseClient {
       body: JSON.stringify(values)
     })
 
-    const data = await response.json()
-
     if (!response.ok) {
-      return { data: null, error: data }
+      const errorData = await response.json().catch(() => ({ error: 'Request failed' }))
+      return { data: null, error: errorData }
     }
 
+    const data = await response.json()
     return { data, error: null }
   }
 
@@ -74,7 +74,7 @@ export class FetchSupabaseClient {
 
     // Add filters to URL
     Object.entries(filters).forEach(([key, value]) => {
-      url.searchParams.set(key, value)
+      url.searchParams.set(key, String(value))
     })
 
 
@@ -84,12 +84,12 @@ export class FetchSupabaseClient {
       body: JSON.stringify(values)
     })
 
-    const data = await response.json()
-
     if (!response.ok) {
-      return { data: null, error: data }
+      const errorData = await response.json().catch(() => ({ error: 'Request failed' }))
+      return { data: null, error: errorData }
     }
 
+    const data = await response.json()
     return { data, error: null }
   }
 
@@ -98,7 +98,7 @@ export class FetchSupabaseClient {
 
     // Add filters to URL
     Object.entries(filters).forEach(([key, value]) => {
-      url.searchParams.set(key, value)
+      url.searchParams.set(key, String(value))
     })
 
 
@@ -107,12 +107,12 @@ export class FetchSupabaseClient {
       headers: this.getHeaders(accessToken)
     })
 
-    const data = await response.json()
-
     if (!response.ok) {
-      return { data: null, error: data }
+      const errorData = await response.json().catch(() => ({ error: 'Request failed' }))
+      return { data: null, error: errorData }
     }
 
+    const data = await response.json()
     return { data, error: null }
   }
 }

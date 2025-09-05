@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
       // Check if profile exists, create one if not
       let userProfile
-      const { data: existingProfile, error: profileError } = await supabase
+      const { data: existingProfile } = await supabase
         .from('profiles')
         .select('id, role')
         .eq('id', data.user.id)
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       if (!existingProfile) {
 
         // Create profile for new Google OAuth user
-        const { data: newProfile, error: createError } = await supabase
+        const { data: newProfile } = await supabase
           .from('profiles')
           .insert({
             id: data.user.id,

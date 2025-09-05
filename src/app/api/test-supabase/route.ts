@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     console.error("API error:", error)
 
     return NextResponse.json({
-      error: error.message,
+      error: (error as Error).message || 'Unknown error occurred',
       timestamp: new Date().toISOString()
     }, { status: 500 })
   }

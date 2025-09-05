@@ -43,7 +43,7 @@ export function ChartLineInteractive() {
       if (data.children && data.children.length > 0) {
         setActiveChart(data.children[0])
       }
-    } catch (error) {
+    } catch {
       setError('Failed to load chart data')
     } finally {
       setLoading(false)
@@ -53,7 +53,7 @@ export function ChartLineInteractive() {
   const total = React.useMemo(() => {
     const totals: { [key: string]: number } = {}
     children.forEach(child => {
-      totals[child] = chartData.reduce((acc, curr) => acc + (curr[child] || 0), 0)
+      totals[child] = chartData.reduce((acc, curr) => acc + (Number(curr[child]) || 0), 0)
     })
     return totals
   }, [chartData, children])
@@ -147,7 +147,7 @@ export function ChartLineInteractive() {
                   className="w-[180px]"
                   nameKey="assignments"
                   labelFormatter={(value) => {
-                    return new Date(value).toLocaleDateString("en-US", {
+                    return new Date(value as string).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",

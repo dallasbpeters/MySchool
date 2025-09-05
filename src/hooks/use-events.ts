@@ -49,7 +49,7 @@ export function useEvents() {
     } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create event",
+        description: (error as Error).message || "Failed to create event",
         variant: "destructive"
       })
       throw error
@@ -94,7 +94,7 @@ export function useEvents() {
     } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to update event",
+        description: (error as Error).message || "Failed to update event",
         variant: "destructive"
       })
       throw error
@@ -128,7 +128,7 @@ export function useEvents() {
     } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete event",
+        description: (error as Error).message || "Failed to delete event",
         variant: "destructive"
       })
       throw error

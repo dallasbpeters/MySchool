@@ -5,7 +5,7 @@ export default async function Home() {
   // Handle missing environment variables during build
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  
+
   if (!supabaseUrl || !supabaseKey) {
     // During build time, redirect to login as fallback
     redirect('/login')
@@ -38,6 +38,8 @@ export default async function Home() {
   // Redirect based on role
   if (profile.role === 'parent') {
     redirect('/parent')
+  } else if (profile.role === 'admin') {
+    redirect('/admin')
   } else if (profile.role === 'student') {
     redirect('/student')
   } else {

@@ -2,7 +2,7 @@ import React, { cloneElement, Children, forwardRef, useMemo } from "react";
 
 import { cn } from "@/lib/utils";
 
-import type { HTMLAttributes, ReactElement, ElementRef } from "react";
+import type { HTMLAttributes, ReactElement } from "react";
 
 // ================================== //
 
@@ -18,16 +18,17 @@ const AvatarGroup = forwardRef<TAvatarGroupRef, TAvatarGroupProps>(({ className,
     return (
       <>
         {avatarItems.slice(0, max).map((child, index) => {
-          return cloneElement(child as ReactElement, {
+          const element = child as ReactElement<{ className?: string; style?: React.CSSProperties }>
+          return cloneElement(element, {
             key: index,
-            className: cn((child as React.ReactElement).props.className, "border-2 border-background"),
-            style: { marginLeft: index === 0 ? 0 : -spacing, ...(child as React.ReactElement).props.style },
+            className: cn(element.props.className, "border-2 border-background"),
+            style: { marginLeft: index === 0 ? 0 : -spacing, ...element.props.style },
           });
         })}
 
         {avatarItems.length > max && (
           <div
-            className={cn("relative flex items-center justify-center rounded-full border-2 border-background bg-muted", (avatarItems[0] as React.ReactElement).props.className)}
+            className={cn("relative flex items-center justify-center rounded-full border-2 border-background bg-muted", (avatarItems[0] as React.ReactElement<{ className?: string }>).props.className)}
             style={{ marginLeft: -spacing }}
           >
             <p>+{avatarItems.length - max}</p>

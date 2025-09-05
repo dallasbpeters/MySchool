@@ -162,7 +162,15 @@ export function ConnectedNavbar() {
 
   // Define navigation links based on user role
   const getNavigationLinks = (): Navbar05NavItem[] => {
-    if (userRole === 'parent' || userRole === 'admin') {
+    if (userRole === 'admin') {
+      return [
+        { href: '/admin', label: 'Admin' },
+        { href: '/calendar', label: 'Calendar' },
+        { href: '/parent/children', label: 'Students' },
+        { href: '/student', label: 'Student Assignments' },
+      ]
+    }
+    if (userRole === 'parent') {
       return [
         { href: '/parent', label: 'Dashboard' },
         { href: '/parent/children', label: 'Students' },
@@ -171,8 +179,7 @@ export function ConnectedNavbar() {
       ]
     } else if (userRole === 'student') {
       return [
-        { href: '/student', label: 'My Assignments' },
-        { href: '/calendar', label: 'Calendar' },
+        { href: '/student', label: 'Assignments' },
       ]
     } else {
       return [
@@ -186,7 +193,7 @@ export function ConnectedNavbar() {
     router.push(href)
   }
 
-  const handleInfoItemClick = (item: string) => {
+  const handleInfoItemClick = (item: 'help' | 'documentation' | 'contact' | 'feedback') => {
     switch (item) {
       case 'help':
         toast({
@@ -250,7 +257,7 @@ export function ConnectedNavbar() {
     }
   }
 
-  const handleUserItemClick = async (item: string) => {
+  const handleUserItemClick = async (item: 'profile' | 'logout') => {
     switch (item) {
       case 'profile':
         router.push('/profile')
@@ -273,7 +280,7 @@ export function ConnectedNavbar() {
           })
 
           // Clear all Supabase cookies
-          document.cookie.split(";").forEach((c) => {
+          document.cookie.split(";").forEach((c: string) => {
             if (c.includes('supabase')) {
               document.cookie = c
                 .replace(/^ +/, "")
@@ -283,7 +290,7 @@ export function ConnectedNavbar() {
 
           // Clear localStorage
           for (let i = localStorage.length - 1; i >= 0; i--) {
-            const key = localStorage.key(i)
+            const key: string | null = localStorage.key(i)
             if (key && key.includes('supabase')) {
               localStorage.removeItem(key)
             }

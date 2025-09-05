@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartLineInteractive } from '@/components/ui/shadcn-io/line-chart-01'
 import { useToast } from '@/hooks/use-toast'
 import { User, Mail, Calendar } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import PageGrid from '@/components/page-grid'
 
@@ -47,7 +46,7 @@ export default function ProfilePage() {
 
         setProfile(profileData)
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to load profile data",

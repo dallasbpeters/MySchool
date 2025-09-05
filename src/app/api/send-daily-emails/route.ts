@@ -3,6 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
 import { format } from 'date-fns'
 
+interface Student {
+  id: string
+  email: string
+  name: string
+  parent_id: string
+}
+
 export async function GET(request: Request) {
   // This endpoint should be called by a cron job at 8:00 AM daily
   // You can use services like Vercel Cron Jobs, Railway, or Supabase Edge Functions
@@ -28,7 +35,7 @@ export async function GET(request: Request) {
     // Get all students with their parent's assignments for today
     const today = format(new Date(), 'yyyy-MM-dd')
 
-    const { data: students } = await supabase
+    const { data: students }: { data: Student[] | null } = await supabase
       .from('profiles')
       .select('id, email, name, parent_id')
       .eq('role', 'student')
@@ -115,7 +122,7 @@ export async function GET(request: Request) {
 
     // Create notifications for successfully sent emails
     if (successfulEmails.length > 0) {
-      const notificationPromises = students.map(async (student: { id: string; name: string; parent_id: string }) => {
+      const notificationPromises = students.map(async (student: Student) => {
         return supabase
           .from('notifications')
           .insert({
@@ -139,7 +146,7 @@ export async function GET(request: Request) {
       studentsCount: students.length,
       emailsSent: successfulEmails.length
     })
-  } catch (error) {
+  } catch {
 
     return NextResponse.json(
       { error: 'Failed to send daily emails' },

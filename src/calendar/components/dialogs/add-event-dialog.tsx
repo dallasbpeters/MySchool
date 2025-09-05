@@ -58,7 +58,7 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
       await createEvent(values);
       onClose();
       form.reset();
-    } catch (error) {
+    } catch {
       // Error handling is done in the hook
     }
   };
@@ -95,12 +95,12 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
             <FormField
               control={form.control}
               name="user"
-              render={({ field, fieldState }) => (
+              render={({ field, fieldState: _fieldState }) => (
                 <FormItem>
                   <FormLabel>Responsible</FormLabel>
                   <FormControl>
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger data-invalid={fieldState.invalid}>
+                      <SelectTrigger data-invalid={_fieldState.invalid}>
                         <SelectValue placeholder="Select an option" />
                       </SelectTrigger>
 
@@ -128,12 +128,12 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
             <FormField
               control={form.control}
               name="title"
-              render={({ field, fieldState }) => (
+              render={({ field, fieldState: _fieldState }) => (
                 <FormItem>
                   <FormLabel htmlFor="title">Title</FormLabel>
 
                   <FormControl>
-                    <Input id="title" placeholder="Enter a title" data-invalid={fieldState.invalid} {...field} />
+                    <Input id="title" placeholder="Enter a title" data-invalid={_fieldState.invalid} {...field} />
                   </FormControl>
 
                   <FormMessage />
@@ -145,7 +145,7 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
               <FormField
                 control={form.control}
                 name="startDate"
-                render={({ field, fieldState }) => (
+                render={({ field, fieldState: _fieldState }) => (
                   <FormItem className="flex-1">
                     <FormLabel htmlFor="startDate">Start Date</FormLabel>
 
@@ -179,12 +179,12 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
               <FormField
                 control={form.control}
                 name="startTime"
-                render={({ field, fieldState }) => (
+                render={({ field, fieldState: _fieldState }) => (
                   <FormItem className="flex-1">
                     <FormLabel>Start Time</FormLabel>
 
                     <FormControl>
-                      <TimeInput value={field.value as TimeValue} onChange={field.onChange} hourCycle={12} data-invalid={fieldState.invalid} />
+                      <TimeInput value={field.value as TimeValue} onChange={field.onChange} hourCycle={12} data-invalid={_fieldState.invalid} />
                     </FormControl>
 
                     <FormMessage />
@@ -197,7 +197,7 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
               <FormField
                 control={form.control}
                 name="endDate"
-                render={({ field, fieldState }) => (
+                render={({ field, fieldState: _fieldState }) => (
                   <FormItem className="flex-1">
                     <FormLabel>End Date</FormLabel>
                     <FormControl>
@@ -229,12 +229,12 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
               <FormField
                 control={form.control}
                 name="endTime"
-                render={({ field, fieldState }) => (
+                render={({ field, fieldState: _fieldState }) => (
                   <FormItem className="flex-1">
                     <FormLabel>End Time</FormLabel>
 
                     <FormControl>
-                      <TimeInput value={field.value as TimeValue} onChange={field.onChange} hourCycle={12} data-invalid={fieldState.invalid} />
+                      <TimeInput value={field.value as TimeValue} onChange={field.onChange} hourCycle={12} data-invalid={_fieldState.invalid} />
                     </FormControl>
 
                     <FormMessage />
@@ -246,12 +246,12 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
             <FormField
               control={form.control}
               name="color"
-              render={({ field, fieldState }) => (
+              render={({ field, fieldState: _fieldState }) => (
                 <FormItem>
                   <FormLabel>Color</FormLabel>
                   <FormControl>
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger data-invalid={fieldState.invalid}>
+                      <SelectTrigger data-invalid={_fieldState.invalid}>
                         <SelectValue placeholder="Select an option" />
                       </SelectTrigger>
 
@@ -315,12 +315,12 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
             <FormField
               control={form.control}
               name="description"
-              render={({ field, fieldState }) => (
+              render={({ field, fieldState: _fieldState }) => (
                 <FormItem>
                   <FormLabel>Description</FormLabel>
 
                   <FormControl>
-                    <Textarea {...field} value={field.value} data-invalid={fieldState.invalid} />
+                    <Textarea {...field} value={field.value} data-invalid={_fieldState.invalid} />
                   </FormControl>
 
                   <FormMessage />

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     let supabase
     try {
       supabase = await createClient()
-    } catch (clientError) {
+    } catch {
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 }
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         profileData.parent_id = parentId
       }
 
-      const { data: profile, error: profileError } = await supabase
+      const { error: profileError } = await supabase
         .from('profiles')
         .upsert(profileData, { onConflict: 'id' })
         .select()
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
           // Handle error silently
         }
       }
-    } catch (profileError) {
+    } catch {
       // Handle error silently
     }
 

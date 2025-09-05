@@ -26,7 +26,7 @@ const CalendarContext = createContext({} as ICalendarContext);
 
 const WORKING_HOURS = {
   0: { from: 0, to: 0 },
-  1: { from: 8, to: 17 },
+  1: { from: 10, to: 17 },
   2: { from: 8, to: 17 },
   3: { from: 8, to: 17 },
   4: { from: 8, to: 17 },

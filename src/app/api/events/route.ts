@@ -219,9 +219,10 @@ export async function GET() {
         id: `assignment-${assignment.id}`, // String ID with prefix to avoid conflicts
         title: assignment.title,
         description: assignment.content ? 'Assignment details available' : 'Assignment due',
-        startDate: `${assignment.due_date}T09:00:00+00:00`, // Default to 9 AM UTC
-        endDate: `${assignment.due_date}T10:00:00+00:00`, // 1 hour duration UTC
+        startDate: assignment.due_date, // All-day event - just the date
+        endDate: assignment.due_date,   // Same date for all-day
         color: color,
+        isAllDay: true, // Mark as all-day event
         user: {
           id: assignment.parent_id,
           name: assignment.profiles?.name || assignment.parent_name || 'Teacher',

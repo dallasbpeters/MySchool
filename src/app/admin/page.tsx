@@ -88,9 +88,16 @@ export default function AdminDashboard() {
     try {
       // Try to fetch admin assignments directly - this will verify admin role
       const response = await fetch('/api/admin/assignments')
+
+      if (!response.ok) {
+        // Handle non-2xx responses
+        setUserRole('parent')
+        return
+      }
+
       const data = await response.json()
 
-      if (response.ok && data.assignments) {
+      if (data.assignments) {
         setUserRole('admin')
         setAssignments(data.assignments)
         await fetchAllFamilies() // Make sure families are loaded before enabling edit
@@ -125,6 +132,12 @@ export default function AdminDashboard() {
   const fetchAllAssignments = async () => {
     try {
       const response = await fetch('/api/admin/assignments')
+
+      if (!response.ok) {
+        console.error('Failed to fetch assignments:', response.status)
+        return
+      }
+
       const data = await response.json()
 
       if (data.assignments) {
@@ -138,19 +151,31 @@ export default function AdminDashboard() {
   const fetchAllFamilies = async () => {
     try {
       const response = await fetch('/api/admin/families')
+
+      if (!response.ok) {
+        console.error('Failed to fetch families:', response.status)
+        return
+      }
+
       const data = await response.json()
 
       if (data.families) {
         setFamilies(data.families)
       }
     } catch (error) {
-      console.error('Failed to fetch assignments:', error)
+      console.error('Failed to fetch families:', error)
     }
   }
 
   const fetchCategories = async () => {
     try {
       const response = await fetch('/api/assignments')
+
+      if (!response.ok) {
+        console.error('Failed to fetch categories:', response.status)
+        return
+      }
+
       const data = await response.json()
 
       if (data.assignments) {
@@ -254,11 +279,12 @@ export default function AdminDashboard() {
         })
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.error || `Assignment ${isEditing ? 'update' : 'creation'} failed`)
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || `Assignment ${isEditing ? 'update' : 'creation'} failed`)
       }
+
+      const data = await response.json()
 
       // Success!
       toast({
@@ -286,11 +312,12 @@ export default function AdminDashboard() {
         method: 'DELETE'
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.error || 'Delete failed')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || 'Delete failed')
       }
+
+      const data = await response.json()
 
       toast({
         title: "Success",
@@ -525,7 +552,7 @@ export default function AdminDashboard() {
                         </CardDescription>
                         <CardDescription className="flex items-center gap-2 mt-1">
                           <Users className="h-4 w-4" />
-                          Created by: {assignment.parent_name}
+                          {assignment.parent_name}
                         </CardDescription>
                       </div>
                       <div className="hidden group-hover:flex gap-0 bg-background absolute top-2 right-2 rounded-lg">

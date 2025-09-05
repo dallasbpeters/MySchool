@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, data })
-  } catch (error) {
+  } catch {
 
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
@@ -95,7 +95,7 @@ export async function DELETE(request: Request) {
     }
 
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch {
 
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }

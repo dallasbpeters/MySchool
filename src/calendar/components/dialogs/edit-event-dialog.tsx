@@ -1,12 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { parseISO } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Trash2 } from "lucide-react";
 
 import { useDisclosure } from "@/hooks/use-disclosure";
 import { useCalendar } from "@/calendar/contexts/calendar-context";
 import { useUpdateEvent } from "@/calendar/hooks/use-update-event";
+import { useToast } from "@/hooks/use-toast";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -31,10 +34,12 @@ interface IProps {
 
 export function EditEventDialog({ children, event }: IProps) {
   const { isOpen, onClose, onToggle } = useDisclosure();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { users } = useCalendar();
+  const { toast } = useToast();
 
-  const { updateEvent } = useUpdateEvent();
+  const { updateEvent, deleteEvent } = useUpdateEvent();
 
   const form = useForm<TEventFormData>({
     resolver: zodResolver(eventSchema),
@@ -72,6 +77,39 @@ export function EditEventDialog({ children, event }: IProps) {
     });
 
     onClose();
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const result = await deleteEvent(event.id);
+
+      if (result.success) {
+        toast({
+          title: "Event deleted",
+          description: result.message,
+        });
+        onClose();
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to delete event",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete event",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -299,16 +337,29 @@ export function EditEventDialog({ children, event }: IProps) {
           </form>
         </Form>
 
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button type="button" variant="outline">
-              Cancel
-            </Button>
-          </DialogClose>
-
-          <Button form="event-form" type="submit">
-            Save changes
+        <DialogFooter className="flex justify-between">
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="flex items-center gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            {isDeleting ? 'Deleting...' : 'Delete Event'}
           </Button>
+
+          <div className="flex gap-2">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Cancel
+              </Button>
+            </DialogClose>
+
+            <Button form="event-form" type="submit">
+              Save changes
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

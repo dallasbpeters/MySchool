@@ -139,7 +139,7 @@ export function LoginForm({
       console.error('Form error:', error)
       toast({
         title: "Error",
-        description: error.message,
+        description: (error as Error).message || "An unexpected error occurred",
         variant: "destructive"
       })
     } finally {
@@ -177,7 +177,7 @@ export function LoginForm({
       console.error('Form error:', error)
       toast({
         title: "Error",
-        description: error.message,
+        description: (error as Error).message || "An unexpected error occurred",
         variant: "destructive"
       })
     } finally {
@@ -197,7 +197,7 @@ export function LoginForm({
     if (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: (error as Error).message || "An unexpected error occurred",
         variant: "destructive"
       })
     }

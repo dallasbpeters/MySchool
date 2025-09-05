@@ -1,14 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { WysiwygEditor } from '@/components/editor/wysiwyg-editor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import MultipleSelector, { Option } from '@/components/ui/multiselect'
-import { Plus, Trash2, Calendar, Link as LinkIcon, Repeat, Video, ExternalLink, Play } from 'lucide-react'
-import { format } from 'date-fns'
+import { Trash2, Calendar, Link as LinkIcon, Repeat, Video, ExternalLink, Play } from 'lucide-react'
 import { MiniCalendar, MiniCalendarNavigation, MiniCalendarDays, MiniCalendarDay } from '@/components/ui/shadcn-io/mini-calendar'
 
 interface Link {

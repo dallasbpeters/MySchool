@@ -33,7 +33,7 @@ export function useUser(): UserData {
 
     const getUser = async () => {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser()
+        const { data: { user }, error: _error } = await supabase.auth.getUser()
 
         if (!mounted) return
 
@@ -61,7 +61,7 @@ export function useUser(): UserData {
             })
           }
         }
-      } catch (error) {
+      } catch (_error) {
         if (mounted) {
           setUserData({
             user: null,
@@ -102,7 +102,7 @@ export function useUser(): UserData {
             })
           }
         }
-      } catch (error) {
+      } catch (_error) {
         if (mounted) {
           setUserData({
             user: null,

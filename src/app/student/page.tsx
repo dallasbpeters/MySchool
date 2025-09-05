@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { StickyNote, Calendar, CheckCircle2, Link as LinkIcon, ChevronDown, BookOpen, Plus, Trash2, Repeat, Edit } from 'lucide-react'
-import { format, isToday, isTomorrow, isPast } from 'date-fns'
+import { format, isTomorrow } from 'date-fns'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -27,7 +27,7 @@ import NoAssignments from '@/components/no-assignments'
 // YouTube helper function moved to UniversalVideoPlayer component
 
 // Helper function to generate upcoming instances for recurring assignments
-const getRecurringInstances = (assignment: Assignment, daysAhead: number = 7): Array<{ date: string, dayName: string }> => {
+const _getRecurringInstances = (assignment: Assignment, daysAhead: number = 7): Array<{ date: string, dayName: string }> => {
   if (!assignment.is_recurring || !assignment.recurrence_pattern) {
     return []
   }
@@ -137,6 +137,11 @@ interface Note {
   assignment_id?: string
 }
 
+interface StudentsApiResponse {
+  students?: Child[]
+  children?: Child[]
+}
+
 export default function StudentDashboard() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
@@ -237,11 +242,11 @@ export default function StudentDashboard() {
       } else {
         throw new Error('Unable to determine user role')
       }
-    } catch (error: unknown) {
-      console.error('Error checking user role:', error)
+    } catch (_error: unknown) {
+      console.error('Error checking user role:', _error)
       toast({
         title: "Assignment Loading Error",
-        description: (error as Error).message || "Failed to load assignments. Please try refreshing the page.",
+        description: (_error as Error).message || "Failed to load assignments. Please try refreshing the page.",
         variant: "destructive"
       })
       setLoading(false)
@@ -264,7 +269,7 @@ export default function StudentDashboard() {
           setUserRole(data.profile.role)
         }
       }
-    } catch (error) {
+    } catch (_error) {
 
     } finally {
       setLoading(false)
@@ -274,7 +279,7 @@ export default function StudentDashboard() {
   const fetchChildren = async (roleOverride?: string) => {
     try {
       let response: Response
-      let data: any
+      let data: StudentsApiResponse
       const currentRole = roleOverride || userRole
 
 
@@ -319,7 +324,7 @@ export default function StudentDashboard() {
           }
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // Handle error silently
     }
   }
@@ -374,7 +379,7 @@ export default function StudentDashboard() {
       if (data.notes) {
         setNotes(data.notes)
       }
-    } catch (error) {
+    } catch (_error) {
       // Handle error silently
     }
   }
@@ -382,9 +387,9 @@ export default function StudentDashboard() {
   const fetchCategories = async () => {
     try {
       const response = await fetch('/api/assignments')
-      const data = await response.json()
+      await response.json()
 
-    } catch (error) {
+    } catch (_error) {
       // Handle error silently
     }
   }
@@ -442,7 +447,7 @@ export default function StudentDashboard() {
           variant: "destructive"
         })
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update note",
@@ -471,7 +476,7 @@ export default function StudentDashboard() {
           variant: "destructive"
         })
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to delete note",
@@ -492,7 +497,7 @@ export default function StudentDashboard() {
     return grouped
   }
 
-  const handleInstanceClick = (assignmentId: string, date: string, dayName: string) => {
+  const handleInstanceClick = (assignmentId: string, date: string, _dayName: string) => {
     setSelectedInstanceDates(prev => ({
       ...prev,
       [assignmentId]: date
@@ -560,7 +565,7 @@ export default function StudentDashboard() {
               errorMessage += ` (${errorData.details})`
             }
           }
-        } catch (e) {
+        } catch (_e) {
           // If we can't parse the error response, use the default message
         }
 
@@ -602,7 +607,7 @@ export default function StudentDashboard() {
 
         fetchAssignments(selectedChildId)
       }
-    } catch (error) {
+    } catch (_error) {
       // Revert optimistic update on error
       setAssignments(prevAssignments =>
         prevAssignments.map(assignment =>
@@ -1256,7 +1261,7 @@ function AssignmentCard({
           variant: "destructive"
         })
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to create note",

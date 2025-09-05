@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export interface Notification {
@@ -31,7 +31,7 @@ export function useNotifications(userId?: string): NotificationsData {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!userId) {
       setNotifications([])
       setLoading(false)
@@ -53,12 +53,12 @@ export function useNotifications(userId?: string): NotificationsData {
       }
 
       setNotifications((data as Notification[]) || [])
-    } catch (error) {
+    } catch (_error) {
 
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
 
   const markAsRead = async (id: string) => {
     try {
@@ -73,7 +73,7 @@ export function useNotifications(userId?: string): NotificationsData {
           notif.id === id ? { ...notif, read: true } : notif
         )
       )
-    } catch (error) {
+    } catch (_error) {
 
     }
   }
@@ -92,7 +92,7 @@ export function useNotifications(userId?: string): NotificationsData {
       setNotifications(prev =>
         prev.map(notif => ({ ...notif, read: true }))
       )
-    } catch (error) {
+    } catch (_error) {
 
     }
   }
@@ -123,7 +123,7 @@ export function useNotifications(userId?: string): NotificationsData {
         subscription.unsubscribe()
       }
     }
-  }, [userId])
+  }, [userId, fetchNotifications])
 
   const unreadCount = notifications.filter(n => !n.read).length
 

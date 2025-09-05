@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { BellIcon, HelpCircleIcon, ChevronDownIcon } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { BellIcon, ChevronDownIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggleButton } from '@/components/ui/shadcn-io/theme-toggle-button';
 import { Logo } from '@/components/ui/Logo'
@@ -28,7 +28,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { ComponentProps } from 'react';
 
 
 // Hamburger icon component
@@ -233,7 +232,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
     {
       className,
       logo = <Logo />,
-      logoHref = '#',
+      logoHref: _logoHref = '#',
       navigationLinks = defaultNavigationLinks,
       userName = 'John Doe',
       userEmail = 'john@example.com',

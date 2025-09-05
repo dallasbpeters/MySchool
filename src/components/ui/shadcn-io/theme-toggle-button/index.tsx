@@ -6,17 +6,17 @@ import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-type AnimationVariant = 
-  | 'circle' 
-  | 'circle-blur' 
+type AnimationVariant =
+  | 'circle'
+  | 'circle-blur'
   | 'gif'
   | 'polygon';
 
-type StartPosition = 
-  | 'center' 
-  | 'top-left' 
-  | 'top-right' 
-  | 'bottom-left' 
+type StartPosition =
+  | 'center'
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
   | 'bottom-right';
 
 export interface ThemeToggleButtonProps {
@@ -35,13 +35,13 @@ export const ThemeToggleButton = ({
   className,
 }: ThemeToggleButtonProps) => {
   const { theme, setTheme } = useTheme();
-  
+
   const handleClick = useCallback(() => {
     // Inject animation styles for this specific transition
     const styleId = `theme-transition-${Date.now()}`;
     const style = document.createElement('style');
     style.id = styleId;
-    
+
     // Generate animation CSS based on variant
     let css = '';
     const positions = {
@@ -51,7 +51,7 @@ export const ThemeToggleButton = ({
       'bottom-left': 'bottom left',
       'bottom-right': 'bottom right',
     };
-    
+
     if (variant === 'circle') {
       const cx = start === 'center' ? '50' : start.includes('left') ? '0' : '100';
       const cy = start === 'center' ? '50' : start.includes('top') ? '0' : '100';
@@ -161,11 +161,11 @@ export const ThemeToggleButton = ({
         }
       `;
     }
-    
+
     if (css) {
       style.textContent = css;
       document.head.appendChild(style);
-      
+
       // Clean up animation styles after transition
       setTimeout(() => {
         const styleEl = document.getElementById(styleId);
@@ -174,10 +174,10 @@ export const ThemeToggleButton = ({
         }
       }, 3000);
     }
-    
+
     // Toggle the theme with view transition
     if ('startViewTransition' in document) {
-      (document as Record<string, unknown>).startViewTransition(() => {
+      (document as unknown as { startViewTransition: (callback: () => void) => void }).startViewTransition(() => {
         setTheme(theme === 'light' ? 'dark' : 'light');
       });
     } else {
@@ -215,7 +215,7 @@ export const ThemeToggleButton = ({
 export const useThemeTransition = () => {
   const startTransition = useCallback((updateFn: () => void) => {
     if ('startViewTransition' in document) {
-      (document as Record<string, unknown>).startViewTransition(updateFn);
+      (document as unknown as { startViewTransition: (callback: () => void) => void }).startViewTransition(updateFn);
     } else {
       updateFn();
     }

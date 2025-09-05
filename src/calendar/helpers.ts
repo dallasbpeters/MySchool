@@ -119,6 +119,13 @@ export function groupEvents(dayEvents: IEvent[]) {
 }
 
 export function getEventBlockStyle(event: IEvent, day: Date, groupIndex: number, groupSize: number, visibleHoursRange?: { from: number; to: number }) {
+  // For all-day events, position at the top
+  if (event.isAllDay) {
+    const width = 100 / groupSize;
+    const left = groupIndex * width;
+    return { top: "0%", width: `${width}%`, left: `${left}%`, height: "20px", isAllDay: true };
+  }
+
   const startDate = parseISO(event.startDate);
   const dayStart = new Date(day.setHours(0, 0, 0, 0));
   const eventStart = startDate < dayStart ? dayStart : startDate;

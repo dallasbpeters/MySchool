@@ -25,6 +25,30 @@ AS $$
     AND (p_student_id IS NULL OR sa.student_id = p_student_id);
 $$;
 
+-- Upsert student assignments for an assignment (admin bypass for RLS)
+CREATE OR REPLACE FUNCTION admin_upsert_student_assignments(
+  p_assignment_id uuid,
+  p_student_ids uuid[]
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  _sid uuid;
+BEGIN
+  -- Remove existing rows for this assignment
+  DELETE FROM student_assignments WHERE assignment_id = p_assignment_id;
+
+  -- Insert new rows
+  FOREACH _sid IN ARRAY p_student_ids LOOP
+    INSERT INTO student_assignments (assignment_id, student_id, completed)
+    VALUES (p_assignment_id, _sid, false)
+    ON CONFLICT DO NOTHING;
+  END LOOP;
+END;
+$$;
+
 -- Create RPC function for getting all assignments with parent info
 CREATE OR REPLACE FUNCTION get_all_assignments_with_parents()
 RETURNS TABLE (

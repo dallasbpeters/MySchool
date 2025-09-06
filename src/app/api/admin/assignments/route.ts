@@ -237,20 +237,20 @@ export async function POST(request: NextRequest) {
 
     // Create student assignments for selected children
     if (selectedChildren.length > 0) {
-      const studentAssignments = selectedChildren.map((childId: string) => ({
-        assignment_id: createdAssignment.id,
-        student_id: childId,
-        completed: false,
-      }))
+      // For admins creating across families, we must bypass RLS when inserting
+      // student_assignments; use a SECURITY DEFINER RPC to perform the insert.
+      const { data: rpcResult, error: rpcError } = await supabase.rpc(
+        'admin_upsert_student_assignments',
+        {
+          p_assignment_id: createdAssignment.id,
+          p_student_ids: selectedChildren,
+        },
+      )
 
-      const { error: studentError } = await supabase
-        .from('student_assignments')
-        .insert(studentAssignments)
-
-      if (studentError) {
+      if (rpcError) {
         return NextResponse.json(
           { error: 'Assignment created but failed to assign to some students' },
-          { status: 207 }, // Partial success
+          { status: 207 },
         )
       }
     }
@@ -397,35 +397,24 @@ export async function PUT(request: NextRequest) {
 
     const updatedAssignment = assignmentData[0] // Get first (and should be only) result
 
-    // Update student assignments if selectedChildren is provided
+    // Update student assignments (bypass RLS via RPC)
     if (selectedChildren && Array.isArray(selectedChildren)) {
-      // First, remove all existing student assignments for this assignment
-      await supabase
-        .from('student_assignments')
-        .delete()
-        .eq('assignment_id', assignmentId)
+      const { error: upsertError } = await supabase.rpc(
+        'admin_upsert_student_assignments',
+        {
+          p_assignment_id: assignmentId,
+          p_student_ids: selectedChildren,
+        },
+      )
 
-      // Then, add the new student assignments
-      if (selectedChildren.length > 0) {
-        const studentAssignments = selectedChildren.map((childId: string) => ({
-          assignment_id: assignmentId,
-          student_id: childId,
-          completed: false,
-        }))
-
-        const { error: studentError } = await supabase
-          .from('student_assignments')
-          .insert(studentAssignments)
-
-        if (studentError) {
-          return NextResponse.json(
-            {
-              error:
-                'Assignment updated but failed to update student assignments',
-            },
-            { status: 207 }, // Partial success
-          )
-        }
+      if (upsertError) {
+        return NextResponse.json(
+          {
+            error:
+              'Assignment updated but failed to update student assignments',
+          },
+          { status: 207 },
+        )
       }
     }
 

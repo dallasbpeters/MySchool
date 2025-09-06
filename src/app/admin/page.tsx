@@ -289,17 +289,17 @@ export default function AdminDashboard() {
         }),
       })
 
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ error: 'Unknown error' }))
+      // Always read the body to inspect partial-success responses (e.g., 207)
+      const data = await response
+        .json()
+        .catch(() => ({ error: 'Unknown error' }))
+
+      if (!response.ok || data?.error) {
         throw new Error(
-          errorData.error ||
+          data?.error ||
           `Assignment ${isEditing ? 'update' : 'creation'} failed`,
         )
       }
-
-      const data = await response.json()
 
       // Success!
       toast({

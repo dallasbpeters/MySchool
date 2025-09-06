@@ -9,20 +9,26 @@ export class FetchSupabaseClient {
   constructor() {
     this.baseUrl = `${SUPABASE_URL}/rest/v1`
     this.baseHeaders = {
-      'apikey': SUPABASE_KEY,
+      apikey: SUPABASE_KEY,
       'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
+      Prefer: 'return=representation',
     }
   }
 
   private getHeaders(accessToken?: string): Record<string, string> {
     return {
       ...this.baseHeaders,
-      'Authorization': `Bearer ${accessToken || SUPABASE_KEY}`
+      Authorization: `Bearer ${accessToken || SUPABASE_KEY}`,
     }
   }
 
-  async query(table: string, select: string = '*', limit?: number, filters?: Record<string, unknown>, accessToken?: string) {
+  async query(
+    table: string,
+    select: string = '*',
+    limit?: number,
+    filters?: Record<string, unknown>,
+    accessToken?: string,
+  ) {
     const url = new URL(`${this.baseUrl}/${table}`)
     url.searchParams.set('select', select)
     if (limit) {
@@ -36,14 +42,15 @@ export class FetchSupabaseClient {
       })
     }
 
-
     const response = await fetch(url.toString(), {
       method: 'GET',
-      headers: this.getHeaders(accessToken)
+      headers: this.getHeaders(accessToken),
     })
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Request failed' }))
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: 'Request failed' }))
       return { data: null, error: errorData }
     }
 
@@ -57,11 +64,13 @@ export class FetchSupabaseClient {
     const response = await fetch(url, {
       method: 'POST',
       headers: this.getHeaders(accessToken),
-      body: JSON.stringify(values)
+      body: JSON.stringify(values),
     })
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Request failed' }))
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: 'Request failed' }))
       return { data: null, error: errorData }
     }
 
@@ -69,23 +78,29 @@ export class FetchSupabaseClient {
     return { data, error: null }
   }
 
-  async update(table: string, values: unknown, filters: Record<string, unknown>, accessToken?: string) {
+  async update(
+    table: string,
+    values: unknown,
+    filters: Record<string, unknown>,
+    accessToken?: string,
+  ) {
     const url = new URL(`${this.baseUrl}/${table}`)
 
     // Add filters to URL
     Object.entries(filters).forEach(([key, value]) => {
       url.searchParams.set(key, String(value))
     })
-
 
     const response = await fetch(url.toString(), {
       method: 'PATCH',
       headers: this.getHeaders(accessToken),
-      body: JSON.stringify(values)
+      body: JSON.stringify(values),
     })
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Request failed' }))
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: 'Request failed' }))
       return { data: null, error: errorData }
     }
 
@@ -93,7 +108,11 @@ export class FetchSupabaseClient {
     return { data, error: null }
   }
 
-  async delete(table: string, filters: Record<string, unknown>, accessToken?: string) {
+  async delete(
+    table: string,
+    filters: Record<string, unknown>,
+    accessToken?: string,
+  ) {
     const url = new URL(`${this.baseUrl}/${table}`)
 
     // Add filters to URL
@@ -101,14 +120,15 @@ export class FetchSupabaseClient {
       url.searchParams.set(key, String(value))
     })
 
-
     const response = await fetch(url.toString(), {
       method: 'DELETE',
-      headers: this.getHeaders(accessToken)
+      headers: this.getHeaders(accessToken),
     })
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Request failed' }))
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: 'Request failed' }))
       return { data: null, error: errorData }
     }
 

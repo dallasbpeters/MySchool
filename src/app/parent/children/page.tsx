@@ -1,13 +1,26 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchClient } from '@/lib/supabase/fetch-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 import { Plus, Copy, Edit, Check, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
@@ -31,18 +44,6 @@ interface SignupCode {
   created_at: string
 }
 
-
-interface StudentAssignmentData {
-  assignment_id: string
-  completed: boolean
-  completed_at: string | null
-  assignments: {
-    id: string
-    title: string
-    due_date: string
-  }[]
-}
-
 interface SignupCodeData {
   id: string
   code: string
@@ -64,6 +65,72 @@ export default function ChildrenManagement() {
   const [editingName, setEditingName] = useState('')
   const { toast } = useToast()
 
+  const fetchAssignmentStatus = async (childId: string) => {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('student_assignments')
+      .select(
+        `
+        assignment_id,
+        completed,
+        completed_at,
+        assignments!inner(id, title, due_date)
+      `,
+      )
+      .eq('student_id', childId)
+
+    if (!error && data) {
+      // Assignment status data loaded successfully
+      // This data could be used for displaying assignment completion status
+    }
+  }
+
+  const fetchChildren = useCallback(
+    async (currentUser = user) => {
+      if (!currentUser) return
+
+      try {
+        const response = await fetch('/api/children')
+        const data = await response.json()
+
+        if (data.children) {
+          setChildren(data.children)
+          // Fetch assignment statuses for each child
+          data.children.forEach((child: { id: string }) =>
+            fetchAssignmentStatus(child.id),
+          )
+        }
+      } catch {
+        // Handle error silently
+      }
+    },
+    [user],
+  )
+
+  const fetchSignupCodes = useCallback(
+    async (currentUser = user) => {
+      if (!currentUser) return
+
+      try {
+        const response = await fetch('/api/signup-codes')
+        const result = await response.json()
+
+        if (result.success && result.codes) {
+          // Sort by creation date, newest first
+          const sortedCodes = result.codes.sort(
+            (a: SignupCodeData, b: SignupCodeData) =>
+              new Date(b.created_at).getTime() -
+              new Date(a.created_at).getTime(),
+          )
+          setSignupCodes(sortedCodes)
+        }
+      } catch {
+        // Handle error silently
+      }
+    },
+    [user],
+  )
+
   useEffect(() => {
     const initUser = async () => {
       try {
@@ -76,7 +143,7 @@ export default function ChildrenManagement() {
 
         // Get user from server-side API (which works since middleware allows access)
         const userResponse = await fetch('/api/user')
-        const { user: serverUser, error: userError } = await userResponse.json()
+        const { user: serverUser } = await userResponse.json()
 
         if (serverUser) {
           setUser(serverUser)
@@ -84,23 +151,25 @@ export default function ChildrenManagement() {
         }
 
         // Fallback: try to get profile data from database
-        const { error: _profileError } = await fetchClient.query('profiles', 'id,email,name,role', 1)
+        await fetchClient.query('profiles', 'id,email,name,role', 1)
 
         // Test auth
         const supabase = createClient()
-        const { data: { session }, error: _sessionError } = await supabase.auth.getSession()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
         if (session?.user) {
           const userObject = {
             id: session.user.id,
-            email: session.user.email || 'user@example.com'
+            email: session.user.email || 'user@example.com',
           }
           setUser(userObject)
           fetchChildren(userObject)
           fetchSignupCodes(userObject)
         } else {
           // Try to get user from profiles
-          const { data: profiles, error: _profileError } = await supabase
+          const { data: profiles } = await supabase
             .from('profiles')
             .select('id, email, name, role')
             .limit(1)
@@ -110,20 +179,22 @@ export default function ChildrenManagement() {
             const user = {
               id: profile.id,
               email: profile.email || 'authenticated@example.com',
-              user_metadata: { full_name: profile.name || 'Authenticated User' }
+              user_metadata: {
+                full_name: profile.name || 'Authenticated User',
+              },
             }
             setUser(user)
             fetchChildren(user)
             fetchSignupCodes(user)
           }
         }
-      } catch (_error) {
+      } catch {
         // Error handling, but no loading state to set
       }
     }
 
     initUser()
-  }, [])
+  }, [fetchChildren, fetchSignupCodes])
 
   // Separate effect to load data when user is authenticated
   useEffect(() => {
@@ -131,8 +202,7 @@ export default function ChildrenManagement() {
       fetchChildren(user)
       fetchSignupCodes(user)
     }
-  }, [user])
-
+  }, [user, fetchChildren, fetchSignupCodes])
 
   // If no user after loading, show login message
   if (!user) {
@@ -140,7 +210,7 @@ export default function ChildrenManagement() {
       <div className="p-8 text-center">
         <p>You need to be logged in to access this page.</p>
         <button
-          onClick={() => window.location.href = '/login'}
+          onClick={() => (window.location.href = '/login')}
           className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
         >
           Go to Login
@@ -149,68 +219,13 @@ export default function ChildrenManagement() {
     )
   }
 
-  const fetchChildren = async (currentUser = user) => {
-    if (!currentUser) return
-
-    try {
-      const response = await fetch('/api/children')
-      const data = await response.json()
-
-      if (data.children) {
-        setChildren(data.children)
-        // Fetch assignment statuses for each child
-        data.children.forEach((child: { id: string }) => fetchAssignmentStatus(child.id))
-      }
-    } catch (_error) {
-      // Handle error silently
-    }
-  }
-
-  const fetchSignupCodes = async (currentUser = user) => {
-    if (!currentUser) return
-
-    try {
-      const response = await fetch('/api/signup-codes')
-      const result = await response.json()
-
-      if (response.ok && result.success && result.data) {
-        // Sort by created_at descending (newest first)
-        const sortedCodes = result.data.sort((a: { created_at: string }, b: { created_at: string }) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )
-
-        setSignupCodes(sortedCodes)
-      }
-    } catch (_error) {
-      // Handle error silently
-    }
-  }
-
-  const fetchAssignmentStatus = async (childId: string) => {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('student_assignments')
-      .select(`
-        assignment_id,
-        completed,
-        completed_at,
-        assignments!inner(id, title, due_date)
-      `)
-      .eq('student_id', childId)
-
-    if (!error && data) {
-      // Assignment status data loaded successfully
-      // This data could be used for displaying assignment completion status
-    }
-  }
-
   const generateSignupCode = async () => {
     // Input validation only
     if (!newChildName.trim()) {
       toast({
-        title: "Error",
-        description: "Please enter a child name",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Please enter a child name',
+        variant: 'destructive',
       })
       return
     }
@@ -228,14 +243,14 @@ export default function ChildrenManagement() {
       used_by: null,
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
       created_at: timestamp,
-      status: 'pending' // Track sync status
+      status: 'pending', // Track sync status
     }
 
     // INSTANT: Show success and update UI immediately
     setGeneratedCode(code)
-    setSignupCodes(prev => [optimisticCode, ...prev])
+    setSignupCodes((prev) => [optimisticCode, ...prev])
     toast({
-      title: "Code Generated!",
+      title: 'Code Generated!',
       description: `Signup code ${code} created for ${newChildName.trim()}`,
     })
 
@@ -251,9 +266,9 @@ export default function ChildrenManagement() {
     try {
       if (!user?.id) {
         toast({
-          title: "Authentication Error",
-          description: "You must be logged in to generate codes",
-          variant: "destructive"
+          title: 'Authentication Error',
+          description: 'You must be logged in to generate codes',
+          variant: 'destructive',
         })
         return
       }
@@ -265,36 +280,39 @@ export default function ChildrenManagement() {
         body: JSON.stringify({
           code: codeData.code,
           child_name: codeData.child_name,
-          expires_at: codeData.expires_at
-        })
+          expires_at: codeData.expires_at,
+        }),
       })
 
       const result = await response.json()
 
       if (!response.ok || result.error) {
         // Update the optimistic code to show error state
-        setSignupCodes(prev =>
-          prev.map(c =>
+        setSignupCodes((prev) =>
+          prev.map((c) =>
             c.id === codeData.id
-              ? { ...c, status: 'error', error: result.error || 'Unknown error' }
-              : c
-          )
+              ? {
+                  ...c,
+                  status: 'error',
+                  error: result.error || 'Unknown error',
+                }
+              : c,
+          ),
         )
 
         // Show non-intrusive error
         toast({
-          title: "Sync Warning",
-          description: "Code created locally but may not be saved to server. Try refreshing the page.",
-          variant: "destructive"
+          title: 'Sync Warning',
+          description:
+            'Code created locally but may not be saved to server. Try refreshing the page.',
+          variant: 'destructive',
         })
       } else {
         // Update status to saved
-        setSignupCodes(prev =>
-          prev.map(c =>
-            c.id === codeData.id
-              ? { ...c, status: 'saved' }
-              : c
-          )
+        setSignupCodes((prev) =>
+          prev.map((c) =>
+            c.id === codeData.id ? { ...c, status: 'saved' } : c,
+          ),
         )
 
         // Refresh the list to get server data
@@ -304,7 +322,7 @@ export default function ChildrenManagement() {
           }
         }, 500)
       }
-    } catch (_error) {
+    } catch {
       // Handle error silently
     }
   }
@@ -312,17 +330,18 @@ export default function ChildrenManagement() {
   const copyCode = async (code: string) => {
     await navigator.clipboard.writeText(code)
     toast({
-      title: "Copied",
-      description: "Signup code copied to clipboard",
+      title: 'Copied',
+      description: 'Signup code copied to clipboard',
     })
   }
 
-  const _copyGeneratedCodeWithWrapper = async (code: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const copyGeneratedCodeWithWrapper = async (code: string) => {
     const wrappedCode = `@ColourfulText("${code}")`
     await navigator.clipboard.writeText(wrappedCode)
     toast({
-      title: "Copied",
-      description: "Code with @ColourfulText wrapper copied to clipboard",
+      title: 'Copied',
+      description: 'Code with @ColourfulText wrapper copied to clipboard',
     })
   }
 
@@ -334,49 +353,47 @@ export default function ChildrenManagement() {
 
   const deleteCode = async (codeId: string) => {
     // INSTANT: Remove from UI immediately
-    const codeToDelete = signupCodes.find(c => c.id === codeId)
+    const codeToDelete = signupCodes.find((c) => c.id === codeId)
 
-    setSignupCodes(prev => prev.filter(c => c.id !== codeId))
+    setSignupCodes((prev) => prev.filter((c) => c.id !== codeId))
 
     toast({
-      title: "Code Deleted",
+      title: 'Code Deleted',
       description: `Signup code deleted`,
     })
 
     // BACKGROUND: Delete from database
     try {
       const response = await fetch(`/api/signup-codes?id=${codeId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       })
       const result = await response.json()
 
       if (!response.ok || result.error) {
         // Restore the code on error
         if (codeToDelete) {
-          setSignupCodes(prev => [codeToDelete, ...prev])
+          setSignupCodes((prev) => [codeToDelete, ...prev])
           toast({
-            title: "Delete Failed",
-            description: "Could not delete code from server. Code restored.",
-            variant: "destructive"
+            title: 'Delete Failed',
+            description: 'Could not delete code from server. Code restored.',
+            variant: 'destructive',
           })
         }
       }
-    } catch (_error) {
-
+    } catch {
       // Restore the code on error
       if (codeToDelete) {
-        setSignupCodes(prev => [codeToDelete, ...prev])
+        setSignupCodes((prev) => [codeToDelete, ...prev])
         toast({
-          title: "Delete Failed",
-          description: "Network error. Code restored.",
-          variant: "destructive"
+          title: 'Delete Failed',
+          description: 'Network error. Code restored.',
+          variant: 'destructive',
         })
       }
     }
   }
 
   const handleStartEditName = (child: Child) => {
-
     setEditingChildId(child.id)
     setEditingName(child.name)
   }
@@ -387,13 +404,11 @@ export default function ChildrenManagement() {
   }
 
   const handleSaveEditName = async (childId: string) => {
-
-
     if (!editingName.trim()) {
       toast({
-        title: "Error",
-        description: "Name cannot be empty",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Name cannot be empty',
+        variant: 'destructive',
       })
       return
     }
@@ -402,256 +417,294 @@ export default function ChildrenManagement() {
       const response = await fetch('/api/profiles', {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           name: editingName.trim(),
-          studentId: childId
-        })
+          studentId: childId,
+        }),
       })
 
       const data = await response.json()
 
       if (response.ok) {
         // Update the children array with the new name
-        setChildren(prev => prev.map(child =>
-          child.id === childId
-            ? { ...child, name: editingName.trim() }
-            : child
-        ))
+        setChildren((prev) =>
+          prev.map((child) =>
+            child.id === childId
+              ? { ...child, name: editingName.trim() }
+              : child,
+          ),
+        )
 
         setEditingChildId(null)
         setEditingName('')
 
         toast({
-          title: "Success",
-          description: data.message || "Name updated successfully",
+          title: 'Success',
+          description: data.message || 'Name updated successfully',
         })
       } else {
         toast({
-          title: "Error",
-          description: data.error || "Failed to update name",
-          variant: "destructive"
+          title: 'Error',
+          description: data.error || 'Failed to update name',
+          variant: 'destructive',
         })
       }
-    } catch (_error) {
+    } catch {
       toast({
-        title: "Error",
-        description: "Failed to update name",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to update name',
+        variant: 'destructive',
       })
     }
   }
 
   return (
     <>
-      <div className="z-10 relative container mx-auto p-6">
-
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Students</h1>
-          <p className="text-muted-foreground">
-            Manage your students and track their assignment progress
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Existing Children */}
-
-          {children.length === 0 ? (
-            <p className="text-muted-foreground py-6">
-              No children registered yet. Generate a signup code to add your first child.
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center h-64">
+            Loading children...
+          </div>
+        }
+      >
+        <div className="z-5 relative container mx-auto p-6">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold">Students</h1>
+            <p className="text-muted-foreground">
+              Manage your students and track their assignment progress
             </p>
-          ) : (
-            <div className="space-y-4">
-              {children.map((child) => (
-                <Card key={child.id} className="border-l-10 border-l-primary">
-                  <CardContent>
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        {editingChildId === child.id ? (
-                          <div className="flex items-center gap-2 mb-2">
-                            <Input
-                              value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
-                              className="font-semibold border-dashed border-2"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveEditName(child.id)
-                                if (e.key === 'Escape') handleCancelEditName()
-                              }}
-                              autoFocus
-                            />
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleSaveEditName(child.id)}
-                              className="text-green-600 hover:text-green-700"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={handleCancelEditName}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold h-8">{child.name}</h3>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleStartEditName(child)}
-                              className="hidden group-hover:block text-muted-foreground hover:text-foreground"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                        <p className="text-sm text-muted-foreground">{child.email}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Joined {format(new Date(child.created_at), 'MMM d, yyyy')}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          </div>
 
-          {/* Signup Codes */}
-          <Card className="gap-4">
-            <CardHeader>
-              <CardTitle>Signup Codes</CardTitle>
-              <CardDescription>
-                Generate codes for your children to create their accounts
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Sheet open={isAddingChild} onOpenChange={(open) => !open && handleSheetClose()}>
-                <SheetTrigger asChild>
-                  <Button
-                    className="w-full mb-4 gap-2"
-                    onClick={() => {
-                      // Reset all sheet state when opening
-                      setGeneratedCode(null)
-                      setNewChildName('')
-                      setIsAddingChild(true)
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add New Child
-                  </Button>
-                </SheetTrigger>
-                <SheetContent>
-                  <SheetHeader>
-                    <SheetTitle>
-                      {generatedCode ? 'Signup Code Generated' : 'Generate Signup Code'}
-                    </SheetTitle>
-                    <SheetDescription>
-                      {generatedCode
-                        ? 'Your child can use this code to register their account'
-                        : 'Create a signup code for your child to register their account'
-                      }
-                    </SheetDescription>
-                  </SheetHeader>
-                  <div className="space-y-4 mt-6">
-                    {generatedCode ? (
-                      // Show generated code with ColourfulText wrapper
-                      <div className="space-y-4">
-                        <div className="text-center">
-                          <div className="text-3xl font-mono bg-background p-4 rounded-lg border">
-                            <ColourfulText text={generatedCode} />
-                          </div>
-                        </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Existing Children */}
 
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            onClick={() => copyCode(generatedCode)}
-                            variant="outline"
-                            className="gap-2"
-                          >
-                            <Copy className="h-4 w-4" />
-                            Copy Code
-                          </Button>
-                        </div>
-
-                        <Button onClick={handleSheetClose} variant="outline" className="w-full">
-                          Done
-                        </Button>
-                      </div>
-                    ) : (
-                      // Show form to generate code
-                      <>
-                        <div className="space-y-2">
-                          <Label htmlFor="child_name">Child&apos;s Name</Label>
-                          <Input
-                            id="child_name"
-                            placeholder="Enter your child's name"
-                            value={newChildName}
-                            onChange={(e) => setNewChildName(e.target.value)}
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button onClick={generateSignupCode} className="flex-1">
-                            Generate Code
-                          </Button>
-                          <Button variant="outline" onClick={handleSheetClose}>
-                            Cancel
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </SheetContent>
-              </Sheet>
-
-              <div className="space-y-3">
-                {(() => {
-                  const unusedCodes = signupCodes.filter(code => !code.used)
-                  return unusedCodes
-                })().map((code) => (
-                  <Card key={code.id} className="border-green-600 bg-green-50 shadow-none">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <code className="bg-background px-2 py-1 rounded font-mono text-sm">
-                              {code.code}
-                            </code>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyCode(code.code)}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="text-sm font-medium mt-1">{code.child_name}</p>
+            {children.length === 0 ? (
+              <p className="text-muted-foreground py-6">
+                No children registered yet. Generate a signup code to add your
+                first child.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {children.map((child) => (
+                  <Card key={child.id} className="border-l-10 border-l-primary">
+                    <CardContent>
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          {editingChildId === child.id ? (
+                            <div className="flex items-center gap-2 mb-2">
+                              <Input
+                                value={editingName}
+                                onChange={(e) => setEditingName(e.target.value)}
+                                className="font-semibold border-dashed border-2"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter')
+                                    handleSaveEditName(child.id)
+                                  if (e.key === 'Escape') handleCancelEditName()
+                                }}
+                                autoFocus
+                              />
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleSaveEditName(child.id)}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={handleCancelEditName}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-semibold h-8">
+                                {child.name}
+                              </h3>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleStartEditName(child)}
+                                className="hidden group-hover:block text-muted-foreground hover:text-foreground"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                          <p className="text-sm text-muted-foreground">
+                            {child.email}
+                          </p>
                           <p className="text-xs text-muted-foreground">
-                            Expires {format(new Date(code.expires_at), 'MMM d, yyyy')}
+                            Joined{' '}
+                            {format(new Date(child.created_at), 'MMM d, yyyy')}
                           </p>
                         </div>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => deleteCode(code.id)}
-                        >
-                          Delete
-                        </Button>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            )}
+
+            {/* Signup Codes */}
+            <Card className="gap-4">
+              <CardHeader>
+                <CardTitle>Signup Codes</CardTitle>
+                <CardDescription>
+                  Generate codes for your children to create their accounts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Sheet
+                  open={isAddingChild}
+                  onOpenChange={(open) => !open && handleSheetClose()}
+                >
+                  <SheetTrigger asChild>
+                    <Button
+                      className="w-full mb-4 gap-2"
+                      onClick={() => {
+                        // Reset all sheet state when opening
+                        setGeneratedCode(null)
+                        setNewChildName('')
+                        setIsAddingChild(true)
+                      }}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add New Child
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent>
+                    <SheetHeader>
+                      <SheetTitle>
+                        {generatedCode
+                          ? 'Signup Code Generated'
+                          : 'Generate Signup Code'}
+                      </SheetTitle>
+                      <SheetDescription>
+                        {generatedCode
+                          ? 'Your child can use this code to register their account'
+                          : 'Create a signup code for your child to register their account'}
+                      </SheetDescription>
+                    </SheetHeader>
+                    <div className="space-y-4 mt-6">
+                      {generatedCode ? (
+                        // Show generated code with ColourfulText wrapper
+                        <div className="space-y-4">
+                          <div className="text-center">
+                            <div className="text-3xl font-mono bg-background p-4 rounded-lg border">
+                              <ColourfulText text={generatedCode} />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              onClick={() => copyCode(generatedCode)}
+                              variant="outline"
+                              className="gap-2"
+                            >
+                              <Copy className="h-4 w-4" />
+                              Copy Code
+                            </Button>
+                          </div>
+
+                          <Button
+                            onClick={handleSheetClose}
+                            variant="outline"
+                            className="w-full"
+                          >
+                            Done
+                          </Button>
+                        </div>
+                      ) : (
+                        // Show form to generate code
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="child_name">
+                              Child&apos;s Name
+                            </Label>
+                            <Input
+                              id="child_name"
+                              placeholder="Enter your child's name"
+                              value={newChildName}
+                              onChange={(e) => setNewChildName(e.target.value)}
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={generateSignupCode}
+                              className="flex-1"
+                            >
+                              Generate Code
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={handleSheetClose}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+
+                <div className="space-y-3">
+                  {(() => {
+                    const unusedCodes = signupCodes.filter((code) => !code.used)
+                    return unusedCodes
+                  })().map((code) => (
+                    <Card
+                      key={code.id}
+                      className="border-green-600 bg-green-50 shadow-none"
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <code className="bg-background px-2 py-1 rounded font-mono text-sm">
+                                {code.code}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyCode(code.code)}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <p className="text-sm font-medium mt-1">
+                              {code.child_name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Expires{' '}
+                              {format(new Date(code.expires_at), 'MMM d, yyyy')}
+                            </p>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteCode(code.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
-      <PageGrid variant="grid" />
+        <PageGrid variant="grid" />
+      </Suspense>
     </>
   )
 }

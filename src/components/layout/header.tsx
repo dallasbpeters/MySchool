@@ -1,8 +1,8 @@
-import Link from "next/link";
-import { ArrowUpRight, Calendar } from "lucide-react";
+import Link from 'next/link'
+import { ArrowUpRight, Calendar } from 'lucide-react'
 
-import { ToggleTheme } from "@/components/layout/change-theme";
-import { Button } from "@/components/ui/button";
+import { ToggleTheme } from '@/components/layout/change-theme'
+import { Button } from '@/components/ui/button'
 
 export function Header() {
   return (
@@ -16,7 +16,7 @@ export function Header() {
           <div className="space-y-1">
             <p className="text-lg font-medium leading-6">Big calendar</p>
             <p className="text-sm text-foreground">
-              Built with Next.js and Tailwind by{" "}
+              Built with Next.js and Tailwind by{' '}
               <Link
                 href="https://github.com/lramos33"
                 target="_blank"
@@ -65,5 +65,5 @@ export function Header() {
         </div>
       </div>
     </header>
-  );
+  )
 }

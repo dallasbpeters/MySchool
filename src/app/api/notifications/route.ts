@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
@@ -7,14 +7,16 @@ export async function GET() {
     try {
       supabase = await createClient()
     } catch {
-
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
-        { status: 503 }
+        { status: 503 },
       )
     }
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json({ notifications: [], count: 0 })
@@ -31,7 +33,15 @@ export async function GET() {
       return NextResponse.json({ notifications: [], count: 0 })
     }
 
-    const notifications: Array<{ id: string; title: string; message: string; type: string; href: string; created_at: string; read?: boolean }> = []
+    const notifications: Array<{
+      id: string
+      title: string
+      message: string
+      type: string
+      href: string
+      created_at: string
+      read?: boolean
+    }> = []
     const now = new Date()
 
     if (profile.role === 'student') {
@@ -40,16 +50,18 @@ export async function GET() {
       if (parentId) {
         const { data: assignments } = await supabase
           .from('assignments')
-          .select(`
+          .select(
+            `
             id, title, due_date,
             student_assignments!inner(completed, student_id)
-          `)
+          `,
+          )
           .eq('parent_id', parentId)
           .eq('student_assignments.student_id', user.id)
           .lt('due_date', now.toISOString())
 
         if (assignments) {
-          assignments.forEach(assignment => {
+          assignments.forEach((assignment) => {
             // Since we're using inner join, we know this student is assigned
             // Check if they've completed it
             const completion = assignment.student_assignments?.[0] // Should only be one since we filtered by student_id
@@ -61,7 +73,7 @@ export async function GET() {
                 title: 'Overdue Assignment',
                 message: `${assignment.title} is overdue`,
                 href: '/student',
-                created_at: assignment.due_date
+                created_at: assignment.due_date,
               })
             }
           })
@@ -77,17 +89,19 @@ export async function GET() {
       if (parentId) {
         const { data: todayAssignments } = await supabase
           .from('assignments')
-          .select(`
+          .select(
+            `
             id, title, due_date,
             student_assignments!inner(completed, student_id)
-          `)
+          `,
+          )
           .eq('parent_id', parentId)
           .eq('student_assignments.student_id', user.id)
           .gte('due_date', today.toISOString())
           .lt('due_date', tomorrow.toISOString())
 
         if (todayAssignments) {
-          todayAssignments.forEach(assignment => {
+          todayAssignments.forEach((assignment) => {
             // Since we're using inner join, we know this student is assigned
             const completion = assignment.student_assignments?.[0] // Should only be one since we filtered by student_id
 
@@ -98,7 +112,7 @@ export async function GET() {
                 title: 'Assignment Due Today',
                 message: `${assignment.title} is due today`,
                 href: '/student',
-                created_at: assignment.due_date
+                created_at: assignment.due_date,
               })
             }
           })
@@ -116,17 +130,20 @@ export async function GET() {
         for (const child of children) {
           const { data: assignments } = await supabase
             .from('assignments')
-            .select(`
+            .select(
+              `
               id, title, due_date,
               student_assignments!left(completed, student_id)
-            `)
+            `,
+            )
             .eq('parent_id', user.id)
             .lt('due_date', now.toISOString())
 
           if (assignments) {
-            assignments.forEach(assignment => {
+            assignments.forEach((assignment) => {
               const completion = assignment.student_assignments?.find(
-                (sa: { student_id: string; completed: boolean }) => sa.student_id === child.id
+                (sa: { student_id: string; completed: boolean }) =>
+                  sa.student_id === child.id,
               )
 
               if (!completion?.completed) {
@@ -136,7 +153,7 @@ export async function GET() {
                   title: 'Child has Overdue Assignment',
                   message: `${child.name} has an overdue assignment: ${assignment.title}`,
                   href: '/parent/children',
-                  created_at: assignment.due_date
+                  created_at: assignment.due_date,
                 })
               }
             })
@@ -147,7 +164,7 @@ export async function GET() {
 
     // Sort by most urgent first (overdue, then due today, then by date)
     notifications.sort((a, b) => {
-      const typeOrder = { 'overdue': 0, 'child-overdue': 1, 'due-today': 2 }
+      const typeOrder = { overdue: 0, 'child-overdue': 1, 'due-today': 2 }
       const aOrder = typeOrder[a.type as keyof typeof typeOrder] ?? 3
       const bOrder = typeOrder[b.type as keyof typeof typeOrder] ?? 3
 
@@ -160,11 +177,10 @@ export async function GET() {
 
     return NextResponse.json({
       notifications: limitedNotifications,
-      count: notifications.length
+      count: notifications.length,
     })
-
   } catch (error: unknown) {
-    console.error("API error:", error)
+    console.error('API error:', error)
 
     return NextResponse.json({ notifications: [], count: 0 })
   }

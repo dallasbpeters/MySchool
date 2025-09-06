@@ -10,8 +10,6 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (data.user && !error) {
-
-
       // Check if profile exists, create one if not
       let userProfile
       const { data: existingProfile } = await supabase
@@ -20,22 +18,21 @@ export async function GET(request: NextRequest) {
         .eq('id', data.user.id)
         .single()
 
-
-
       if (!existingProfile) {
-
         // Create profile for new Google OAuth user
         const { data: newProfile } = await supabase
           .from('profiles')
           .insert({
             id: data.user.id,
             email: data.user.email!,
-            name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || null,
-            role: 'parent' // Default to parent role for Google OAuth
+            name:
+              data.user.user_metadata?.full_name ||
+              data.user.user_metadata?.name ||
+              null,
+            role: 'parent', // Default to parent role for Google OAuth
           })
           .select('role')
           .single()
-
 
         userProfile = newProfile
       } else {
@@ -51,7 +48,6 @@ export async function GET(request: NextRequest) {
       } else if (userProfile?.role === 'student') {
         redirectPath = '/student'
       }
-
 
       return NextResponse.redirect(new URL(redirectPath, requestUrl.origin))
     }

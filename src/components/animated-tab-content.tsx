@@ -7,12 +7,12 @@ import { TabsContent } from '@/components/ui/tabs'
 const tabVariants = {
   initial: { opacity: 0, y: 10 },
   animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -10 }
+  exit: { opacity: 0, y: -10 },
 }
 
 const tabTransition = {
   duration: 0.3,
-  ease: [0.4, 0.0, 0.2, 1]
+  ease: [0.4, 0.0, 0.2, 1],
 }
 
 interface AnimatedTabContentProps {
@@ -26,7 +26,7 @@ export function AnimatedTabContent({
   value,
   activeTab,
   children,
-  className = "relative"
+  className = 'relative',
 }: AnimatedTabContentProps) {
   return (
     <TabsContent value={value} className={className}>

@@ -25,7 +25,7 @@ import {
   Quote,
   Code,
   Undo,
-  Redo
+  Redo,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -40,33 +40,33 @@ export function WysiwygEditor({
   content,
   onChange,
   placeholder = 'Start typing your assignment...',
-  className
+  className,
 }: WysiwygEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: {
-          levels: [1, 2, 3]
-        }
+          levels: [1, 2, 3],
+        },
       }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'text-primary underline'
-        }
+          class: 'text-primary underline',
+        },
       }),
       Placeholder.configure({
-        placeholder
+        placeholder,
       }),
       Underline,
       TextAlign.configure({
-        types: ['heading', 'paragraph']
+        types: ['heading', 'paragraph'],
       }),
       Highlight.configure({
-        multicolor: true
+        multicolor: true,
       }),
       TextStyle,
-      Color
+      Color,
     ],
     content,
     immediatelyRender: false,
@@ -91,10 +91,10 @@ export function WysiwygEditor({
           '[&_em]:italic',
           '[&_u]:underline',
           '[&_.ProseMirror-placeholder]:text-muted-foreground [&_.ProseMirror-placeholder]:opacity-50',
-          className
-        )
-      }
-    }
+          className,
+        ),
+      },
+    },
   })
 
   if (!editor) {
@@ -126,7 +126,10 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={cn('h-8 w-8 p-0', editor.isActive('italic') && 'bg-muted')}
+            className={cn(
+              'h-8 w-8 p-0',
+              editor.isActive('italic') && 'bg-muted',
+            )}
           >
             <Italic className="h-4 w-4" />
           </Button>
@@ -135,7 +138,10 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleUnderline().run()}
-            className={cn('h-8 w-8 p-0', editor.isActive('underline') && 'bg-muted')}
+            className={cn(
+              'h-8 w-8 p-0',
+              editor.isActive('underline') && 'bg-muted',
+            )}
           >
             <UnderlineIcon className="h-4 w-4" />
           </Button>
@@ -144,7 +150,10 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleHighlight().run()}
-            className={cn('h-8 w-8 p-0', editor.isActive('highlight') && 'bg-muted')}
+            className={cn(
+              'h-8 w-8 p-0',
+              editor.isActive('highlight') && 'bg-muted',
+            )}
           >
             <Highlighter className="h-4 w-4" />
           </Button>
@@ -157,8 +166,13 @@ export function WysiwygEditor({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            className={cn('h-8 w-8 p-0', editor.isActive('heading', { level: 2 }) && 'bg-muted')}
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 2 }).run()
+            }
+            className={cn(
+              'h-8 w-8 p-0',
+              editor.isActive('heading', { level: 2 }) && 'bg-muted',
+            )}
           >
             <Heading2 className="h-4 w-4" />
           </Button>
@@ -167,7 +181,10 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={cn('h-8 w-8 p-0', editor.isActive('bulletList') && 'bg-muted')}
+            className={cn(
+              'h-8 w-8 p-0',
+              editor.isActive('bulletList') && 'bg-muted',
+            )}
           >
             <List className="h-4 w-4" />
           </Button>
@@ -176,7 +193,10 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            className={cn('h-8 w-8 p-0', editor.isActive('orderedList') && 'bg-muted')}
+            className={cn(
+              'h-8 w-8 p-0',
+              editor.isActive('orderedList') && 'bg-muted',
+            )}
           >
             <ListOrdered className="h-4 w-4" />
           </Button>
@@ -185,7 +205,10 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            className={cn('h-8 w-8 p-0', editor.isActive('blockquote') && 'bg-muted')}
+            className={cn(
+              'h-8 w-8 p-0',
+              editor.isActive('blockquote') && 'bg-muted',
+            )}
           >
             <Quote className="h-4 w-4" />
           </Button>
@@ -208,7 +231,10 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().setTextAlign('left').run()}
-            className={cn('h-8 w-8 p-0', editor.isActive({ textAlign: 'left' }) && 'bg-muted')}
+            className={cn(
+              'h-8 w-8 p-0',
+              editor.isActive({ textAlign: 'left' }) && 'bg-muted',
+            )}
           >
             <AlignLeft className="h-4 w-4" />
           </Button>
@@ -217,7 +243,10 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().setTextAlign('center').run()}
-            className={cn('h-8 w-8 p-0', editor.isActive({ textAlign: 'center' }) && 'bg-muted')}
+            className={cn(
+              'h-8 w-8 p-0',
+              editor.isActive({ textAlign: 'center' }) && 'bg-muted',
+            )}
           >
             <AlignCenter className="h-4 w-4" />
           </Button>
@@ -226,7 +255,10 @@ export function WysiwygEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().setTextAlign('right').run()}
-            className={cn('h-8 w-8 p-0', editor.isActive({ textAlign: 'right' }) && 'bg-muted')}
+            className={cn(
+              'h-8 w-8 p-0',
+              editor.isActive({ textAlign: 'right' }) && 'bg-muted',
+            )}
           >
             <AlignRight className="h-4 w-4" />
           </Button>

@@ -1,24 +1,27 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { CartesianGrid, Line, LineChart, XAxis } from "recharts"
+import * as React from 'react'
+import { CartesianGrid, Line, LineChart, XAxis } from 'recharts'
 
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart"
+} from '@/components/ui/chart'
 
-export const description = "An interactive line chart showing completed assignments per child"
+export const description =
+  'An interactive line chart showing completed assignments per child'
 
 export function ChartLineInteractive() {
-  const [chartData, setChartData] = React.useState<Record<string, unknown>[]>([])
+  const [chartData, setChartData] = React.useState<Record<string, unknown>[]>(
+    [],
+  )
   const [children, setChildren] = React.useState<string[]>([])
   const [chartConfig, setChartConfig] = React.useState<ChartConfig>({})
-  const [activeChart, setActiveChart] = React.useState<string>("")
+  const [activeChart, setActiveChart] = React.useState<string>('')
   const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState<string>("")
+  const [error, setError] = React.useState<string>('')
 
   React.useEffect(() => {
     fetchChartData()
@@ -52,8 +55,11 @@ export function ChartLineInteractive() {
 
   const total = React.useMemo(() => {
     const totals: { [key: string]: number } = {}
-    children.forEach(child => {
-      totals[child] = chartData.reduce((acc, curr) => acc + (Number(curr[child]) || 0), 0)
+    children.forEach((child) => {
+      totals[child] = chartData.reduce(
+        (acc, curr) => acc + (Number(curr[child]) || 0),
+        0,
+      )
     })
     return totals
   }, [chartData, children])
@@ -77,7 +83,9 @@ export function ChartLineInteractive() {
   if (children.length === 0) {
     return (
       <div className="w-full h-[400px] flex items-center justify-center">
-        <p className="text-muted-foreground">No children found. Add children to see their assignment progress.</p>
+        <p className="text-muted-foreground">
+          No children found. Add children to see their assignment progress.
+        </p>
       </div>
     )
   }
@@ -99,9 +107,7 @@ export function ChartLineInteractive() {
               className="data-[active=true]:bg-muted/50 flex flex-1 flex-col justify-center gap-1 border-t px-4 py-4 text-left even:border-l sm:border-t-0 sm:border-l sm:px-6 sm:py-6 min-w-[120px]"
               onClick={() => setActiveChart(child)}
             >
-              <span className="text-muted-foreground text-xs">
-                {child}
-              </span>
+              <span className="text-muted-foreground text-xs">{child}</span>
               <span className="text-lg leading-none font-bold sm:text-2xl">
                 {total[child] || 0}
               </span>
@@ -111,10 +117,7 @@ export function ChartLineInteractive() {
         </div>
       </div>
       <div className="flex-1 flex items-center justify-center min-h-0">
-        <ChartContainer
-          config={chartConfig}
-          className="h-[250px] w-full"
-        >
+        <ChartContainer config={chartConfig} className="h-[250px] w-full">
           <LineChart
             accessibilityLayer
             data={chartData}
@@ -134,9 +137,9 @@ export function ChartLineInteractive() {
               minTickGap={32}
               tickFormatter={(value) => {
                 const date = new Date(value)
-                return date.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
+                return date.toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
                 })
               }}
             />
@@ -147,11 +150,14 @@ export function ChartLineInteractive() {
                   className="w-[180px]"
                   nameKey="assignments"
                   labelFormatter={(value) => {
-                    return new Date(value as string).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })
+                    return new Date(value as string).toLocaleDateString(
+                      'en-US',
+                      {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      },
+                    )
                   }}
                 />
               }

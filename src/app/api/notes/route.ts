@@ -10,7 +10,10 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
 
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json({ notes: [], error: 'No user found' })
@@ -63,45 +66,42 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ notes: notes || [] })
-
   } catch (error: unknown) {
-    console.error("API error:", error)
+    console.error('API error:', error)
     return NextResponse.json({ notes: [], error: 'Internal server error' })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const {
-      category,
-      title,
-      content,
-      assignment_id
-    } = await request.json()
+    const { category, title, content, assignment_id } = await request.json()
 
     if (!title?.trim()) {
       return NextResponse.json(
         { error: 'Note title is required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
     if (!category?.trim()) {
       return NextResponse.json(
         { error: 'Category is required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
     const supabase = await createClient()
 
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json(
         { error: 'You must be logged in to create notes' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         category: category.trim(),
         title: title.trim(),
         content: content,
-        assignment_id: assignment_id || null
+        assignment_id: assignment_id || null,
       })
       .select()
       .single()
@@ -121,21 +121,20 @@ export async function POST(request: NextRequest) {
     if (noteError) {
       return NextResponse.json(
         { error: `Failed to create note: ${noteError.message}` },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
     return NextResponse.json({
       success: true,
       note: noteData,
-      message: `Note "${title.trim()}" created successfully`
+      message: `Note "${title.trim()}" created successfully`,
     })
-
   } catch (error: unknown) {
-    console.error("API error:", error)
+    console.error('API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
@@ -148,31 +147,31 @@ export async function PUT(request: NextRequest) {
     if (!noteId) {
       return NextResponse.json(
         { error: 'Note ID is required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
-    const {
-      title,
-      content
-    } = await request.json()
+    const { title, content } = await request.json()
 
     if (!title?.trim()) {
       return NextResponse.json(
         { error: 'Note title is required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
     const supabase = await createClient()
 
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json(
         { error: 'You must be logged in to update notes' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
@@ -181,7 +180,7 @@ export async function PUT(request: NextRequest) {
       .from('assignment_notes')
       .update({
         title: title.trim(),
-        content: content
+        content: content,
       })
       .eq('id', noteId)
       .eq('student_id', user.id) // Ensure user can only update their own notes
@@ -191,28 +190,27 @@ export async function PUT(request: NextRequest) {
     if (noteError) {
       return NextResponse.json(
         { error: `Failed to update note: ${noteError.message}` },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
     if (!noteData) {
       return NextResponse.json(
         { error: 'Note not found or you do not have permission to update it' },
-        { status: 404 }
+        { status: 404 },
       )
     }
 
     return NextResponse.json({
       success: true,
       note: noteData,
-      message: `Note "${title.trim()}" updated successfully`
+      message: `Note "${title.trim()}" updated successfully`,
     })
-
   } catch (error: unknown) {
-    console.error("API error:", error)
+    console.error('API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
@@ -225,19 +223,22 @@ export async function DELETE(request: NextRequest) {
     if (!noteId) {
       return NextResponse.json(
         { error: 'Note ID is required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
     const supabase = await createClient()
 
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json(
         { error: 'You must be logged in to delete notes' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
@@ -251,20 +252,19 @@ export async function DELETE(request: NextRequest) {
     if (deleteError) {
       return NextResponse.json(
         { error: `Failed to delete note: ${deleteError.message}` },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Note deleted successfully'
+      message: 'Note deleted successfully',
     })
-
   } catch (error: unknown) {
-    console.error("API error:", error)
+    console.error('API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

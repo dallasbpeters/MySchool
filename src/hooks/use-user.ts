@@ -33,7 +33,9 @@ export function useUser(): UserData {
 
     const getUser = async () => {
       try {
-        const { data: { user }, error: _error } = await supabase.auth.getUser()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
 
         if (!mounted) return
 
@@ -61,7 +63,7 @@ export function useUser(): UserData {
             })
           }
         }
-      } catch (_error) {
+      } catch {
         if (mounted) {
           setUserData({
             user: null,
@@ -75,7 +77,9 @@ export function useUser(): UserData {
     // Try getSession as fallback
     const getSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
         if (!mounted) return
 
@@ -102,7 +106,7 @@ export function useUser(): UserData {
             })
           }
         }
-      } catch (_error) {
+      } catch {
         if (mounted) {
           setUserData({
             user: null,
@@ -117,31 +121,31 @@ export function useUser(): UserData {
     getUser().catch(() => getSession())
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (!mounted) return
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return
 
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
 
-          setUserData({
-            user: session.user,
-            profile: profile as Profile,
-            loading: false,
-          })
-        } else {
-          setUserData({
-            user: null,
-            profile: null,
-            loading: false,
-          })
-        }
+        setUserData({
+          user: session.user,
+          profile: profile as Profile,
+          loading: false,
+        })
+      } else {
+        setUserData({
+          user: null,
+          profile: null,
+          loading: false,
+        })
       }
-    )
+    })
 
     return () => {
       mounted = false

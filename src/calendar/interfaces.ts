@@ -1,24 +1,27 @@
-import type { TEventColor } from "@/calendar/types";
+import type { TEventColor } from '@/calendar/types'
 
 export interface IUser {
-  id: string;
-  name: string;
-  picturePath?: string; // Optional avatar image
+  id: string
+  name: string
+  picturePath?: string // Optional avatar image
 }
 
 export interface IEvent {
-  id: string;
-  startDate: string;
-  endDate: string;
-  title: string;
-  color: TEventColor;
-  description: string;
-  user: IUser;
-  isAllDay?: boolean;
+  id: string
+  startDate: string
+  endDate: string
+  title: string
+  color: TEventColor
+  description: string
+  user: IUser
+  isAllDay?: boolean
+  // Assignment-specific properties
+  isAssignment?: boolean
+  assignedStudents?: string[]
 }
 
 export interface ICalendarCell {
-  day: number;
-  currentMonth: boolean;
-  date: Date;
+  day: number
+  currentMonth: boolean
+  date: Date
 }

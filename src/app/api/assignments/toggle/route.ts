@@ -5,13 +5,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-
     const { assignmentId, studentId, completed, instanceDate } = body
 
     if (!assignmentId) {
       return NextResponse.json(
         { error: 'Assignment ID is required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -22,17 +21,20 @@ export async function POST(request: NextRequest) {
       console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
-        { status: 503 }
+        { status: 503 },
       )
     }
 
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json(
         { error: 'You must be logged in to toggle assignments' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
@@ -50,8 +52,10 @@ export async function POST(request: NextRequest) {
       // For parents and admins, studentId must be provided (child's ID)
       if (!studentId) {
         return NextResponse.json(
-          { error: `${userProfile?.role === 'admin' ? 'Admin' : 'Parent'} must specify which student to toggle assignment for` },
-          { status: 400 }
+          {
+            error: `${userProfile?.role === 'admin' ? 'Admin' : 'Parent'} must specify which student to toggle assignment for`,
+          },
+          { status: 400 },
         )
       }
       targetStudentId = studentId
@@ -59,8 +63,6 @@ export async function POST(request: NextRequest) {
       // For students, use their own ID
       targetStudentId = user.id
     }
-
-
 
     // If toggling for another student, verify the user is their parent or admin
     if (studentId && studentId !== user.id) {
@@ -78,14 +80,14 @@ export async function POST(request: NextRequest) {
         if (childError) {
           return NextResponse.json(
             { error: `Failed to verify student: ${childError.message}` },
-            { status: 400 }
+            { status: 400 },
           )
         }
 
         if (!childProfile || childProfile.parent_id !== user.id) {
           return NextResponse.json(
             { error: 'Not authorized to toggle assignments for this student' },
-            { status: 403 }
+            { status: 403 },
           )
         }
       }
@@ -106,14 +108,13 @@ export async function POST(request: NextRequest) {
 
     const { data: existing, error: existingError } = await query.single()
 
-
-
     // Handle the case where no existing record is found (this is not an error)
     if (existingError && existingError.code !== 'PGRST116') {
-
       return NextResponse.json(
-        { error: `Failed to check existing assignment: ${existingError.message}` },
-        { status: 500 }
+        {
+          error: `Failed to check existing assignment: ${existingError.message}`,
+        },
+        { status: 500 },
       )
     }
 
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
         .from('student_assignments')
         .update({
           completed,
-          completed_at: completed ? new Date().toISOString() : null
+          completed_at: completed ? new Date().toISOString() : null,
         })
         .eq('assignment_id', assignmentId)
         .eq('student_id', targetStudentId)
@@ -137,13 +138,11 @@ export async function POST(request: NextRequest) {
       const { error: updateError } = await updateQuery
 
       if (updateError) {
-
         return NextResponse.json(
           { error: `Failed to update assignment: ${updateError.message}` },
-          { status: 500 }
+          { status: 500 },
         )
       }
-
     } else {
       // Create new assignment record
       const { error: insertError } = await supabase
@@ -153,29 +152,30 @@ export async function POST(request: NextRequest) {
           student_id: targetStudentId,
           completed,
           completed_at: completed ? new Date().toISOString() : null,
-          instance_date: instanceDate || null
+          instance_date: instanceDate || null,
         })
 
       if (insertError) {
-
         return NextResponse.json(
-          { error: `Failed to create assignment record: ${insertError.message}` },
-          { status: 500 }
+          {
+            error: `Failed to create assignment record: ${insertError.message}`,
+          },
+          { status: 500 },
         )
       }
-
     }
 
     return NextResponse.json({
       success: true,
-      message: completed ? 'Assignment marked as complete' : 'Assignment marked as incomplete'
+      message: completed
+        ? 'Assignment marked as complete'
+        : 'Assignment marked as incomplete',
     })
-
   } catch (error: unknown) {
     console.error('Error in PATCH /api/assignments/toggle:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

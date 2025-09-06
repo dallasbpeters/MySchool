@@ -8,7 +8,10 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -21,10 +24,13 @@ export async function POST(request: NextRequest) {
     const isAuthorized = userEmail === 'dallaspeters@gmail.com'
 
     if (!isAuthorized) {
-      return NextResponse.json({
-        error: 'Fix access denied',
-        debug: { userEmail, expectedPattern: 'justice*', userId: user.id }
-      }, { status: 403 })
+      return NextResponse.json(
+        {
+          error: 'Fix access denied',
+          debug: { userEmail, expectedPattern: 'justice*', userId: user.id },
+        },
+        { status: 403 },
+      )
     }
 
     const results = { action, success: false, message: '', details: {} }
@@ -48,14 +54,18 @@ export async function POST(request: NextRequest) {
               .eq('id', child.id)
 
             if (updateError) {
-              updates.push({ email: child.email, status: 'failed', error: updateError.message })
+              updates.push({
+                email: child.email,
+                status: 'failed',
+                error: updateError.message,
+              })
             } else {
               updates.push({ email: child.email, status: 'fixed' })
             }
           }
 
           results.success = true
-          results.message = `Fixed parent_id for ${updates.filter(u => u.status === 'fixed').length} children`
+          results.message = `Fixed parent_id for ${updates.filter((u) => u.status === 'fixed').length} children`
           results.details = { updates }
         }
         break
@@ -69,15 +79,17 @@ export async function POST(request: NextRequest) {
           .eq('role', 'student')
 
         if (yourChildrenIds) {
-          const childIds = yourChildrenIds.map(child => child.id)
+          const childIds = yourChildrenIds.map((child) => child.id)
 
           // Find student_assignments where the assignment creator is not you
           const { data: contaminated } = await supabase
             .from('student_assignments')
-            .select(`
+            .select(
+              `
               id, assignment_id, student_id,
               assignment:assignments!inner(parent_id, title)
-            `)
+            `,
+            )
             .in('student_id', childIds)
             .neq('assignment.parent_id', user.id)
 
@@ -93,18 +105,18 @@ export async function POST(request: NextRequest) {
                 removals.push({
                   assignment_title: sa.assignment.title,
                   status: 'failed',
-                  error: deleteError.message
+                  error: deleteError.message,
                 })
               } else {
                 removals.push({
                   assignment_title: sa.assignment.title,
-                  status: 'removed'
+                  status: 'removed',
                 })
               }
             }
 
             results.success = true
-            results.message = `Removed ${removals.filter(r => r.status === 'removed').length} cross-family assignments`
+            results.message = `Removed ${removals.filter((r) => r.status === 'removed').length} cross-family assignments`
             results.details = { removals }
           }
         }
@@ -131,12 +143,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(results)
-
   } catch (error) {
     console.error('Fix data issues error:', error)
     return NextResponse.json(
       { error: 'Fix failed', details: (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

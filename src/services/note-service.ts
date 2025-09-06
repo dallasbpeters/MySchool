@@ -47,7 +47,7 @@ export class NoteService {
       const response = await fetch('/api/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(noteData)
+        body: JSON.stringify(noteData),
       })
 
       const data = await response.json()
@@ -60,20 +60,20 @@ export class NoteService {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to create note'
+        error: error instanceof Error ? error.message : 'Failed to create note',
       }
     }
   }
 
   static async updateNote(
     noteId: string,
-    updates: { title?: string; content?: string }
+    updates: { title?: string; content?: string },
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await fetch('/api/notes', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ noteId, ...updates })
+        body: JSON.stringify({ noteId, ...updates }),
       })
 
       if (!response.ok) {
@@ -85,17 +85,19 @@ export class NoteService {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to update note'
+        error: error instanceof Error ? error.message : 'Failed to update note',
       }
     }
   }
 
-  static async deleteNote(noteId: string): Promise<{ success: boolean; error?: string }> {
+  static async deleteNote(
+    noteId: string,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await fetch('/api/notes', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ noteId })
+        body: JSON.stringify({ noteId }),
       })
 
       if (!response.ok) {
@@ -107,7 +109,7 @@ export class NoteService {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to delete note'
+        error: error instanceof Error ? error.message : 'Failed to delete note',
       }
     }
   }

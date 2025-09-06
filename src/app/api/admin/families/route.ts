@@ -10,12 +10,15 @@ export async function GET() {
       console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
-        { status: 503 }
+        { status: 503 },
       )
     }
 
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json({ families: [], error: 'No user found' })
@@ -29,10 +32,13 @@ export async function GET() {
       .single()
 
     if (!profile || profile.role !== 'admin') {
-      return NextResponse.json({
-        families: [],
-        error: 'Admin access required'
-      }, { status: 403 })
+      return NextResponse.json(
+        {
+          families: [],
+          error: 'Admin access required',
+        },
+        { status: 403 },
+      )
     }
 
     // Get all parents (including admins who have children)
@@ -41,7 +47,6 @@ export async function GET() {
       .select('id, name, email, role')
       .in('role', ['parent', 'admin'])
       .order('name', { ascending: true })
-
 
     if (parentsError) {
       return NextResponse.json({ families: [], error: parentsError.message })
@@ -64,16 +69,14 @@ export async function GET() {
           parent_id: parent.id,
           parent_name: parent.name,
           parent_email: parent.email,
-          children: children
+          children: children,
         })
       }
     }
 
-
     return NextResponse.json({
-      families
+      families,
     })
-
   } catch (error: unknown) {
     console.error('Error in GET /api/admin/families:', error)
     return NextResponse.json({ families: [], error: 'Internal server error' })

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { LocalDock, type TabValue } from '@/components/local-dock'
 import PageGrid from '@/components/page-grid'
@@ -30,7 +30,10 @@ interface Assignment {
   }
   recurrence_end_date?: string
   next_due_date?: string
-  instance_completions?: Record<string, { completed: boolean; completed_at?: string; instance_date: string }>
+  instance_completions?: Record<
+    string,
+    { completed: boolean; completed_at?: string; instance_date: string }
+  >
 }
 
 interface Child {
@@ -55,23 +58,139 @@ export default function StudentDashboard() {
   const [userRole, setUserRole] = useState<string>('')
   const [children, setChildren] = useState<Child[]>([])
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
-  const [selectedChildName, setSelectedChildName] = useState<string | null>(null)
+  const [selectedChildName, setSelectedChildName] = useState<string | null>(
+    null,
+  )
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null)
   const [notes, setNotes] = useState<Note[]>([])
-  const [selectedInstanceDates, setSelectedInstanceDates] = useState<Record<string, string>>({})
+  const [selectedInstanceDates, setSelectedInstanceDates] = useState<
+    Record<string, string>
+  >({})
   const [editingNote, setEditingNote] = useState<Note | null>(null)
-  const [editNoteData, setEditNoteData] = useState<{ title: string; content: string }>({ title: '', content: '' })
+  const [editNoteData, setEditNoteData] = useState<{
+    title: string
+    content: string
+  }>({ title: '', content: '' })
+  const [isLoadingAssignments, setIsLoadingAssignments] = useState(true)
 
   const { toast } = useToast()
 
-  // Initialize data
-  useEffect(() => {
-    checkUserRole()
-    fetchNotes()
+  // Handle tab changes and reset expanded card
+  const handleTabChange = (newTab: TabValue) => {
+    setActiveTab(newTab)
+    setExpandedCardId(null) // Reset expanded card when switching tabs
+  }
+
+  const fetchAssignments = useCallback(async (childId?: string) => {
+    try {
+      setIsLoadingAssignments(true)
+      const url = childId
+        ? `/api/assignments?childId=${childId}`
+        : '/api/assignments'
+      const response = await fetch(url)
+      const data = await response.json()
+
+      if (data.assignments) {
+        setAssignments(data.assignments)
+        if (data.profile?.role) {
+          setUserRole(data.profile.role)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching assignments:', error)
+    } finally {
+      setIsLoadingAssignments(false)
+    }
   }, [])
 
-  const checkUserRole = async () => {
+  const fetchNotes = useCallback(async (childId?: string) => {
     try {
+      const studentId = childId || selectedChildId
+      const url = studentId ? `/api/notes?studentId=${studentId}` : '/api/notes'
+      const response = await fetch(url)
+      const data = await response.json()
+
+      if (data.notes) {
+        setNotes(data.notes)
+      }
+    } catch (error) {
+      console.error('Error fetching notes:', error)
+    }
+  }, [selectedChildId])
+
+  const fetchChildren = useCallback(
+    async (roleOverride?: string) => {
+      try {
+        const currentRole = roleOverride || userRole
+        let response: Response
+        let data: {
+          students?: Array<{
+            id: string
+            name: string
+            email?: string
+            parent_name?: string
+          }>
+          children?: Array<{ id: string; name: string; email?: string }>
+        }
+
+        if (currentRole === 'admin') {
+          response = await fetch('/api/admin/students')
+          data = await response.json()
+          if (data.students && data.students.length > 0) {
+            // Add default email if missing to match Child interface
+            const studentsWithEmail = data.students.map((student) => ({
+              ...student,
+              email:
+                student.email ||
+                `${student.name.toLowerCase().replace(/\s+/g, '.')}@student.local`,
+            }))
+            setChildren(studentsWithEmail)
+            if (!selectedChildId) {
+              const firstStudent = data.students[0]
+              setSelectedChildId(firstStudent.id)
+              setSelectedChildName(firstStudent.name)
+              fetchAssignments(firstStudent.id)
+              fetchNotes(firstStudent.id)
+            }
+          } else {
+            // No students found, set loading to false
+            setIsLoadingAssignments(false)
+          }
+        } else {
+          response = await fetch('/api/children')
+          data = await response.json()
+          if (data.children && data.children.length > 0) {
+            // Add default email if missing to match Child interface
+            const childrenWithEmail = data.children.map((child) => ({
+              ...child,
+              email:
+                child.email ||
+                `${child.name.toLowerCase().replace(/\s+/g, '.')}@student.local`,
+            }))
+            setChildren(childrenWithEmail)
+            if (!selectedChildId) {
+              const firstChild = data.children[0]
+              setSelectedChildId(firstChild.id)
+              setSelectedChildName(firstChild.name)
+              fetchAssignments(firstChild.id)
+              fetchNotes(firstChild.id)
+            }
+          } else {
+            // No children found, set loading to false
+            setIsLoadingAssignments(false)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching children:', error)
+        setIsLoadingAssignments(false) // Set to false on error
+      }
+    },
+    [userRole, fetchAssignments, fetchNotes, selectedChildId],
+  )
+
+  const checkUserRole = useCallback(async () => {
+    try {
+      setIsLoadingAssignments(true)
       const response = await fetch('/api/assignments')
       const data = await response.json()
 
@@ -85,124 +204,90 @@ export default function StudentDashboard() {
         if (data.profile.role === 'parent') {
           setAssignments([])
           fetchChildren()
+          // Don't set loading to false yet - wait for child selection
         } else if (data.profile.role === 'admin') {
           setAssignments([])
           fetchChildren('admin')
+          // Don't set loading to false yet - wait for child selection
         } else {
           if (data.assignments) {
             setAssignments(data.assignments)
+            setIsLoadingAssignments(false) // Only set to false when we have assignments
+          } else {
+            setIsLoadingAssignments(false) // Set to false if no assignments
           }
         }
       }
     } catch (error) {
       console.error('Error checking user role:', error)
       toast({
-        title: "Assignment Loading Error",
-        description: (error as Error).message || "Failed to load assignments. Please try refreshing the page.",
-        variant: "destructive"
+        title: 'Assignment Loading Error',
+        description:
+          (error as Error).message ||
+          'Failed to load assignments. Please try refreshing the page.',
+        variant: 'destructive',
       })
+      setIsLoadingAssignments(false) // Set to false on error
     }
-  }
+  }, [toast]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchChildren = async (roleOverride?: string) => {
-    try {
-      const currentRole = roleOverride || userRole
-      let response: Response
-      let data: any
-
-      if (currentRole === 'admin') {
-        response = await fetch('/api/admin/students')
-        data = await response.json()
-        if (data.students && data.students.length > 0) {
-          setChildren(data.students)
-          if (!selectedChildId) {
-            const firstStudent = data.students[0]
-            setSelectedChildId(firstStudent.id)
-            setSelectedChildName(firstStudent.name)
-            fetchAssignments(firstStudent.id)
-            fetchNotes(firstStudent.id)
-          }
-        }
-      } else {
-        response = await fetch('/api/children')
-        data = await response.json()
-        if (data.children && data.children.length > 0) {
-          setChildren(data.children)
-          if (!selectedChildId) {
-            const firstChild = data.children[0]
-            setSelectedChildId(firstChild.id)
-            setSelectedChildName(firstChild.name)
-            fetchAssignments(firstChild.id)
-            fetchNotes(firstChild.id)
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching children:', error)
-    }
-  }
-
-  const fetchAssignments = async (childId?: string) => {
-    try {
-      const url = childId ? `/api/assignments?childId=${childId}` : '/api/assignments'
-      const response = await fetch(url)
-      const data = await response.json()
-
-      if (data.assignments) {
-        setAssignments(data.assignments)
-        if (data.profile?.role) {
-          setUserRole(data.profile.role)
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching assignments:', error)
-    }
-  }
-
-  const fetchNotes = async (childId?: string) => {
-    try {
-      const studentId = childId || selectedChildId
-      const url = studentId ? `/api/notes?studentId=${studentId}` : '/api/notes'
-      const response = await fetch(url)
-      const data = await response.json()
-
-      if (data.notes) {
-        setNotes(data.notes)
-      }
-    } catch (error) {
-      console.error('Error fetching notes:', error)
-    }
-  }
+  // Initialize data
+  useEffect(() => {
+    checkUserRole()
+    fetchNotes()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChildSelect = (childId: string, childName: string) => {
     setSelectedChildId(childId)
     setSelectedChildName(childName)
+    setIsLoadingAssignments(true) // Reset loading state when switching children
     fetchAssignments(childId)
     fetchNotes(childId)
   }
 
   const handleToggle = async (assignmentId: string, instanceDate?: string) => {
-    const result = await AssignmentService.toggleAssignment(assignmentId, selectedChildId || undefined, instanceDate)
+    // Find the assignment to determine current completion state
+    const assignment = assignments.find((a) => a.id === assignmentId)
+    if (!assignment) return
+
+    // Determine current completion state
+    let currentlyCompleted = false
+    if (assignment.is_recurring && instanceDate) {
+      currentlyCompleted =
+        assignment.instance_completions?.[instanceDate]?.completed || false
+    } else {
+      currentlyCompleted = assignment.completed || false
+    }
+
+    // Toggle the state
+    const newCompletedState = !currentlyCompleted
+
+    const result = await AssignmentService.toggleAssignment(
+      assignmentId,
+      selectedChildId || undefined,
+      instanceDate,
+      newCompletedState,
+    )
 
     if (result.success) {
       fetchAssignments(selectedChildId || undefined)
       toast({
-        title: "Success",
+        title: 'Success',
         description: result.message,
       })
     } else {
       toast({
-        title: "Error",
+        title: 'Error',
         description: result.message,
-        variant: "destructive"
+        variant: 'destructive',
       })
     }
   }
 
-  const handleInstanceClick = (assignmentId: string, date: string, _dayName: string) => {
-    setSelectedInstanceDates(prev => ({
+  const handleInstanceClick = (assignmentId: string, date: string) => {
+    setSelectedInstanceDates((prev) => ({
       ...prev,
-      [assignmentId]: date
+      [assignmentId]: date,
     }))
 
     if (expandedCardId !== assignmentId) {
@@ -227,16 +312,16 @@ export default function StudentDashboard() {
 
     if (result.success) {
       toast({
-        title: "Success",
-        description: "Note updated successfully",
+        title: 'Success',
+        description: 'Note updated successfully',
       })
       handleCancelEdit()
       fetchNotes()
     } else {
       toast({
-        title: "Error",
-        description: result.error || "Failed to update note",
-        variant: "destructive"
+        title: 'Error',
+        description: result.error || 'Failed to update note',
+        variant: 'destructive',
       })
     }
   }
@@ -246,19 +331,18 @@ export default function StudentDashboard() {
 
     if (result.success) {
       toast({
-        title: "Success",
-        description: "Note deleted successfully",
+        title: 'Success',
+        description: 'Note deleted successfully',
       })
       fetchNotes()
     } else {
       toast({
-        title: "Error",
-        description: result.error || "Failed to delete note",
-        variant: "destructive"
+        title: 'Error',
+        description: result.error || 'Failed to delete note',
+        variant: 'destructive',
       })
     }
   }
-
 
   return (
     <>
@@ -267,16 +351,19 @@ export default function StudentDashboard() {
           userRole={userRole}
           selectedChildId={selectedChildId}
           selectedChildName={selectedChildName}
-          children={children}
+          childrenList={children}
           onChildSelect={handleChildSelect}
         />
 
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="w-full">
-          <TabsContent value="assignments" className="relative">
-            <Suspense fallback={<div className="flex items-center justify-center h-64">Loading assignments...</div>}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as TabValue)}
+          className="w-full"
+        >
+          <Suspense>
+            <TabsContent value="assignments" className="relative">
               <AssignmentList
                 assignments={assignments}
-                userRole={userRole}
                 selectedChildName={selectedChildName}
                 expandedCardId={expandedCardId}
                 setExpandedCardId={setExpandedCardId}
@@ -285,42 +372,39 @@ export default function StudentDashboard() {
                 onToggle={handleToggle}
                 onNoteCreated={fetchNotes}
                 onInstanceClick={handleInstanceClick}
+                isLoading={isLoadingAssignments}
               />
-            </Suspense>
-          </TabsContent>
+            </TabsContent>
+          </Suspense>
 
           <TabsContent value="timeline" className="relative">
-            <Suspense fallback={<div className="flex items-center justify-center h-64">Loading timeline...</div>}>
-              <AssignmentTimeline
-                assignments={assignments}
-                expandedCardId={expandedCardId}
-                setExpandedCardId={setExpandedCardId}
-                notes={notes}
-                onToggle={handleToggle}
-                onNoteCreated={fetchNotes}
-              />
-            </Suspense>
+            <AssignmentTimeline
+              assignments={assignments}
+              expandedCardId={expandedCardId}
+              setExpandedCardId={setExpandedCardId}
+              notes={notes}
+              onToggle={handleToggle}
+              onNoteCreated={fetchNotes}
+            />
           </TabsContent>
 
           <TabsContent value="notes" className="relative">
-            <Suspense fallback={<div className="flex items-center justify-center h-64">Loading notes...</div>}>
-              <NotesTab
-                notes={notes}
-                assignments={assignments}
-                editingNote={editingNote}
-                editNoteData={editNoteData}
-                setEditNoteData={setEditNoteData}
-                onStartEdit={handleStartEdit}
-                onCancelEdit={handleCancelEdit}
-                onUpdateNote={handleUpdateNote}
-                onDeleteNote={handleDeleteNote}
-              />
-            </Suspense>
+            <NotesTab
+              notes={notes}
+              assignments={assignments}
+              editingNote={editingNote}
+              editNoteData={editNoteData}
+              setEditNoteData={setEditNoteData}
+              onStartEdit={handleStartEdit}
+              onCancelEdit={handleCancelEdit}
+              onUpdateNote={handleUpdateNote}
+              onDeleteNote={handleDeleteNote}
+            />
           </TabsContent>
         </Tabs>
-      </div>
+        <LocalDock activeTab={activeTab} onTabChange={handleTabChange} />
+      </div >
 
-      <LocalDock activeTab={activeTab} onTabChange={setActiveTab} />
       <PageGrid variant="grid" />
     </>
   )

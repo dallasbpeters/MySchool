@@ -48,13 +48,11 @@ export function useNotifications(userId?: string): NotificationsData {
         .limit(50)
 
       if (error) {
-
         return
       }
 
       setNotifications((data as Notification[]) || [])
-    } catch (_error) {
-
+    } catch {
     } finally {
       setLoading(false)
     }
@@ -63,19 +61,14 @@ export function useNotifications(userId?: string): NotificationsData {
   const markAsRead = async (id: string) => {
     try {
       const supabase = createClient()
-      await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', id)
+      await supabase.from('notifications').update({ read: true }).eq('id', id)
 
-      setNotifications(prev =>
-        prev.map(notif =>
-          notif.id === id ? { ...notif, read: true } : notif
-        )
+      setNotifications((prev) =>
+        prev.map((notif) =>
+          notif.id === id ? { ...notif, read: true } : notif,
+        ),
       )
-    } catch (_error) {
-
-    }
+    } catch {}
   }
 
   const markAllAsRead = async () => {
@@ -89,12 +82,10 @@ export function useNotifications(userId?: string): NotificationsData {
         .eq('user_id', userId)
         .eq('read', false)
 
-      setNotifications(prev =>
-        prev.map(notif => ({ ...notif, read: true }))
+      setNotifications((prev) =>
+        prev.map((notif) => ({ ...notif, read: true })),
       )
-    } catch (_error) {
-
-    }
+    } catch {}
   }
 
   useEffect(() => {
@@ -115,7 +106,7 @@ export function useNotifications(userId?: string): NotificationsData {
           },
           () => {
             fetchNotifications()
-          }
+          },
         )
         .subscribe()
 
@@ -125,7 +116,7 @@ export function useNotifications(userId?: string): NotificationsData {
     }
   }, [userId, fetchNotifications])
 
-  const unreadCount = notifications.filter(n => !n.read).length
+  const unreadCount = notifications.filter((n) => !n.read).length
 
   return {
     notifications,

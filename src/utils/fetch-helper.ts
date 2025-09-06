@@ -11,7 +11,7 @@ export interface FetchResult<T = unknown> {
 
 export async function safeFetch<T = unknown>(
   url: string,
-  options?: RequestInit
+  options?: RequestInit,
 ): Promise<FetchResult<T>> {
   try {
     const response = await fetch(url, options)
@@ -22,7 +22,8 @@ export async function safeFetch<T = unknown>(
       let errorMessage: string
       try {
         const errorData = await response.json()
-        errorMessage = errorData.error || errorData.message || response.statusText
+        errorMessage =
+          errorData.error || errorData.message || response.statusText
       } catch {
         errorMessage = response.statusText || `HTTP ${response.status}`
       }
@@ -30,7 +31,7 @@ export async function safeFetch<T = unknown>(
       return {
         data: null,
         error: errorMessage,
-        status: response.status
+        status: response.status,
       }
     }
 
@@ -39,27 +40,26 @@ export async function safeFetch<T = unknown>(
     return {
       data,
       error: null,
-      status: response.status
+      status: response.status,
     }
-
   } catch (error) {
     return {
       data: null,
       error: error instanceof Error ? error.message : 'Network error',
-      status: 0
+      status: 0,
     }
   }
 }
 
 /**
  * Example usage:
- * 
+ *
  * const { data, error } = await safeFetch('/api/users')
  * if (error) {
  *   console.error('API Error:', error)
  *   return
  * }
- * 
+ *
  * // Safe to use data here
  * setUsers(data.users)
  */

@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     if (!email || !password || !role) {
       return NextResponse.json(
         { error: 'Email, password, and role are required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
-        { status: 503 }
+        { status: 503 },
       )
     }
 
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       if (!signupCode?.trim()) {
         return NextResponse.json(
           { error: 'Signup code is required for students' },
-          { status: 400 }
+          { status: 400 },
         )
       }
 
@@ -47,14 +47,14 @@ export async function POST(request: NextRequest) {
       if (codeError || !codes) {
         return NextResponse.json(
           { error: 'Invalid signup code' },
-          { status: 400 }
+          { status: 400 },
         )
       }
 
       if (codes.used) {
         return NextResponse.json(
           { error: 'This signup code has already been used' },
-          { status: 400 }
+          { status: 400 },
         )
       }
 
@@ -69,32 +69,35 @@ export async function POST(request: NextRequest) {
       options: {
         data: {
           name: childName,
-          role: role
-        }
-      }
+          role: role,
+        },
+      },
     })
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
     if (!data.user) {
       return NextResponse.json(
         { error: 'User creation failed' },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
     // Create profile in database
     try {
-      const profileData: { id: string; email: string; name: string; role: string; parent_id?: string } = {
+      const profileData: {
+        id: string
+        email: string
+        name: string
+        role: string
+        parent_id?: string
+      } = {
         id: data.user.id,
         email: email,
         name: childName,
-        role: role
+        role: role,
       }
 
       if (role === 'student' && parentId) {
@@ -110,7 +113,7 @@ export async function POST(request: NextRequest) {
       if (profileError) {
         return NextResponse.json(
           { error: `Profile creation failed: ${profileError.message}` },
-          { status: 500 }
+          { status: 500 },
         )
       }
 
@@ -120,7 +123,7 @@ export async function POST(request: NextRequest) {
           .from('signup_codes')
           .update({
             used: true,
-            used_by: data.user.id
+            used_by: data.user.id,
           })
           .eq('code', signupCode.trim().toUpperCase())
 
@@ -135,14 +138,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       user: data.user,
-      session: data.session
+      session: data.session,
     })
-
   } catch (error: unknown) {
-    console.error("API error:", error)
+    console.error('API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

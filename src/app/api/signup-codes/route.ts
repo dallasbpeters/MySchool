@@ -5,7 +5,10 @@ export async function POST(request: Request) {
   const supabase = await createClient()
 
   // Get the authenticated user
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
 
   if (authError || !user) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
@@ -22,19 +25,17 @@ export async function POST(request: Request) {
         code,
         child_name,
         expires_at,
-        used: false
+        used: false,
       })
       .select()
       .single()
 
     if (error) {
-
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, data })
   } catch {
-
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 }
@@ -43,7 +44,10 @@ export async function GET() {
   const supabase = await createClient()
 
   // Get the authenticated user
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
 
   if (authError || !user) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
@@ -57,7 +61,6 @@ export async function GET() {
     .order('created_at', { ascending: false })
 
   if (error) {
-
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
@@ -68,7 +71,10 @@ export async function DELETE(request: Request) {
   const supabase = await createClient()
 
   // Get the authenticated user
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
 
   if (authError || !user) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
@@ -90,13 +96,11 @@ export async function DELETE(request: Request) {
       .eq('parent_id', user.id) // Ensure user can only delete their own codes
 
     if (error) {
-
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
   } catch {
-
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 }

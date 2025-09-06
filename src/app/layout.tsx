@@ -1,14 +1,11 @@
 import type { Metadata } from 'next'
-import {
-  Schibsted_Grotesk
-} from 'next/font/google'
+import { Inclusive_Sans } from 'next/font/google'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
 import { ConnectedNavbar } from '@/components/connected-navbar'
 import { ThemeProvider } from '@/components/theme-provider'
 
-
-const font = Schibsted_Grotesk({ subsets: ['latin'] })
+const font = Inclusive_Sans({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'My School - Daily Assignment Tracker',
@@ -29,7 +26,6 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-
           <div className="min-h-screen w-full bg-background relative">
             <ConnectedNavbar />
             {children}

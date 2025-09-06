@@ -15,11 +15,8 @@
   }
 
   .bg-grid-small {
-    background-image: linear-gradient(
-        to right,
-        hsl(var(--muted)) 1px,
-        transparent 1px
-      ),
+    background-image:
+      linear-gradient(to right, hsl(var(--muted)) 1px, transparent 1px),
       linear-gradient(to bottom, hsl(var(--muted)) 1px, transparent 1px);
     background-size: 20px 30px;
     -webkit-mask-image: radial-gradient(
@@ -38,8 +35,10 @@
   .bg-calendar-disabled-hour {
     background-image: repeating-linear-gradient(
       -60deg,
-      hsl(var(--border)) 0 0.5px,
-      transparent 0.5px 8px
+      var(--muted),
+      var(--muted) 1px,
+      #fff 1px,
+      #fff 5px
     );
   }
 }

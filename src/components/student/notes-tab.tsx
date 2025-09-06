@@ -1,7 +1,14 @@
 'use client'
 
 import React from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +16,7 @@ import { Label } from '@/components/ui/label'
 import { BookOpen, Calendar, Edit, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { WysiwygEditor } from '@/components/editor/wysiwyg-editor'
-import { NoteService, Note, GroupedNotes } from '@/services/note-service'
+import { NoteService, Note } from '@/services/note-service'
 import { Assignment } from '@/types'
 
 interface NotesTabProps {
@@ -30,7 +37,11 @@ function NoteContent({ content }: { content: string }) {
     const parsedContent = JSON.parse(content)
     if (parsedContent?.type === 'doc' && parsedContent?.content) {
       // Extract text from ProseMirror JSON
-      const extractText = (node: any): string => {
+      const extractText = (node: {
+        type?: string
+        text?: string
+        content?: Array<{ type?: string; text?: string; content?: unknown[] }>
+      }): string => {
         if (node.type === 'text') {
           return node.text || ''
         }
@@ -59,7 +70,7 @@ export function NotesTab({
   onStartEdit,
   onCancelEdit,
   onUpdateNote,
-  onDeleteNote
+  onDeleteNote,
 }: NotesTabProps) {
   const groupedNotes = NoteService.groupByCategory(notes)
   const categories = Object.keys(groupedNotes)
@@ -69,7 +80,9 @@ export function NotesTab({
       <Card>
         <CardContent className="text-center py-8">
           <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">No notes yet. Add notes to assignments to see them here!</p>
+          <p className="text-muted-foreground">
+            No notes yet. Add notes to assignments to see them here!
+          </p>
         </CardContent>
       </Card>
     )
@@ -121,20 +134,31 @@ export function NotesTab({
                 {editingNote?.id === note.id ? (
                   <CardContent className="space-y-4">
                     <div>
-                      <Label htmlFor={`edit-note-title-${note.id}`}>Note Title</Label>
+                      <Label htmlFor={`edit-note-title-${note.id}`}>
+                        Note Title
+                      </Label>
                       <Input
                         id={`edit-note-title-${note.id}`}
                         value={editNoteData.title}
-                        onChange={(e) => setEditNoteData({ ...editNoteData, title: e.target.value })}
+                        onChange={(e) =>
+                          setEditNoteData({
+                            ...editNoteData,
+                            title: e.target.value,
+                          })
+                        }
                         className="mt-1"
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`edit-note-content-${note.id}`}>Content</Label>
+                      <Label htmlFor={`edit-note-content-${note.id}`}>
+                        Content
+                      </Label>
                       <div className="mt-1">
                         <WysiwygEditor
                           content={editNoteData.content}
-                          onChange={(content) => setEditNoteData({ ...editNoteData, content })}
+                          onChange={(content) =>
+                            setEditNoteData({ ...editNoteData, content })
+                          }
                           placeholder="Edit your note here..."
                         />
                       </div>
@@ -143,9 +167,7 @@ export function NotesTab({
                       <Button variant="outline" onClick={onCancelEdit}>
                         Cancel
                       </Button>
-                      <Button onClick={onUpdateNote}>
-                        Save Changes
-                      </Button>
+                      <Button onClick={onUpdateNote}>Save Changes</Button>
                     </div>
                   </CardContent>
                 ) : (
@@ -161,16 +183,24 @@ export function NotesTab({
                     <div className="mt-1 space-x-2">
                       <span>Related Assignments: </span>
                       {assignments
-                        .filter(assignment => assignment.category === note.category)
+                        .filter(
+                          (assignment) => assignment.category === note.category,
+                        )
                         .map((assignment, index, filteredAssignments) => (
-                          <code key={assignment.id} className="bg-gray-100 px-2 py-1 rounded-md font-medium">
+                          <code
+                            key={assignment.id}
+                            className="bg-gray-100 px-2 py-1 rounded-md font-medium"
+                          >
                             {assignment.title}
                             {index < filteredAssignments.length - 1 ? ', ' : ''}
                           </code>
-                        ))
-                      }
-                      {assignments.filter(assignment => assignment.category === note.category).length === 0 && (
-                        <span className="italic">No current assignments in this category</span>
+                        ))}
+                      {assignments.filter(
+                        (assignment) => assignment.category === note.category,
+                      ).length === 0 && (
+                        <span className="italic">
+                          No current assignments in this category
+                        </span>
                       )}
                     </div>
                   </div>

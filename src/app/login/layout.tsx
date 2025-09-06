@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { Schibsted_Grotesk } from 'next/font/google'
+import { Inclusive_Sans } from 'next/font/google'
 import '../globals.css'
 import { Toaster } from '@/components/ui/toaster'
 import { ConnectedNavbar } from '@/components/connected-navbar'
 import { ThemeProvider } from '@/components/theme-provider'
 
-const font = Schibsted_Grotesk({ subsets: ['latin'] })
+const font = Inclusive_Sans({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'MySchool - Homeschool Assignment Manager',
@@ -20,12 +20,7 @@ export default function LoginLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={font.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-        >
-
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <div className="min-h-screen w-full bg-background relative">
             {/* Bottom Fade Grid Background */}
             <ConnectedNavbar />

@@ -1,82 +1,112 @@
-"use client";
+'use client'
 
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 
-import { useDisclosure } from "@/hooks/use-disclosure";
-import { useCalendar } from "@/calendar/contexts/calendar-context";
-import { useEvents } from "@/hooks/use-events";
+import { useDisclosure } from '@/hooks/use-disclosure'
+import { useCalendar } from '@/calendar/contexts/calendar-context'
+import { useEvents } from '@/hooks/use-events'
 
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { TimeInput } from "@/components/ui/time-input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Form, FormField, FormLabel, FormItem, FormControl, FormMessage } from "@/components/ui/form";
-import { Select, SelectItem, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogHeader, DialogClose, DialogContent, DialogTrigger, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { TimeInput } from '@/components/ui/time-input'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { CalendarIcon } from 'lucide-react'
+import { format } from 'date-fns'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  Form,
+  FormField,
+  FormLabel,
+  FormItem,
+  FormControl,
+  FormMessage,
+} from '@/components/ui/form'
+import {
+  Select,
+  SelectItem,
+  SelectContent,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogHeader,
+  DialogClose,
+  DialogContent,
+  DialogTrigger,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
-import { eventSchema } from "@/calendar/schemas";
+import { eventSchema } from '@/calendar/schemas'
 
-import type { TimeValue } from "react-aria-components";
-import type { TEventFormData } from "@/calendar/schemas";
+import type { TimeValue } from 'react-aria-components'
+import type { TEventFormData } from '@/calendar/schemas'
 
 interface IProps {
-  children: React.ReactNode;
-  startDate?: Date;
-  startTime?: { hour: number; minute: number };
+  children: React.ReactNode
+  startDate?: Date
+  startTime?: { hour: number; minute: number }
 }
 
 export function AddEventDialog({ children, startDate, startTime }: IProps) {
-  const { users } = useCalendar();
+  const { users } = useCalendar()
 
-  const { isOpen, onClose, onToggle } = useDisclosure();
+  const { isOpen, onClose, onToggle } = useDisclosure()
 
   const form = useForm<TEventFormData>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
-      title: "",
-      description: "",
+      title: '',
+      description: '',
       startDate: startDate || new Date(),
       endDate: startDate || new Date(),
       startTime: startTime || { hour: 9, minute: 0 },
-      endTime: startTime ? { hour: startTime.hour + 1, minute: startTime.minute } : { hour: 10, minute: 0 },
-      color: "blue",
-      user: ""
+      endTime: startTime
+        ? { hour: startTime.hour + 1, minute: startTime.minute }
+        : { hour: 10, minute: 0 },
+      color: 'blue',
+      user: '',
     },
-  });
+  })
 
-  const { createEvent, isLoading: isCreating } = useEvents();
+  const { createEvent, isLoading: isCreating } = useEvents()
 
   const onSubmit = async (values: TEventFormData) => {
     try {
-      await createEvent(values);
-      onClose();
-      form.reset();
+      await createEvent(values)
+      onClose()
+      form.reset()
     } catch {
       // Error handling is done in the hook
     }
-  };
+  }
 
   useEffect(() => {
     if (isOpen) {
       form.reset({
-        title: "",
-        description: "",
+        title: '',
+        description: '',
         startDate: startDate || new Date(),
         endDate: startDate || new Date(),
         startTime: startTime || { hour: 9, minute: 0 },
-        endTime: startTime ? { hour: startTime.hour + 1, minute: startTime.minute } : { hour: 10, minute: 0 },
-        color: "blue",
-        user: users.length > 0 ? users[0].id : ""
-      });
+        endTime: startTime
+          ? { hour: startTime.hour + 1, minute: startTime.minute }
+          : { hour: 10, minute: 0 },
+        color: 'blue',
+        user: users.length > 0 ? users[0].id : '',
+      })
     }
-  }, [isOpen, startDate, startTime, users, form]);
+  }, [isOpen, startDate, startTime, users, form])
 
   return (
     <Dialog open={isOpen} onOpenChange={onToggle}>
@@ -91,26 +121,39 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
         </DialogHeader>
 
         <Form {...form}>
-          <form id="event-form" onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+          <form
+            id="event-form"
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="grid gap-4 py-4"
+          >
             <FormField
               control={form.control}
               name="user"
-              render={({ field, fieldState: _fieldState }) => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Responsible</FormLabel>
                   <FormControl>
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger data-invalid={_fieldState.invalid}>
+                      <SelectTrigger>
                         <SelectValue placeholder="Select an option" />
                       </SelectTrigger>
 
                       <SelectContent>
-                        {users.map(user => (
-                          <SelectItem key={user.id} value={user.id} className="flex-1">
+                        {users.map((user) => (
+                          <SelectItem
+                            key={user.id}
+                            value={user.id}
+                            className="flex-1"
+                          >
                             <div className="flex items-center gap-2">
                               <Avatar key={user.id} className="size-6">
-                                <AvatarImage src={user.picturePath ?? undefined} alt={user.name} />
-                                <AvatarFallback className="text-xxs">{user.name[0]}</AvatarFallback>
+                                <AvatarImage
+                                  src={user.picturePath ?? undefined}
+                                  alt={user.name}
+                                />
+                                <AvatarFallback className="text-xxs">
+                                  {user.name[0]}
+                                </AvatarFallback>
                               </Avatar>
 
                               <p className="truncate">{user.name}</p>
@@ -128,12 +171,12 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
             <FormField
               control={form.control}
               name="title"
-              render={({ field, fieldState: _fieldState }) => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel htmlFor="title">Title</FormLabel>
 
                   <FormControl>
-                    <Input id="title" placeholder="Enter a title" data-invalid={_fieldState.invalid} {...field} />
+                    <Input id="title" placeholder="Enter a title" {...field} />
                   </FormControl>
 
                   <FormMessage />
@@ -145,7 +188,7 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
               <FormField
                 control={form.control}
                 name="startDate"
-                render={({ field, fieldState: _fieldState }) => (
+                render={({ field }) => (
                   <FormItem className="flex-1">
                     <FormLabel htmlFor="startDate">Start Date</FormLabel>
 
@@ -157,7 +200,9 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
                             className="w-full justify-start text-left font-normal"
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : "Pick a date"}
+                            {field.value
+                              ? format(field.value, 'PPP')
+                              : 'Pick a date'}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -179,12 +224,16 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
               <FormField
                 control={form.control}
                 name="startTime"
-                render={({ field, fieldState: _fieldState }) => (
+                render={({ field }) => (
                   <FormItem className="flex-1">
                     <FormLabel>Start Time</FormLabel>
 
                     <FormControl>
-                      <TimeInput value={field.value as TimeValue} onChange={field.onChange} hourCycle={12} data-invalid={_fieldState.invalid} />
+                      <TimeInput
+                        value={field.value as TimeValue}
+                        onChange={field.onChange}
+                        hourCycle={12}
+                      />
                     </FormControl>
 
                     <FormMessage />
@@ -197,7 +246,7 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
               <FormField
                 control={form.control}
                 name="endDate"
-                render={({ field, fieldState: _fieldState }) => (
+                render={({ field }) => (
                   <FormItem className="flex-1">
                     <FormLabel>End Date</FormLabel>
                     <FormControl>
@@ -208,7 +257,9 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
                             className="w-full justify-start text-left font-normal"
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : "Pick a date"}
+                            {field.value
+                              ? format(field.value, 'PPP')
+                              : 'Pick a date'}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -229,12 +280,16 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
               <FormField
                 control={form.control}
                 name="endTime"
-                render={({ field, fieldState: _fieldState }) => (
+                render={({ field }) => (
                   <FormItem className="flex-1">
                     <FormLabel>End Time</FormLabel>
 
                     <FormControl>
-                      <TimeInput value={field.value as TimeValue} onChange={field.onChange} hourCycle={12} data-invalid={_fieldState.invalid} />
+                      <TimeInput
+                        value={field.value as TimeValue}
+                        onChange={field.onChange}
+                        hourCycle={12}
+                      />
                     </FormControl>
 
                     <FormMessage />
@@ -246,12 +301,12 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
             <FormField
               control={form.control}
               name="color"
-              render={({ field, fieldState: _fieldState }) => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Color</FormLabel>
                   <FormControl>
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger data-invalid={_fieldState.invalid}>
+                      <SelectTrigger>
                         <SelectValue placeholder="Select an option" />
                       </SelectTrigger>
 
@@ -315,12 +370,12 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
             <FormField
               control={form.control}
               name="description"
-              render={({ field, fieldState: _fieldState }) => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Description</FormLabel>
 
                   <FormControl>
-                    <Textarea {...field} value={field.value} data-invalid={_fieldState.invalid} />
+                    <Textarea {...field} value={field.value} />
                   </FormControl>
 
                   <FormMessage />
@@ -343,5 +398,5 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

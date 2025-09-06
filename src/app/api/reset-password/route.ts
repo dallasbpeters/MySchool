@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     if (!password || password.length < 6) {
       return NextResponse.json(
         { error: 'Password must be at least 6 characters long' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -16,49 +16,41 @@ export async function POST(request: NextRequest) {
     try {
       supabase = await createClient()
     } catch {
-
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
-        { status: 503 }
+        { status: 503 },
       )
     }
 
     // Get the current user from the session
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
-
       return NextResponse.json(
         { error: 'Invalid session. Please try the reset link again.' },
-        { status: 401 }
+        { status: 401 },
       )
     }
-
-
 
     // Update the user's password
     const { error: updateError } = await supabase.auth.updateUser({
-      password: password
+      password: password,
     })
 
     if (updateError) {
-
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: updateError.message }, { status: 400 })
     }
 
-
-
     return NextResponse.json({ success: true })
-
   } catch (error: unknown) {
-    console.error("API error:", error)
+    console.error('API error:', error)
 
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

@@ -5,7 +5,13 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 
 export default function ResetPasswordPage() {
@@ -20,14 +26,13 @@ export default function ResetPasswordPage() {
     let mounted = true
 
     const setupPasswordReset = async () => {
-
-
       try {
         const supabase = createClient()
 
         // Check if we already have a valid session
-        const { data: { session } } = await supabase.auth.getSession()
-
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
         if (session?.user) {
           // Already have a session - ready for password reset
@@ -47,11 +52,8 @@ export default function ResetPasswordPage() {
         const error = urlParams.get('error')
         const errorCode = urlParams.get('error_code')
 
-
-
         // Handle error states first
         if (error || errorCode) {
-
           if (mounted) {
             setIsValidSession(false)
             setIsCheckingSession(false)
@@ -61,19 +63,19 @@ export default function ResetPasswordPage() {
 
         // Exchange code for session if we have one
         if (code) {
-
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+          const { error: exchangeError } =
+            await supabase.auth.exchangeCodeForSession(code)
 
           if (exchangeError) {
-
             if (mounted) {
               setIsValidSession(false)
               setIsCheckingSession(false)
             }
           } else {
-
             // Wait for auth state change event or check session again
-            const { data: { session: newSession } } = await supabase.auth.getSession()
+            const {
+              data: { session: newSession },
+            } = await supabase.auth.getSession()
             if (newSession?.user && mounted) {
               setIsValidSession(true)
               setIsCheckingSession(false)
@@ -89,8 +91,7 @@ export default function ResetPasswordPage() {
             setIsCheckingSession(false)
           }
         }
-      } catch (_error) {
-
+      } catch {
         if (mounted) {
           setIsValidSession(false)
           setIsCheckingSession(false)
@@ -100,14 +101,16 @@ export default function ResetPasswordPage() {
 
     // Listen for auth events
     const supabase = createClient()
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
-        if (session?.user && mounted) {
-          setIsValidSession(true)
-          setIsCheckingSession(false)
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+          if (session?.user && mounted) {
+            setIsValidSession(true)
+            setIsCheckingSession(false)
+          }
         }
-      }
-    })
+      },
+    )
 
     setupPasswordReset()
 
@@ -122,18 +125,18 @@ export default function ResetPasswordPage() {
 
     if (password !== confirmPassword) {
       toast({
-        title: "Error",
+        title: 'Error',
         description: "Passwords don't match",
-        variant: "destructive"
+        variant: 'destructive',
       })
       return
     }
 
     if (password.length < 6) {
       toast({
-        title: "Error",
-        description: "Password must be at least 6 characters long",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Password must be at least 6 characters long',
+        variant: 'destructive',
       })
       return
     }
@@ -144,24 +147,22 @@ export default function ResetPasswordPage() {
     const timeoutId = setTimeout(() => {
       setIsLoading(false)
       toast({
-        title: "Error",
-        description: "Request timed out. Please try again.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Request timed out. Please try again.',
+        variant: 'destructive',
       })
     }, 10000) // 10 second timeout
 
     try {
-
-
       // Use our API route which handles the Supabase call server-side
       const response = await fetch('/api/reset-password', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          password: password
-        })
+          password: password,
+        }),
       })
 
       clearTimeout(timeoutId)
@@ -172,10 +173,9 @@ export default function ResetPasswordPage() {
         throw new Error(data.error || 'Failed to update password')
       }
 
-
       toast({
-        title: "Success",
-        description: "Password updated successfully! Redirecting to login..."
+        title: 'Success',
+        description: 'Password updated successfully! Redirecting to login...',
       })
 
       // Clear form
@@ -193,15 +193,16 @@ export default function ResetPasswordPage() {
       supabase.auth.signOut().catch(() => {
         // Ignore signout errors since we're already redirecting
       })
-
     } catch (error: unknown) {
       console.error('Reset password error:', error)
       clearTimeout(timeoutId)
 
       toast({
-        title: "Error",
-        description: (error as Error).message || "Failed to update password. Please try again.",
-        variant: "destructive"
+        title: 'Error',
+        description:
+          (error as Error).message ||
+          'Failed to update password. Please try again.',
+        variant: 'destructive',
       })
     } finally {
       setIsLoading(false)
@@ -232,15 +233,18 @@ export default function ResetPasswordPage() {
         <Card className="mx-auto w-500 max-w-lg">
           <CardHeader>
             <CardTitle className="text-2xl">
-              {errorCode === 'otp_expired' ? 'Reset Link Expired' : 'Invalid Reset Link'}
+              {errorCode === 'otp_expired'
+                ? 'Reset Link Expired'
+                : 'Invalid Reset Link'}
             </CardTitle>
             <CardDescription>
-              {errorDescription || 'This password reset link is invalid or has expired. Please request a new one.'}
+              {errorDescription ||
+                'This password reset link is invalid or has expired. Please request a new one.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button
-              onClick={() => window.location.href = '/login'}
+              onClick={() => (window.location.href = '/login')}
               className="w-full"
             >
               Back to Login
@@ -259,9 +263,7 @@ export default function ResetPasswordPage() {
       <Card className="mx-auto min-w-lg max-w-lg">
         <CardHeader>
           <CardTitle className="text-2xl">Reset Password</CardTitle>
-          <CardDescription>
-            Enter your new password below
-          </CardDescription>
+          <CardDescription>Enter your new password below</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="grid gap-4">

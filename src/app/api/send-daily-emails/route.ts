@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   if (!process.env.RESEND_API_KEY) {
     return NextResponse.json(
       { error: 'Email service not configured' },
-      { status: 503 }
+      { status: 503 },
     )
   }
 
@@ -44,20 +44,26 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'No students found' })
     }
 
-    const emailPromises = students.map(async (student: { id: string; name: string; parent_id: string; email?: string }) => {
-      if (!student.parent_id) return null
+    const emailPromises = students.map(
+      async (student: {
+        id: string
+        name: string
+        parent_id: string
+        email?: string
+      }) => {
+        if (!student.parent_id) return null
 
-      // Get today's assignments for this student
-      const { data: assignments } = await supabase
-        .from('assignments')
-        .select('*')
-        .eq('parent_id', student.parent_id)
-        .eq('due_date', today)
+        // Get today's assignments for this student
+        const { data: assignments } = await supabase
+          .from('assignments')
+          .select('*')
+          .eq('parent_id', student.parent_id)
+          .eq('due_date', today)
 
-      if (!assignments || assignments.length === 0) return null
+        if (!assignments || assignments.length === 0) return null
 
-      // Create email HTML
-      const emailHtml = `
+        // Create email HTML
+        const emailHtml = `
         <!DOCTYPE html>
         <html>
           <head>
@@ -80,19 +86,33 @@ export async function GET(request: Request) {
                 <p>Hi ${student.name || 'Student'}! Here are your assignments for ${format(new Date(), 'MMMM dd, yyyy')}</p>
               </div>
               <div class="content">
-                ${assignments.map((assignment: { title: string; links?: Array<{ url: string; title: string }> }) => `
+                ${assignments
+                  .map(
+                    (assignment: {
+                      title: string
+                      links?: Array<{ url: string; title: string }>
+                    }) => `
                   <div class="assignment">
                     <h3>${assignment.title}</h3>
-                    ${assignment.links && assignment.links.length > 0 ? `
+                    ${
+                      assignment.links && assignment.links.length > 0
+                        ? `
                       <div class="links">
                         <strong>Resources:</strong><br>
-                        ${assignment.links.map(link =>
-        `<a href="${link.url}" class="link">📎 ${link.title}</a><br>`
-      ).join('')}
+                        ${assignment.links
+                          .map(
+                            (link) =>
+                              `<a href="${link.url}" class="link">📎 ${link.title}</a><br>`,
+                          )
+                          .join('')}
                       </div>
-                    ` : ''}
+                    `
+                        : ''
+                    }
                   </div>
-                `).join('')}
+                `,
+                  )
+                  .join('')}
                 <p style="margin-top: 20px;">
                   <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/student" 
                      style="background: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
@@ -108,34 +128,33 @@ export async function GET(request: Request) {
         </html>
       `
 
-      // Send email
-      return resend.emails.send({
-        from: 'MySchool <noreply@myschool.app>',
-        to: student.email,
-        subject: `Today's Assignments - ${format(new Date(), 'MMMM dd, yyyy')}`,
-        html: emailHtml,
-      })
-    })
+        // Send email
+        return resend.emails.send({
+          from: 'MySchool <noreply@myschool.app>',
+          to: student.email,
+          subject: `Today's Assignments - ${format(new Date(), 'MMMM dd, yyyy')}`,
+          html: emailHtml,
+        })
+      },
+    )
 
     const emailResults = await Promise.all(emailPromises)
-    const successfulEmails = emailResults.filter(result => result !== null)
+    const successfulEmails = emailResults.filter((result) => result !== null)
 
     // Create notifications for successfully sent emails
     if (successfulEmails.length > 0) {
       const notificationPromises = students.map(async (student: Student) => {
-        return supabase
-          .from('notifications')
-          .insert({
-            user_id: student.id,
-            title: 'Daily Assignment Email Sent',
-            message: `Your daily assignment email for ${format(new Date(), 'MMMM dd, yyyy')} has been sent to ${student.email}`,
-            type: 'success',
-            metadata: {
-              action: 'email_sent',
-              email: student.email,
-              date: format(new Date(), 'yyyy-MM-dd')
-            }
-          })
+        return supabase.from('notifications').insert({
+          user_id: student.id,
+          title: 'Daily Assignment Email Sent',
+          message: `Your daily assignment email for ${format(new Date(), 'MMMM dd, yyyy')} has been sent to ${student.email}`,
+          type: 'success',
+          metadata: {
+            action: 'email_sent',
+            email: student.email,
+            date: format(new Date(), 'yyyy-MM-dd'),
+          },
+        })
       })
 
       await Promise.all(notificationPromises)
@@ -144,13 +163,12 @@ export async function GET(request: Request) {
     return NextResponse.json({
       message: 'Daily emails sent successfully',
       studentsCount: students.length,
-      emailsSent: successfulEmails.length
+      emailsSent: successfulEmails.length,
     })
   } catch {
-
     return NextResponse.json(
       { error: 'Failed to send daily emails' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

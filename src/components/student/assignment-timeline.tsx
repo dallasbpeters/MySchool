@@ -23,10 +23,12 @@ export function AssignmentTimeline({
   setExpandedCardId,
   notes,
   onToggle,
-  onNoteCreated
+  onNoteCreated,
 }: AssignmentTimelineProps) {
-  const pastAssignments = assignments.filter(assignment =>
-    AssignmentService.filters.isPast(assignment) || AssignmentService.filters.isToday(assignment)
+  const pastAssignments = assignments.filter(
+    (assignment) =>
+      AssignmentService.filters.isPast(assignment) ||
+      AssignmentService.filters.isToday(assignment),
   )
 
   if (pastAssignments.length === 0) {
@@ -40,17 +42,24 @@ export function AssignmentTimeline({
     )
   }
 
-  const sortedAssignments = pastAssignments
-    .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
+  const sortedAssignments = pastAssignments.sort(
+    (a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime(),
+  )
 
-  const groupedByDate = sortedAssignments.reduce((acc, assignment) => {
-    const dateKey = format(new Date(assignment.due_date), 'EEEE, MMMM dd, yyyy')
-    if (!acc[dateKey]) {
-      acc[dateKey] = []
-    }
-    acc[dateKey].push(assignment)
-    return acc
-  }, {} as Record<string, Assignment[]>)
+  const groupedByDate = sortedAssignments.reduce(
+    (acc, assignment) => {
+      const dateKey = format(
+        new Date(assignment.due_date),
+        'EEEE, MMMM dd, yyyy',
+      )
+      if (!acc[dateKey]) {
+        acc[dateKey] = []
+      }
+      acc[dateKey].push(assignment)
+      return acc
+    },
+    {} as Record<string, Assignment[]>,
+  )
 
   let runningIndex = 0
 
@@ -63,9 +72,12 @@ export function AssignmentTimeline({
             {date}
           </time>
           <p className="text-sm text-muted-foreground mb-4">
-            {dateAssignments.length} assignment{dateAssignments.length !== 1 ? 's' : ''}
+            {dateAssignments.length} assignment
+            {dateAssignments.length !== 1 ? 's' : ''}
           </p>
-          <div className={`grid gap-4 transition-grid-cols duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+          <div
+            className={`grid gap-4 transition-grid-cols duration-500 grid-cols-1 md:grid-cols-3`}
+          >
             {dateAssignments.map((assignment) => {
               const currentIndex = runningIndex++
               return (
@@ -75,8 +87,12 @@ export function AssignmentTimeline({
                   key={assignment.id}
                   assignment={assignment}
                   onToggle={onToggle}
-                  getDateLabel={(date: string, completed?: boolean) => AssignmentService.getDateLabel(assignment)}
-                  getDateColor={(date: string, completed?: boolean) => AssignmentService.getDateColor(assignment)}
+                  getDateLabel={() =>
+                    AssignmentService.getDateLabel(assignment)
+                  }
+                  getDateColor={() =>
+                    AssignmentService.getDateColor(assignment)
+                  }
                   imageIndex={currentIndex}
                   expandedCardId={expandedCardId}
                   setExpandedCardId={setExpandedCardId}

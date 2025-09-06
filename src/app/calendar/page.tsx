@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import ColourfulText from '@/components/ui/colourful-text'
 
 export default function CalendarPage() {
   const router = useRouter()
@@ -13,7 +14,7 @@ export default function CalendarPage() {
 
   return (
     <div className="flex items-center justify-center h-64">
-      <p className="text-muted-foreground">Redirecting to calendar...</p>
+      <ColourfulText text="Redirecting to calendar..." />
     </div>
   )
 }

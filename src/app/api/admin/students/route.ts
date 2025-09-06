@@ -10,12 +10,15 @@ export async function GET() {
       console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
-        { status: 503 }
+        { status: 503 },
       )
     }
 
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json({ students: [], error: 'No user found' })
@@ -29,10 +32,13 @@ export async function GET() {
       .single()
 
     if (!profile || profile.role !== 'admin') {
-      return NextResponse.json({
-        students: [],
-        error: 'Admin access required'
-      }, { status: 403 })
+      return NextResponse.json(
+        {
+          students: [],
+          error: 'Admin access required',
+        },
+        { status: 403 },
+      )
     }
 
     // Get ALL students across all families with parent information
@@ -60,20 +66,26 @@ export async function GET() {
     })
 
     // Format students with parent information
-    const studentsWithParents = studentsData?.map((student: { id: string; name: string; parent_id: string; email: string; created_at: string }) => ({
-      id: student.id,
-      name: student.name,
-      email: student.email,
-      created_at: student.created_at,
-      parent_name: parentNameMap.get(student.parent_id) || 'Unknown Parent'
-    })) || []
-
-
+    const studentsWithParents =
+      studentsData?.map(
+        (student: {
+          id: string
+          name: string
+          parent_id: string
+          email: string
+          created_at: string
+        }) => ({
+          id: student.id,
+          name: student.name,
+          email: student.email,
+          created_at: student.created_at,
+          parent_name: parentNameMap.get(student.parent_id) || 'Unknown Parent',
+        }),
+      ) || []
 
     return NextResponse.json({
-      students: studentsWithParents
+      students: studentsWithParents,
     })
-
   } catch (error: unknown) {
     console.error('Error in GET /api/admin/students:', error)
     return NextResponse.json({ students: [], error: 'Internal server error' })

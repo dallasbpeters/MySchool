@@ -1,70 +1,70 @@
-import { Label } from "@/components/ui/label"
-import MultipleSelector, { Option } from "@/components/ui/multiselect"
+import { Label } from '@/components/ui/label'
+import MultipleSelector, { Option } from '@/components/ui/multiselect'
 
 const frameworks: Option[] = [
   {
-    value: "next.js",
-    label: "Next.js",
+    value: 'next.js',
+    label: 'Next.js',
   },
   {
-    value: "sveltekit",
-    label: "SvelteKit",
+    value: 'sveltekit',
+    label: 'SvelteKit',
   },
   {
-    value: "nuxt.js",
-    label: "Nuxt.js",
+    value: 'nuxt.js',
+    label: 'Nuxt.js',
   },
   {
-    value: "remix",
-    label: "Remix",
+    value: 'remix',
+    label: 'Remix',
   },
   {
-    value: "astro",
-    label: "Astro",
+    value: 'astro',
+    label: 'Astro',
   },
   {
-    value: "angular",
-    label: "Angular",
+    value: 'angular',
+    label: 'Angular',
   },
   {
-    value: "vue",
-    label: "Vue.js",
+    value: 'vue',
+    label: 'Vue.js',
   },
   {
-    value: "react",
-    label: "React",
+    value: 'react',
+    label: 'React',
   },
   {
-    value: "ember",
-    label: "Ember.js",
+    value: 'ember',
+    label: 'Ember.js',
   },
   {
-    value: "gatsby",
-    label: "Gatsby",
+    value: 'gatsby',
+    label: 'Gatsby',
   },
   {
-    value: "eleventy",
-    label: "Eleventy",
+    value: 'eleventy',
+    label: 'Eleventy',
   },
   {
-    value: "solid",
-    label: "SolidJS",
+    value: 'solid',
+    label: 'SolidJS',
   },
   {
-    value: "preact",
-    label: "Preact",
+    value: 'preact',
+    label: 'Preact',
   },
   {
-    value: "qwik",
-    label: "Qwik",
+    value: 'qwik',
+    label: 'Qwik',
   },
   {
-    value: "alpine",
-    label: "Alpine.js",
+    value: 'alpine',
+    label: 'Alpine.js',
   },
   {
-    value: "lit",
-    label: "Lit",
+    value: 'lit',
+    label: 'Lit',
   },
 ]
 
@@ -74,7 +74,7 @@ export default function Component() {
       <Label>Multiselect with placeholder and clear</Label>
       <MultipleSelector
         commandProps={{
-          label: "Select frameworks",
+          label: 'Select frameworks',
         }}
         defaultOptions={frameworks}
         placeholder="Select frameworks"
@@ -85,7 +85,7 @@ export default function Component() {
         role="region"
         aria-live="polite"
       >
-        Inspired by{" "}
+        Inspired by{' '}
         <a
           className="hover:text-foreground underline"
           href="https://shadcnui-expansions.typeart.cc/docs/multiple-selector"

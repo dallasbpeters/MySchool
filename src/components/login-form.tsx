@@ -3,13 +3,13 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchClient } from '@/lib/supabase/fetch-client'
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 
-interface LoginFormProps extends React.ComponentPropsWithoutRef<"form"> {
+interface LoginFormProps extends React.ComponentPropsWithoutRef<'form'> {
   mode?: 'login' | 'signup'
 }
 
@@ -38,9 +38,9 @@ export function LoginForm({
         const response = await fetch('/api/login', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email, password }),
         })
 
         const data = await response.json()
@@ -50,8 +50,8 @@ export function LoginForm({
         }
 
         toast({
-          title: "Success",
-          description: "Logged in successfully",
+          title: 'Success',
+          description: 'Logged in successfully',
         })
 
         // Redirect immediately - the server-side login worked
@@ -60,12 +60,14 @@ export function LoginForm({
         // Set session in background (don't await it)
         if (data.session) {
           const supabase = createClient()
-          supabase.auth.setSession({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token
-          }).catch(() => {
-            // Ignore errors - we're already redirecting
-          })
+          supabase.auth
+            .setSession({
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token,
+            })
+            .catch(() => {
+              // Ignore errors - we're already redirecting
+            })
         }
       } else {
         // Handle signup
@@ -81,10 +83,9 @@ export function LoginForm({
             'parent_id,child_name,used,code',
             1,
             {
-              code: `eq.${signupCode.trim().toUpperCase()}`
-            }
+              code: `eq.${signupCode.trim().toUpperCase()}`,
+            },
           )
-
 
           if (codeError || !codes || codes.length === 0) {
             throw new Error('Invalid signup code')
@@ -103,15 +104,15 @@ export function LoginForm({
         const response = await fetch('/api/signup', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             email,
             password,
             name,
             role,
-            signupCode: role === 'student' ? signupCode : null
-          })
+            signupCode: role === 'student' ? signupCode : null,
+          }),
         })
 
         const data = await response.json()
@@ -123,24 +124,25 @@ export function LoginForm({
         // Profile creation is now handled by the server-side signup API
 
         toast({
-          title: "Success",
-          description: role === 'parent'
-            ? "Account created successfully! Check your email to verify your account."
-            : "Student account created successfully!",
+          title: 'Success',
+          description:
+            role === 'parent'
+              ? 'Account created successfully! Check your email to verify your account.'
+              : 'Student account created successfully!',
         })
 
         if (role === 'student') {
           // Give the session time to establish before redirecting
-          await new Promise(resolve => setTimeout(resolve, 500))
+          await new Promise((resolve) => setTimeout(resolve, 500))
           window.location.href = '/'
         }
       }
     } catch (error: unknown) {
       console.error('Form error:', error)
       toast({
-        title: "Error",
-        description: (error as Error).message || "An unexpected error occurred",
-        variant: "destructive"
+        title: 'Error',
+        description: (error as Error).message || 'An unexpected error occurred',
+        variant: 'destructive',
       })
     } finally {
       setIsLoading(false)
@@ -150,9 +152,9 @@ export function LoginForm({
   const handleForgotPasswordSubmit = async () => {
     if (!email.trim()) {
       toast({
-        title: "Email Required",
-        description: "Please enter your email address",
-        variant: "destructive"
+        title: 'Email Required',
+        description: 'Please enter your email address',
+        variant: 'destructive',
       })
       return
     }
@@ -162,23 +164,23 @@ export function LoginForm({
     try {
       const supabase = createClient()
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`
+        redirectTo: `${window.location.origin}/auth/reset-password`,
       })
 
       if (error) throw error
 
       toast({
-        title: "Reset Email Sent",
-        description: "Check your email for password reset instructions"
+        title: 'Reset Email Sent',
+        description: 'Check your email for password reset instructions',
       })
 
       setShowForgotPassword(false)
     } catch (error: unknown) {
       console.error('Form error:', error)
       toast({
-        title: "Error",
-        description: (error as Error).message || "An unexpected error occurred",
-        variant: "destructive"
+        title: 'Error',
+        description: (error as Error).message || 'An unexpected error occurred',
+        variant: 'destructive',
       })
     } finally {
       setIsLoading(false)
@@ -187,37 +189,49 @@ export function LoginForm({
 
   const handleGoogleLogin = async () => {
     const supabase = createClient()
+
+    // Use correct redirect URL for development vs production
+    const redirectTo =
+      window.location.hostname === 'localhost'
+        ? `${window.location.origin}/auth/callback`
+        : `https://www.myschooltoday.com/auth/callback`
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`
-      }
+        redirectTo,
+      },
     })
 
     if (error) {
       toast({
-        title: "Error",
-        description: (error as Error).message || "An unexpected error occurred",
-        variant: "destructive"
+        title: 'Error',
+        description: (error as Error).message || 'An unexpected error occurred',
+        variant: 'destructive',
       })
     }
   }
 
   return (
-    <form className={cn("flex flex-col gap-6", className)} onSubmit={handleSubmit} {...props}>
+    <form
+      className={cn('flex flex-col gap-6', className)}
+      onSubmit={handleSubmit}
+      {...props}
+    >
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-2xl font-bold">
           {showForgotPassword
             ? 'Reset your password'
-            : currentMode === 'login' ? 'Login to your account' : 'Create your account'}
+            : currentMode === 'login'
+              ? 'Login to your account'
+              : 'Create your account'}
         </h1>
         <p className="text-balance text-sm text-muted-foreground">
           {showForgotPassword
             ? 'Enter your email below to receive reset instructions'
             : currentMode === 'login'
               ? 'Enter your email below to login to your account'
-              : 'Enter your details below to create your account'
-          }
+              : 'Enter your details below to create your account'}
         </p>
       </div>
 
@@ -237,7 +251,12 @@ export function LoginForm({
               />
             </div>
 
-            <Button type="button" onClick={handleForgotPasswordSubmit} className="w-full" disabled={isLoading}>
+            <Button
+              type="button"
+              onClick={handleForgotPasswordSubmit}
+              className="w-full"
+              disabled={isLoading}
+            >
               {isLoading ? 'Sending...' : 'Send Reset Email'}
             </Button>
 
@@ -260,7 +279,6 @@ export function LoginForm({
                   <div className="flex gap-2">
                     <Button
                       type="button"
-
                       variant={role === 'parent' ? 'default' : 'outline'}
                       className="w-full"
                       onClick={() => setRole('parent')}
@@ -345,17 +363,30 @@ export function LoginForm({
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Loading...' : (currentMode === 'login' ? 'Login' : 'Sign Up')}
+              {isLoading
+                ? 'Loading...'
+                : currentMode === 'login'
+                  ? 'Login'
+                  : 'Sign Up'}
             </Button>
 
             <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
-              <span className="relative z-10 bg-background px-2 text-muted-foreground">
+              <span className="relative z-5 bg-background px-2 text-muted-foreground">
                 Or continue with
               </span>
             </div>
 
-            <Button type="button" variant="outline" className="w-full" onClick={handleGoogleLogin}>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="mr-2 h-4 w-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleLogin}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                className="mr-2 h-4 w-4"
+              >
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                   fill="#4285F4"
@@ -382,7 +413,7 @@ export function LoginForm({
       <div className="text-center text-sm">
         {currentMode === 'login' ? (
           <>
-            Don&apos;t have an account?{" "}
+            Don&apos;t have an account?{' '}
             <button
               type="button"
               onClick={() => setCurrentMode('signup')}
@@ -393,7 +424,7 @@ export function LoginForm({
           </>
         ) : (
           <>
-            Already have an account?{" "}
+            Already have an account?{' '}
             <button
               type="button"
               onClick={() => setCurrentMode('login')}

@@ -70,7 +70,7 @@ interface Note {
   assignment_id?: string
 }
 
-interface AssignmentCardProps {
+interface TimelineCardProps {
   image: boolean
   showDate: boolean
   assignment: Assignment
@@ -119,7 +119,7 @@ export const images = [
   '/melanie-villette-wI97g9u9XVM-unsplash.svg',
 ]
 
-export default function AssignmentCard({
+export default function TimelineCard({
   assignment,
   onToggle,
   getDateLabel,
@@ -132,7 +132,7 @@ export default function AssignmentCard({
   onNoteCreated,
   assignmentNotes = [],
   selectedInstanceDate,
-}: AssignmentCardProps) {
+}: TimelineCardProps) {
   const expanded = expandedCardId === assignment.id
   const cardRef = useRef<HTMLDivElement>(null)
   const [isCreatingNote, setIsCreatingNote] = useState(false)
@@ -239,17 +239,12 @@ export default function AssignmentCard({
     >
       <motion.div
         layout
-        key={assignment.id}
-        id={`assignment-${assignment.id}`}
-        layoutId={`assignment-${assignment.id}`}
-        initial={{
-          opacity: 0,
-          y: -10,
-        }}
+        key={assignment.id + 1}
+        id={`assignment-${assignment.id + 1}`}
+        layoutId={`assignment-${assignment.id + 1}`}
+        initial={false}
         animate={{
           opacity: 1,
-          y: 0,
-          x: 0,
         }}
         transition={{
           duration: 0.5,

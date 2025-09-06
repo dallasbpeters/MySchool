@@ -24,16 +24,14 @@ export function ConnectedNavbar() {
   const [user, setUser] = useState<User | null>(null)
   const [userRole, setUserRole] = useState<string>('parent') // Default to parent
   const [userName, setUserName] = useState<string>('')
-  const [isLoading, setIsLoading] = useState(true)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [notificationCount, setNotificationCount] = useState(0)
   const [isMounted, setIsMounted] = useState(false)
-
+  const [isLoading, setIsLoading] = useState(true)
   // Prevent SSR issues
   useEffect(() => {
     setIsMounted(true)
   }, [])
-
 
   const fetchNotifications = async () => {
     try {
@@ -44,8 +42,7 @@ export function ConnectedNavbar() {
         setNotifications(data.notifications)
         setNotificationCount(data.count)
       }
-    } catch (error) {
-    }
+    } catch {}
   }
 
   useEffect(() => {
@@ -57,7 +54,11 @@ export function ConnectedNavbar() {
 
         if (data.user) {
           setUser(data.user)
-          setUserName(data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User')
+          setUserName(
+            data.user.user_metadata?.full_name ||
+              data.user.email?.split('@')[0] ||
+              'User',
+          )
 
           // Force admin role for Dallas
           if (data.user.email === 'dallaspeters@gmail.com') {
@@ -76,13 +77,16 @@ export function ConnectedNavbar() {
               const profileResponse = await fetch('/api/user')
               const profileData = await profileResponse.json()
 
-              if (profileData.user?.user_metadata?.role && data.user.email !== 'dallaspeters@gmail.com') {
+              if (
+                profileData.user?.user_metadata?.role &&
+                data.user.email !== 'dallaspeters@gmail.com'
+              ) {
                 setUserRole(profileData.user.user_metadata.role)
               }
 
               // Fetch notifications after we have the user
               await fetchNotifications()
-            } catch (error) {
+            } catch {
               // Keep defaults on error
             }
           }
@@ -91,7 +95,7 @@ export function ConnectedNavbar() {
           setUser(null)
         }
         setIsLoading(false)
-      } catch (error) {
+      } catch {
         setIsLoading(false)
       }
     }
@@ -100,10 +104,16 @@ export function ConnectedNavbar() {
 
     // Listen for auth changes
     const supabase = createClient()
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_, session) => {
       if (session?.user) {
         setUser(session.user)
-        setUserName(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User')
+        setUserName(
+          session.user.user_metadata?.full_name ||
+            session.user.email?.split('@')[0] ||
+            'User',
+        )
         // Fetch role in background, but override for admin emails
         try {
           // Force admin role for Dallas
@@ -121,7 +131,7 @@ export function ConnectedNavbar() {
             setUserRole(data.role)
           }
           if (data?.name) setUserName(data.name)
-        } catch (error) {
+        } catch {
           // If profile doesn't exist, keep defaults or admin for Dallas
           if (session.user.email === 'dallaspeters@gmail.com') {
             setUserRole('admin')
@@ -158,15 +168,24 @@ export function ConnectedNavbar() {
   // Don't handle redirects in navbar - let middleware or page-level redirects handle this
   // This prevents redirect loops
 
-
-
   // Don't render during SSR to prevent build issues
   if (!isMounted) {
     return null
   }
+  if (isLoading) {
+    return null
+  }
 
   // Don't show navbar on auth pages
-  if (['/login', '/auth/callback', '/auth/reset-password', '/auth/test-reset', '/setup'].some(path => pathname?.startsWith(path))) {
+  if (
+    [
+      '/login',
+      '/auth/callback',
+      '/auth/reset-password',
+      '/auth/test-reset',
+      '/setup',
+    ].some((path) => pathname?.startsWith(path))
+  ) {
     return null
   }
 
@@ -178,7 +197,8 @@ export function ConnectedNavbar() {
   // Define navigation links based on user role
   const getNavigationLinks = (): Navbar05NavItem[] => {
     // Check if user is admin (by email or role)
-    const isAdmin = user?.email === 'dallaspeters@gmail.com' || userRole === 'admin'
+    const isAdmin =
+      user?.email === 'dallaspeters@gmail.com' || userRole === 'admin'
 
     if (isAdmin) {
       return [
@@ -194,16 +214,14 @@ export function ConnectedNavbar() {
         { href: '/parent', label: 'Dashboard' },
         { href: '/parent/children', label: 'Students' },
         { href: '/student', label: 'Student Assignments' },
-        { href: '/calendar', label: 'Calendar' }
+        { href: '/calendar', label: 'Calendar' },
       ]
     } else if (userRole === 'student') {
-      return [
-        { href: '/student', label: 'Assignments' },
-      ]
+      return [{ href: '/student', label: 'Assignments' }]
     } else {
       return [
         { href: '/parent', label: 'Dashboard' },
-        { href: '/setup', label: 'Setup' }
+        { href: '/setup', label: 'Setup' },
       ]
     }
   }
@@ -212,30 +230,34 @@ export function ConnectedNavbar() {
     router.push(href)
   }
 
-  const handleInfoItemClick = (item: 'help' | 'documentation' | 'contact' | 'feedback') => {
+  const handleInfoItemClick = (
+    item: 'help' | 'documentation' | 'contact' | 'feedback',
+  ) => {
     switch (item) {
       case 'help':
         toast({
           title: 'Help Center',
-          description: 'Visit our help documentation for guidance on using MySchool.'
+          description:
+            'Visit our help documentation for guidance on using MySchool.',
         })
         break
       case 'documentation':
         toast({
           title: 'Documentation',
-          description: 'Documentation coming soon!'
+          description: 'Documentation coming soon!',
         })
         break
       case 'contact':
         toast({
           title: 'Contact Support',
-          description: 'Email us at support@myschool.app for assistance.'
+          description: 'Email us at support@myschool.app for assistance.',
         })
         break
       case 'feedback':
         toast({
           title: 'Send Feedback',
-          description: 'We\'d love to hear from you! Email feedback@myschool.app'
+          description:
+            "We'd love to hear from you! Email feedback@myschool.app",
         })
         break
     }
@@ -249,7 +271,7 @@ export function ConnectedNavbar() {
     }
 
     // Find the notification by ID
-    const notification = notifications.find(n => n.id === item)
+    const notification = notifications.find((n) => n.id === item)
     if (notification) {
       toast({
         title: notification.title,
@@ -271,7 +293,9 @@ export function ConnectedNavbar() {
       }
 
       // Navigate to the appropriate page with assignment ID as hash
-      const url = assignmentId ? `${notification.href}#assignment-${assignmentId}` : notification.href
+      const url = assignmentId
+        ? `${notification.href}#assignment-${assignmentId}`
+        : notification.href
       router.push(url)
     }
   }
@@ -299,11 +323,14 @@ export function ConnectedNavbar() {
           })
 
           // Clear all Supabase cookies
-          document.cookie.split(";").forEach((c: string) => {
+          document.cookie.split(';').forEach((c: string) => {
             if (c.includes('supabase')) {
               document.cookie = c
-                .replace(/^ +/, "")
-                .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                .replace(/^ +/, '')
+                .replace(
+                  /=.*/,
+                  '=;expires=' + new Date().toUTCString() + ';path=/',
+                )
             }
           })
 

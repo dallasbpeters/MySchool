@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -19,40 +19,33 @@ export async function POST(request: NextRequest) {
       console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
-        { status: 503 }
+        { status: 503 },
       )
     }
-
-
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password
+      password,
     })
 
     if (error) {
-
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
-
-
 
     // Create response with session cookies
     const response = NextResponse.json({
       success: true,
       user: data.user,
-      session: data.session ? {
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token
-      } : null
+      session: data.session
+        ? {
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          }
+        : null,
     })
 
     // Set session cookies manually if session exists
     if (data.session) {
-
       const maxAge = 60 * 60 * 24 * 7 // 7 days
 
       response.cookies.set('sb-access-token', data.session.access_token, {
@@ -60,7 +53,7 @@ export async function POST(request: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path: '/'
+        path: '/',
       })
 
       response.cookies.set('sb-refresh-token', data.session.refresh_token, {
@@ -68,17 +61,16 @@ export async function POST(request: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path: '/'
+        path: '/',
       })
     }
 
     return response
-
   } catch (error: unknown) {
     console.error('Error in POST /api/login:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

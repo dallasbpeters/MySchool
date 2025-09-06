@@ -6,21 +6,21 @@ export async function PUT(request: NextRequest) {
     const { name, studentId } = await request.json()
 
     if (!name?.trim()) {
-      return NextResponse.json(
-        { error: 'Name is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
     const supabase = await createClient()
 
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json(
         { error: 'You must be logged in to update profiles' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
@@ -32,10 +32,7 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (!profile) {
-      return NextResponse.json(
-        { error: 'Profile not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
     // Determine which profile to update
@@ -54,7 +51,7 @@ export async function PUT(request: NextRequest) {
         if (!student || student.parent_id !== user.id) {
           return NextResponse.json(
             { error: 'You can only update your own children' },
-            { status: 403 }
+            { status: 403 },
           )
         }
       }
@@ -71,28 +68,27 @@ export async function PUT(request: NextRequest) {
     if (updateError) {
       return NextResponse.json(
         { error: `Failed to update profile: ${updateError.message}` },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
     if (!updatedProfile || updatedProfile.length === 0) {
       return NextResponse.json(
         { error: 'Profile not found or no permission to update' },
-        { status: 404 }
+        { status: 404 },
       )
     }
 
     return NextResponse.json({
       success: true,
       profile: updatedProfile[0],
-      message: 'Name updated successfully'
+      message: 'Name updated successfully',
     })
-
   } catch (error: unknown) {
-    console.error("API error:", error)
+    console.error('API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

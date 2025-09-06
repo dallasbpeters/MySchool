@@ -2,10 +2,7 @@
   "mcpServers": {
     "mui-mcp": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@mui/mcp@latest"
-      ]
+      "args": ["-y", "@mui/mcp@latest"]
     },
     "Figma Dev Mode MCP": {
       "type": "http",
@@ -13,10 +10,7 @@
     },
     "supabase": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@supabase/mcp-server-supabase@latest"
-      ],
+      "args": ["-y", "@supabase/mcp-server-supabase@latest"],
       "env": {
         "SUPABASE_ACCESS_TOKEN": "sbp_3082d30247fa350c57b5fe7b4d6f4b823d531e49"
       }

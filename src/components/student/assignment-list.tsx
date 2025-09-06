@@ -1,18 +1,24 @@
 'use client'
 
-import React from 'react'
-import { Timeline, TimelineItem, TimelineHeader, TimelineContent } from '@/components/ui/timeline-view'
-import { Card, CardContent } from '@/components/ui/card'
-import { CheckCircle2, BookOpen } from 'lucide-react'
+import React, { Suspense } from 'react'
+import { AnimatePresence } from 'framer-motion'
+import ColorfulText from '@/components/ui/colourful-text'
+import {
+  Timeline,
+  TimelineItem,
+  TimelineHeader,
+  TimelineContent,
+} from '@/components/ui/timeline-view'
 import { AssignmentService } from '@/services/assignment-service'
 import AssignmentCard from '../assignment-card'
-import NoAssignments from '../no-assignments'
-import { RecurringInstancesGrid } from '@/components/ui/recurring-instances-grid'
+import TimelineCard from '../timeline-card'
 import { Assignment, Note } from '@/types'
+import { Card, CardContent } from '@/components/ui/card'
+import { CheckCircle2 } from 'lucide-react'
+import NoAssignments from '@/components/no-assignments'
 
 interface AssignmentListProps {
   assignments: Assignment[]
-  userRole: string
   selectedChildName?: string
   expandedCardId: string | null
   setExpandedCardId: (id: string | null) => void
@@ -21,62 +27,44 @@ interface AssignmentListProps {
   onToggle: (assignmentId: string, instanceDate?: string) => void
   onNoteCreated: () => void
   onInstanceClick: (assignmentId: string, date: string, dayName: string) => void
+  isLoading?: boolean
 }
 
 export function AssignmentList({
   assignments,
-  userRole,
-  selectedChildName,
   expandedCardId,
   setExpandedCardId,
   selectedInstanceDates,
   notes,
   onToggle,
   onNoteCreated,
-  onInstanceClick
+  onInstanceClick,
+  isLoading = false,
 }: AssignmentListProps) {
-  const { overdue, today, upcoming } = AssignmentService.groupAssignments(assignments)
+  const { overdue, today, upcoming } =
+    AssignmentService.groupAssignments(assignments)
 
-  if (assignments.length === 0) {
+  // Show loading state while assignments are being fetched
+  if (isLoading) {
     return (
       <Card className="relative">
-        <NoAssignments className="absolute h-full w-full inset-0 z-0" />
-        <CardContent className="relative text-center py-40">
-          <BookOpen className="h-16 w-16 text-primary mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Assignments Yet</h3>
-          <p className="text-muted-foreground mb-4">
-            {userRole === 'parent'
-              ? selectedChildName
-                ? `${selectedChildName} doesn't have any assignments yet.`
-                : "No assignments have been created yet."
-              : "You don't have any assignments yet."
-            }
-          </p>
-          {userRole === 'parent' && (
-            <p className="text-sm text-muted-foreground">
-              Visit the <strong>Parent Dashboard</strong> to create assignments for your children.
-            </p>
-          )}
+        <CardContent className="text-center py-40">
+          <ColorfulText text="Loading assignments..." />
         </CardContent>
       </Card>
     )
   }
 
-  const allCompleted = overdue.length === 0 && today.length === 0 && upcoming.length === 0
-
-  if (allCompleted) {
+  // Show "No Assignments" card only when we're not loading AND there are 0 assignments in any category
+  if (!isLoading && overdue.length === 0 && today.length === 0 && upcoming.length === 0) {
     return (
-      <Card>
-        <CardContent className="text-center py-12">
+      <Card className="relative">
+        <NoAssignments className="absolute h-full w-full inset-0 z-0" />
+        <CardContent className="relative text-center py-40 z-5">
           <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">All Caught Up!</h3>
           <p className="text-muted-foreground mb-4">
-            {userRole === 'parent'
-              ? selectedChildName
-                ? `${selectedChildName} has completed all their current assignments.`
-                : "All current assignments have been completed."
-              : "You've completed all your current assignments."
-            }
+            &ldquo;You&apos;ve completed all your current assignments.&rdquo;
           </p>
           <p className="text-sm text-muted-foreground">
             Great work! Check back later for new assignments.
@@ -87,76 +75,77 @@ export function AssignmentList({
   }
 
   return (
-    <Timeline>
-      {overdue.length > 0 && (
-        <TimelineItem dotColor="red">
-          <TimelineHeader textColor="red">Overdue</TimelineHeader>
-          <TimelineContent>
-            <div className={`grid gap-4 transition-grid-cols duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
-              {overdue.map((assignment, index) => (
-                <AssignmentCard
-                  showDate={false}
-                  image={true}
-                  key={assignment.id}
-                  assignment={assignment}
-                  onToggle={onToggle}
-                  getDateLabel={(date: string, completed?: boolean) => AssignmentService.getDateLabel(assignment)}
-                  getDateColor={(date: string, completed?: boolean) => AssignmentService.getDateColor(assignment)}
-                  imageIndex={index}
-                  expandedCardId={expandedCardId}
-                  setExpandedCardId={setExpandedCardId}
-                  onNoteCreated={onNoteCreated}
-                  selectedInstanceDate={selectedInstanceDates[assignment.id]}
-                />
-              ))}
-            </div>
-          </TimelineContent>
-        </TimelineItem>
-      )}
-
-      {today.length > 0 && (
-        <TimelineItem dotColor="default">
-          <TimelineHeader textColor="default">Today&apos;s Assignments</TimelineHeader>
-          <TimelineContent>
-            <div className={`grid gap-4 transition-[grid-template-columns] duration-600 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
-              {today.map((assignment, index) => (
-                <React.Fragment key={assignment.id}>
+    <Suspense>
+      <Timeline>
+        {overdue.length > 0 && (
+          <TimelineItem dotColor="red">
+            <TimelineHeader textColor="red">Overdue</TimelineHeader>
+            <TimelineContent>
+              <AnimatePresence mode="popLayout">
+                {overdue.map((assignment, index) => (
                   <AssignmentCard
+                    showDate={true}
+                    image={true}
+                    key={assignment.id}
+                    assignment={assignment}
+                    onToggle={onToggle}
+                    getDateLabel={() =>
+                      AssignmentService.getDateLabel(assignment)
+                    }
+                    getDateColor={() =>
+                      AssignmentService.getDateColor(assignment)
+                    }
+                    imageIndex={index}
+                    expandedCardId={expandedCardId}
+                    setExpandedCardId={setExpandedCardId}
+                    onNoteCreated={onNoteCreated}
+                    selectedInstanceDate={selectedInstanceDates[assignment.id]}
+                  />
+                ))}
+              </AnimatePresence>
+            </TimelineContent>
+          </TimelineItem>
+        )}
+
+        {today.length > 0 && (
+          <TimelineItem dotColor="default">
+            <TimelineHeader textColor="default">
+              Today&apos;s Assignments
+            </TimelineHeader>
+
+            <TimelineContent>
+              {today.map((assignment, index) => (
+                <AnimatePresence mode="popLayout" key={assignment.id + 1}>
+                  <TimelineCard
                     showDate={true}
                     image={true}
                     assignment={assignment}
                     onToggle={onToggle}
-                    getDateLabel={(date: string, completed?: boolean) => AssignmentService.getDateLabel(assignment)}
-                    getDateColor={(date: string, completed?: boolean) => AssignmentService.getDateColor(assignment)}
+                    getDateLabel={() =>
+                      AssignmentService.getDateLabel(assignment)
+                    }
+                    getDateColor={() =>
+                      AssignmentService.getDateColor(assignment)
+                    }
                     imageIndex={index + overdue.length}
                     expandedCardId={expandedCardId}
                     setExpandedCardId={setExpandedCardId}
                     onNoteCreated={onNoteCreated}
                     assignmentNotes={notes}
-                    selectedInstanceDate={selectedInstanceDates[assignment.id]}
+                    selectedInstanceDate={
+                      selectedInstanceDates[assignment.id]
+                    }
                   />
-                  {expandedCardId === assignment.id && (
-                    <RecurringInstancesGrid
-                      assignment={assignment}
-                      imageIndex={index + overdue.length}
-                      showImages={true}
-                      daysAhead={7}
-                      onInstanceClick={(date, dayName) => onInstanceClick(assignment.id, date, dayName)}
-                      selectedInstanceDate={selectedInstanceDates[assignment.id]}
-                    />
-                  )}
-                </React.Fragment>
+                </AnimatePresence>
               ))}
-            </div>
-          </TimelineContent>
-        </TimelineItem>
-      )}
+            </TimelineContent>
+          </TimelineItem>
+        )}
 
-      {upcoming.length > 0 && (
-        <TimelineItem dotColor="default">
-          <TimelineHeader textColor="default">Upcoming</TimelineHeader>
-          <TimelineContent>
-            <div className={`grid gap-4 transition-all duration-500 ${expandedCardId ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+        {upcoming.length > 0 && (
+          <TimelineItem dotColor="default">
+            <TimelineHeader textColor="default">Upcoming</TimelineHeader>
+            <TimelineContent>
               {upcoming.map((assignment, index) => (
                 <AssignmentCard
                   showDate={true}
@@ -164,8 +153,12 @@ export function AssignmentList({
                   key={assignment.id}
                   assignment={assignment}
                   onToggle={onToggle}
-                  getDateLabel={(date: string, completed?: boolean) => AssignmentService.getDateLabel(assignment)}
-                  getDateColor={(date: string, completed?: boolean) => AssignmentService.getDateColor(assignment)}
+                  getDateLabel={() =>
+                    AssignmentService.getDateLabel(assignment)
+                  }
+                  getDateColor={() =>
+                    AssignmentService.getDateColor(assignment)
+                  }
                   imageIndex={index + overdue.length + today.length}
                   expandedCardId={expandedCardId}
                   setExpandedCardId={setExpandedCardId}
@@ -174,10 +167,10 @@ export function AssignmentList({
                   selectedInstanceDate={selectedInstanceDates[assignment.id]}
                 />
               ))}
-            </div>
-          </TimelineContent>
-        </TimelineItem>
-      )}
-    </Timeline>
+            </TimelineContent>
+          </TimelineItem>
+        )}
+      </Timeline>
+    </Suspense>
   )
 }

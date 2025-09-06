@@ -1,14 +1,14 @@
-import { LoginForm } from "@/components/login-form"
-import { Logo } from "@/components/ui/Logo"
-import { LoginHeading } from "@/components/ui/aceternity/LoginHeading"
-import Link from "next/link"
-import PageGrid from "@/components/page-grid"
-import Background from "@/components/background"
+import { LoginForm } from '@/components/login-form'
+import { Logo } from '@/components/ui/Logo'
+import { LoginHeading } from '@/components/ui/aceternity/LoginHeading'
+import Link from 'next/link'
+import PageGrid from '@/components/page-grid'
+import Background from '@/components/background'
 
 export default function LoginPage() {
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
-      <div className="relative z-10 hidden lg:block">
+      <div className="relative z-5 hidden lg:block">
         <div className="min-h-screen w-full relative">
           <div className="min-h-screen w-full relative">
             {/* Top Fade Grid Background */}
@@ -21,13 +21,14 @@ export default function LoginPage() {
               </div>
             </div>
           </div>
-
-
         </div>
       </div>
-      <div className="z-100 flex flex-col gap-4 p-6 md:p-10">
+      <div className="z-50 flex flex-col gap-4 p-6 md:p-10">
         <div className="flex justify-center gap-2 md:justify-end">
-          <Link href="/" className="max-w-[100px] flex items-center gap-2 font-medium">
+          <Link
+            href="/"
+            className="max-w-[100px] flex items-center gap-2 font-medium"
+          >
             <Logo />
           </Link>
         </div>

@@ -1,32 +1,81 @@
-import { startOfWeek, addDays, format, parseISO, isSameDay, areIntervalsOverlapping } from "date-fns";
+import {
+  startOfWeek,
+  addDays,
+  format,
+  parseISO,
+  isSameDay,
+  areIntervalsOverlapping,
+} from 'date-fns'
+import { useRef, useEffect } from 'react'
 
-import { useCalendar } from "@/calendar/contexts/calendar-context";
+import { useCalendar } from '@/calendar/contexts/calendar-context'
 
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea } from '@/components/ui/scroll-area'
 
-import { AddEventDialog } from "@/calendar/components/dialogs/add-event-dialog";
-import { EventBlock } from "@/calendar/components/week-and-day-view/event-block";
-import { DroppableTimeBlock } from "@/calendar/components/dnd/droppable-time-block";
-import { CalendarTimeline } from "@/calendar/components/week-and-day-view/calendar-time-line";
-import { WeekViewMultiDayEventsRow } from "@/calendar/components/week-and-day-view/week-view-multi-day-events-row";
+import { AddEventDialog } from '@/calendar/components/dialogs/add-event-dialog'
+import { EventBlock } from '@/calendar/components/week-and-day-view/event-block'
+import { DroppableTimeBlock } from '@/calendar/components/dnd/droppable-time-block'
+import { CalendarTimeline } from '@/calendar/components/week-and-day-view/calendar-time-line'
+import { WeekViewMultiDayEventsRow } from '@/calendar/components/week-and-day-view/week-view-multi-day-events-row'
 
-import { cn } from "@/lib/utils";
-import { groupEvents, getEventBlockStyle, isWorkingHour, getVisibleHours } from "@/calendar/helpers";
+import { cn } from '@/lib/utils'
+import {
+  groupEvents,
+  getEventBlockStyle,
+  isWorkingHour,
+  getVisibleHours,
+} from '@/calendar/helpers'
 
-import type { IEvent } from "@/calendar/interfaces";
+import type { IEvent } from '@/calendar/interfaces'
 
 interface IProps {
-  singleDayEvents: IEvent[];
-  multiDayEvents: IEvent[];
+  singleDayEvents: IEvent[]
+  multiDayEvents: IEvent[]
 }
 
 export function CalendarWeekView({ singleDayEvents, multiDayEvents }: IProps) {
-  const { selectedDate, workingHours, visibleHours } = useCalendar();
+  const { selectedDate, workingHours, visibleHours } = useCalendar()
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
-  const { hours, earliestEventHour, latestEventHour } = getVisibleHours(visibleHours, singleDayEvents);
+  const { hours, earliestEventHour, latestEventHour } = getVisibleHours(
+    visibleHours,
+    singleDayEvents,
+  )
 
-  const weekStart = startOfWeek(selectedDate);
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Scroll to current time on load
+  useEffect(() => {
+    const scrollToCurrentTime = () => {
+      if (!scrollAreaRef.current) return
+
+      const now = new Date()
+      const currentHour = now.getHours()
+      const currentMinute = now.getMinutes()
+
+      // Only scroll if current time is within visible hours
+      if (currentHour >= earliestEventHour && currentHour < latestEventHour) {
+        const totalMinutes = (latestEventHour - earliestEventHour) * 60
+        const currentMinutes =
+          (currentHour - earliestEventHour) * 60 + currentMinute
+        const scrollPercentage = currentMinutes / totalMinutes
+
+        const scrollContainer = scrollAreaRef.current.querySelector(
+          '[data-radix-scroll-area-viewport]',
+        )
+        if (scrollContainer) {
+          const maxScroll =
+            scrollContainer.scrollHeight - scrollContainer.clientHeight
+          scrollContainer.scrollTop = maxScroll * scrollPercentage
+        }
+      }
+    }
+
+    // Small delay to ensure DOM is ready
+    const timeoutId = setTimeout(scrollToCurrentTime, 100)
+    return () => clearTimeout(timeoutId)
+  }, [earliestEventHour, latestEventHour])
+
+  const weekStart = startOfWeek(selectedDate)
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
   return (
     <>
@@ -37,29 +86,42 @@ export function CalendarWeekView({ singleDayEvents, multiDayEvents }: IProps) {
 
       <div className="hidden flex-col sm:flex">
         <div>
-          <WeekViewMultiDayEventsRow selectedDate={selectedDate} multiDayEvents={multiDayEvents} />
+          <WeekViewMultiDayEventsRow
+            selectedDate={selectedDate}
+            multiDayEvents={multiDayEvents}
+          />
 
           {/* Week header */}
           <div className="relative z-20 flex border-b">
             <div className="w-18"></div>
             <div className="grid flex-1 grid-cols-7 divide-x border-l">
               {weekDays.map((day, index) => (
-                <span key={index} className="py-2 text-center text-xs font-medium text-muted-foreground">
-                  {format(day, "EE")} <span className="ml-1 font-semibold text-foreground">{format(day, "d")}</span>
+                <span
+                  key={index}
+                  className="py-2 text-center text-xs font-medium text-muted-foreground"
+                >
+                  {format(day, 'EE')}{' '}
+                  <span className="ml-1 font-semibold text-foreground">
+                    {format(day, 'd')}
+                  </span>
                 </span>
               ))}
             </div>
           </div>
         </div>
 
-        <ScrollArea className="h-[736px]" type="always">
+        <ScrollArea className="h-[736px]" type="always" ref={scrollAreaRef}>
           <div className="flex overflow-hidden">
             {/* Hours column */}
             <div className="relative w-18">
               {hours.map((hour, index) => (
-                <div key={hour} className="relative" style={{ height: "96px" }}>
+                <div key={hour} className="relative" style={{ height: '96px' }}>
                   <div className="absolute -top-3 right-2 flex h-6 items-center">
-                    {index !== 0 && <span className="text-xs text-muted-foreground">{format(new Date().setHours(hour, 0, 0, 0), "hh a")}</span>}
+                    {index !== 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date().setHours(hour, 0, 0, 0), 'hh a')}
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -69,80 +131,146 @@ export function CalendarWeekView({ singleDayEvents, multiDayEvents }: IProps) {
             <div className="relative flex-1 border-l">
               <div className="grid grid-cols-7 divide-x">
                 {weekDays.map((day, dayIndex) => {
-                  const dayEvents = singleDayEvents.filter(event => isSameDay(parseISO(event.startDate), day) || isSameDay(parseISO(event.endDate), day));
-                  const groupedEvents = groupEvents(dayEvents);
+                  const dayEvents = singleDayEvents.filter(
+                    (event) =>
+                      isSameDay(parseISO(event.startDate), day) ||
+                      isSameDay(parseISO(event.endDate), day),
+                  )
+                  const groupedEvents = groupEvents(dayEvents)
 
                   return (
                     <div key={dayIndex} className="relative">
                       {hours.map((hour, index) => {
-                        const isDisabled = !isWorkingHour(day, hour, workingHours);
+                        const isDisabled = !isWorkingHour(
+                          day,
+                          hour,
+                          workingHours,
+                        )
 
                         return (
-                          <div key={hour} className={cn("relative", isDisabled && "bg-calendar-disabled-hour")} style={{ height: "96px" }}>
-                            {index !== 0 && <div className="pointer-events-none absolute inset-x-0 top-0 border-b"></div>}
+                          <div
+                            key={hour}
+                            className={cn(
+                              'relative',
+                              isDisabled && 'bg-calendar-disabled-hour',
+                            )}
+                            style={{ height: '96px' }}
+                          >
+                            {index !== 0 && (
+                              <div className="pointer-events-none absolute inset-x-0 top-0 border-b"></div>
+                            )}
 
-                            <DroppableTimeBlock date={day} hour={hour} minute={0}>
-                              <AddEventDialog startDate={day} startTime={{ hour, minute: 0 }}>
+                            <DroppableTimeBlock
+                              date={day}
+                              hour={hour}
+                              minute={0}
+                            >
+                              <AddEventDialog
+                                startDate={day}
+                                startTime={{ hour, minute: 0 }}
+                              >
                                 <div className="absolute inset-x-0 top-0 h-[24px] cursor-pointer transition-colors hover:bg-accent" />
                               </AddEventDialog>
                             </DroppableTimeBlock>
 
-                            <DroppableTimeBlock date={day} hour={hour} minute={15}>
-                              <AddEventDialog startDate={day} startTime={{ hour, minute: 15 }}>
+                            <DroppableTimeBlock
+                              date={day}
+                              hour={hour}
+                              minute={15}
+                            >
+                              <AddEventDialog
+                                startDate={day}
+                                startTime={{ hour, minute: 15 }}
+                              >
                                 <div className="absolute inset-x-0 top-[24px] h-[24px] cursor-pointer transition-colors hover:bg-accent" />
                               </AddEventDialog>
                             </DroppableTimeBlock>
 
                             <div className="pointer-events-none absolute inset-x-0 top-1/2 border-b border-dashed"></div>
 
-                            <DroppableTimeBlock date={day} hour={hour} minute={30}>
-                              <AddEventDialog startDate={day} startTime={{ hour, minute: 30 }}>
+                            <DroppableTimeBlock
+                              date={day}
+                              hour={hour}
+                              minute={30}
+                            >
+                              <AddEventDialog
+                                startDate={day}
+                                startTime={{ hour, minute: 30 }}
+                              >
                                 <div className="absolute inset-x-0 top-[48px] h-[24px] cursor-pointer transition-colors hover:bg-accent" />
                               </AddEventDialog>
                             </DroppableTimeBlock>
 
-                            <DroppableTimeBlock date={day} hour={hour} minute={45}>
-                              <AddEventDialog startDate={day} startTime={{ hour, minute: 45 }}>
+                            <DroppableTimeBlock
+                              date={day}
+                              hour={hour}
+                              minute={45}
+                            >
+                              <AddEventDialog
+                                startDate={day}
+                                startTime={{ hour, minute: 45 }}
+                              >
                                 <div className="absolute inset-x-0 top-[72px] h-[24px] cursor-pointer transition-colors hover:bg-accent" />
                               </AddEventDialog>
                             </DroppableTimeBlock>
                           </div>
-                        );
+                        )
                       })}
 
                       {groupedEvents.map((group, groupIndex) =>
-                        group.map(event => {
-                          let style = getEventBlockStyle(event, day, groupIndex, groupedEvents.length, { from: earliestEventHour, to: latestEventHour });
+                        group.map((event) => {
+                          let style = getEventBlockStyle(
+                            event,
+                            day,
+                            groupIndex,
+                            groupedEvents.length,
+                            { from: earliestEventHour, to: latestEventHour },
+                            workingHours,
+                          )
                           const hasOverlap = groupedEvents.some(
                             (otherGroup, otherIndex) =>
                               otherIndex !== groupIndex &&
-                              otherGroup.some(otherEvent =>
+                              otherGroup.some((otherEvent) =>
                                 areIntervalsOverlapping(
-                                  { start: parseISO(event.startDate), end: parseISO(event.endDate) },
-                                  { start: parseISO(otherEvent.startDate), end: parseISO(otherEvent.endDate) }
-                                )
-                              )
-                          );
+                                  {
+                                    start: parseISO(event.startDate),
+                                    end: parseISO(event.endDate),
+                                  },
+                                  {
+                                    start: parseISO(otherEvent.startDate),
+                                    end: parseISO(otherEvent.endDate),
+                                  },
+                                ),
+                              ),
+                          )
 
-                          if (!hasOverlap) style = { ...style, width: "100%", left: "0%" };
+                          if (!hasOverlap)
+                            style = { ...style, width: '100%', left: '0%' }
 
                           return (
-                            <div key={event.id} className="absolute p-1" style={style}>
+                            <div
+                              key={event.id}
+                              className="absolute p-1"
+                              style={style}
+                            >
                               <EventBlock event={event} />
                             </div>
-                          );
-                        })
+                          )
+                        }),
                       )}
                     </div>
-                  );
+                  )
                 })}
               </div>
 
-              <CalendarTimeline firstVisibleHour={earliestEventHour} lastVisibleHour={latestEventHour} />
+              <CalendarTimeline
+                firstVisibleHour={earliestEventHour}
+                lastVisibleHour={latestEventHour}
+              />
             </div>
           </div>
         </ScrollArea>
       </div>
     </>
-  );
+  )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { use } from 'react'
-import { ClientContainer } from "@/calendar/components/client-container"
+import { ClientContainer } from '@/calendar/components/client-container'
 import { notFound } from 'next/navigation'
 
 interface CalendarViewPageProps {
@@ -10,7 +10,13 @@ interface CalendarViewPageProps {
   }>
 }
 
-const validViews = ['day-view', 'week-view', 'month-view', 'year-view', 'agenda-view']
+const validViews = [
+  'day-view',
+  'week-view',
+  'month-view',
+  'year-view',
+  'agenda-view',
+]
 
 export default function CalendarViewPage({ params }: CalendarViewPageProps) {
   const { view } = use(params)
@@ -21,13 +27,16 @@ export default function CalendarViewPage({ params }: CalendarViewPageProps) {
   }
 
   // Convert URL format to component format
-  const viewType = view.replace('-view', '') as 'day' | 'week' | 'month' | 'year' | 'agenda'
+  const viewType = view.replace('-view', '') as
+    | 'day'
+    | 'week'
+    | 'month'
+    | 'year'
+    | 'agenda'
 
   return (
-    <div className="relative z-10 mx-auto flex max-w-screen-2xl flex-col gap-4 p-4">
+    <div className="relative z-5 mx-auto flex max-w-screen-2xl flex-col gap-4 p-4">
       <ClientContainer view={viewType} />
     </div>
   )
 }
-
-

@@ -6,7 +6,10 @@ export async function GET() {
     const supabase = await createClient()
 
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -19,10 +22,13 @@ export async function GET() {
     const isAuthorized = userEmail === 'dallaspeters@gmail.com'
 
     if (!isAuthorized) {
-      return NextResponse.json({
-        error: 'Audit access denied',
-        debug: { userEmail, expectedPattern: 'justice*', userId: user.id }
-      }, { status: 403 })
+      return NextResponse.json(
+        {
+          error: 'Audit access denied',
+          debug: { userEmail, expectedPattern: 'justice*', userId: user.id },
+        },
+        { status: 403 },
+      )
     }
 
     // Get user profile (might not exist or have role set yet)
@@ -39,31 +45,34 @@ export async function GET() {
         email: profile?.email || user.email,
         name: profile?.name || user.user_metadata?.full_name || 'Unknown',
         role: profile?.role || 'No role set',
-        id: user.id
+        id: user.id,
       },
-      issues: []
+      issues: [],
     }
 
     // 1. Check for role issues
     try {
       const validRoles = ['parent', 'student', 'admin']
-      const { data: profilesWithInvalidRoles, error: roleError } = await supabase
-        .from('profiles')
-        .select('id, email, name, role')
-        .not('role', 'in', `(${validRoles.join(',')})`)
-
+      const { data: profilesWithInvalidRoles, error: roleError } =
+        await supabase
+          .from('profiles')
+          .select('id, email, name, role')
+          .not('role', 'in', `(${validRoles.join(',')})`)
 
       if (roleError) {
         auditResults.issues.push({
           type: 'QUERY_ERROR',
           count: 1,
-          details: { query: 'profiles role check', error: roleError.message }
+          details: { query: 'profiles role check', error: roleError.message },
         })
-      } else if (profilesWithInvalidRoles && profilesWithInvalidRoles.length > 0) {
+      } else if (
+        profilesWithInvalidRoles &&
+        profilesWithInvalidRoles.length > 0
+      ) {
         auditResults.issues.push({
           type: 'INVALID_ROLES',
           count: profilesWithInvalidRoles.length,
-          details: profilesWithInvalidRoles
+          details: profilesWithInvalidRoles,
         })
       }
     } catch (error) {
@@ -71,41 +80,46 @@ export async function GET() {
       auditResults.issues.push({
         type: 'QUERY_ERROR',
         count: 1,
-        details: { query: 'profiles role check', error: (error as Error).message }
+        details: {
+          query: 'profiles role check',
+          error: (error as Error).message,
+        },
       })
     }
 
     // 2. Check for orphaned children (students with invalid parent_id)
     const { data: orphanedChildren } = await supabase
       .from('profiles')
-      .select(`
+      .select(
+        `
         id, email, name, role, parent_id,
         parent:profiles!profiles_parent_id_fkey(id, email, name, role)
-      `)
+      `,
+      )
       .eq('role', 'student')
 
-    const orphans = orphanedChildren?.filter(child =>
-      !child.parent || child.parent.role !== 'parent'
-    ) || []
+    const orphans =
+      orphanedChildren?.filter(
+        (child) => !child.parent || child.parent.role !== 'parent',
+      ) || []
 
     if (orphans.length > 0) {
       auditResults.issues.push({
         type: 'ORPHANED_CHILDREN',
         count: orphans.length,
-        details: orphans.map(child => ({
+        details: orphans.map((child) => ({
           id: child.id,
           email: child.email,
           name: child.name,
           parent_id: child.parent_id,
           parent_exists: !!child.parent,
-          parent_role: child.parent?.role
-        }))
+          parent_role: child.parent?.role,
+        })),
       })
     }
 
     // 3. Check for cross-family assignment contamination
-    const { data: assignmentAudit } = await supabase
-      .from('assignments')
+    const { data: assignmentAudit } = await supabase.from('assignments')
       .select(`
         id, title, parent_id,
         creator:profiles!assignments_parent_id_fkey(id, email, name, role),
@@ -119,32 +133,35 @@ export async function GET() {
       `)
 
     const crossFamilyAssignments = []
-    assignmentAudit?.forEach(assignment => {
-      assignment.student_assignments?.forEach(sa => {
+    assignmentAudit?.forEach((assignment) => {
+      assignment.student_assignments?.forEach((sa) => {
         const student = sa.student
         const studentParent = student?.parent
         const assignmentCreator = assignment.creator
 
         // Check if assignment creator is different from student's parent
-        if (assignmentCreator && studentParent &&
+        if (
+          assignmentCreator &&
+          studentParent &&
           assignmentCreator.id !== studentParent.id &&
-          assignmentCreator.role !== 'admin') {
+          assignmentCreator.role !== 'admin'
+        ) {
           crossFamilyAssignments.push({
             assignment_id: assignment.id,
             assignment_title: assignment.title,
             created_by: {
               email: assignmentCreator.email,
               name: assignmentCreator.name,
-              role: assignmentCreator.role
+              role: assignmentCreator.role,
             },
             assigned_to: {
               email: student.email,
-              name: student.name
+              name: student.name,
             },
             student_parent: {
               email: studentParent.email,
-              name: studentParent.name
-            }
+              name: studentParent.name,
+            },
           })
         }
       })
@@ -154,7 +171,7 @@ export async function GET() {
       auditResults.issues.push({
         type: 'CROSS_FAMILY_ASSIGNMENTS',
         count: crossFamilyAssignments.length,
-        details: crossFamilyAssignments
+        details: crossFamilyAssignments,
       })
     }
 
@@ -166,19 +183,18 @@ export async function GET() {
       .eq('role', 'student')
 
     if (yourChildren) {
-      auditResults.yourChildren = yourChildren.map(child => ({
+      auditResults.yourChildren = yourChildren.map((child) => ({
         ...child,
-        has_valid_parent: child.parent_id === user.id
+        has_valid_parent: child.parent_id === user.id,
       }))
     }
 
     return NextResponse.json(auditResults)
-
   } catch (error) {
     console.error('Data audit error:', error)
     return NextResponse.json(
       { error: 'Audit failed', details: (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

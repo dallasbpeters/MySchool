@@ -24,12 +24,15 @@ export async function GET() {
       console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
-        { status: 503 }
+        { status: 503 },
       )
     }
 
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json({ chartData: [], error: 'No user found' })
@@ -54,7 +57,11 @@ export async function GET() {
       .eq('role', 'student')
 
     if (!children || children.length === 0) {
-      return NextResponse.json({ chartData: [], children: [], error: 'No children found' })
+      return NextResponse.json({
+        chartData: [],
+        children: [],
+        error: 'No children found',
+      })
     }
 
     // Get date range for the last 7 days
@@ -66,72 +73,87 @@ export async function GET() {
     // Get all completed assignments for these children in the date range
     const { data: completedAssignments } = await supabase
       .from('student_assignments')
-      .select(`
+      .select(
+        `
         completed_at,
         student_id,
         profiles!inner(name)
-      `)
-      .in('student_id', children.map((c: Child) => c.id))
+      `,
+      )
+      .in(
+        'student_id',
+        children.map((c: Child) => c.id),
+      )
       .eq('completed', true)
       .gte('completed_at', startDate.toISOString())
       .lte('completed_at', endDate.toISOString())
 
     // Generate chart data for each day
-    const chartData = eachDayOfInterval({ start: startDate, end: endDate }).map(date => {
-      const dayData: Record<string, string | number> = {
-        date: format(date, 'yyyy-MM-dd')
-      }
+    const chartData = eachDayOfInterval({ start: startDate, end: endDate }).map(
+      (date) => {
+        const dayData: Record<string, string | number> = {
+          date: format(date, 'yyyy-MM-dd'),
+        }
 
-      // Count completed assignments for each child on this day
-      children.forEach((child: Child) => {
-        const completedCount = completedAssignments?.filter((assignment: CompletedAssignment) => {
-          const completedDate = new Date(assignment.completed_at)
-          const dayStart = new Date(date)
-          dayStart.setHours(0, 0, 0, 0)
-          const dayEnd = new Date(date)
-          dayEnd.setHours(23, 59, 59, 999)
+        // Count completed assignments for each child on this day
+        children.forEach((child: Child) => {
+          const completedCount =
+            completedAssignments?.filter((assignment: CompletedAssignment) => {
+              const completedDate = new Date(assignment.completed_at)
+              const dayStart = new Date(date)
+              dayStart.setHours(0, 0, 0, 0)
+              const dayEnd = new Date(date)
+              dayEnd.setHours(23, 59, 59, 999)
 
-          return assignment.student_id === child.id &&
-            completedDate >= dayStart &&
-            completedDate <= dayEnd
-        })?.length || 0
+              return (
+                assignment.student_id === child.id &&
+                completedDate >= dayStart &&
+                completedDate <= dayEnd
+              )
+            })?.length || 0
 
-        // Use child name as key for chart data
-        dayData[child.name] = completedCount
-      })
+          // Use child name as key for chart data
+          dayData[child.name] = completedCount
+        })
 
-      return dayData
-    })
+        return dayData
+      },
+    )
 
     // Create chart config
     const chartConfig: Record<string, { label: string; color?: string }> = {
       assignments: {
-        label: "Completed Assignments",
-      }
+        label: 'Completed Assignments',
+      },
     }
 
     // Add each child to config with a unique color
-    const colors = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)']
+    const colors = [
+      'var(--chart-1)',
+      'var(--chart-2)',
+      'var(--chart-3)',
+      'var(--chart-4)',
+      'var(--chart-5)',
+    ]
     children.forEach((child: Child, index: number) => {
       chartConfig[child.name] = {
         label: child.name,
-        color: colors[index % colors.length]
+        color: colors[index % colors.length],
       }
     })
 
     return NextResponse.json({
       chartData,
       children: children.map((c: Child) => c.name),
-      chartConfig
+      chartConfig,
     })
-
   } catch (error: unknown) {
     console.error('Error in GET /api/assignments/chart-data:', error)
     return NextResponse.json({
       chartData: [],
       children: [],
       chartConfig: {},
-      error: 'Internal server error'
+      error: 'Internal server error',
     })
   }
 }

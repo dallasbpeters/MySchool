@@ -1,4 +1,4 @@
-export type TTheme = 'light' | 'dark' | 'system';
+export type TTheme = 'light' | 'dark' | 'system'
 
 // Assignment type definition
 export interface Assignment {
@@ -17,7 +17,10 @@ export interface Assignment {
   }
   recurrence_end_date?: string
   next_due_date?: string
-  instance_completions?: Record<string, { completed: boolean; completed_at?: string; instance_date: string }>
+  instance_completions?: Record<
+    string,
+    { completed: boolean; completed_at?: string; instance_date: string }
+  >
 }
 
 // Note type definition

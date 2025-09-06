@@ -19,8 +19,10 @@ export async function GET(request: NextRequest) {
     })
     if (!error) {
       // Get user profile to determine correct redirect
-      const { data: { user } } = await supabase.auth.getUser()
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')

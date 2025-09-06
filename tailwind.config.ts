@@ -1,4 +1,4 @@
-import type { Config } from "tailwindcss"
+import type { Config } from 'tailwindcss'
 
 const config = {
   content: [
@@ -9,7 +9,7 @@ const config = {
   ],
   plugins: [
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require("tailwindcss-animate")
+    require('tailwindcss-animate'),
   ],
 } satisfies Config
 

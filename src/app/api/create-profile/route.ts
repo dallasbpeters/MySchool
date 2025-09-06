@@ -5,7 +5,10 @@ export async function POST() {
   const supabase = await createClient()
 
   // Get the authenticated user
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
 
   if (authError || !user) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
@@ -19,7 +22,10 @@ export async function POST() {
     .single()
 
   if (existingProfile) {
-    return NextResponse.json({ success: true, message: 'Profile already exists' })
+    return NextResponse.json({
+      success: true,
+      message: 'Profile already exists',
+    })
   }
 
   // Create the profile
@@ -29,13 +35,12 @@ export async function POST() {
       id: user.id,
       email: user.email || 'authenticated@example.com',
       role: 'parent',
-      name: user.user_metadata?.full_name || 'Authenticated User'
+      name: user.user_metadata?.full_name || 'Authenticated User',
     })
     .select()
     .single()
 
   if (error) {
-
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 

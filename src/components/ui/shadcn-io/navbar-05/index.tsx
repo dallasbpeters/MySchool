@@ -1,22 +1,22 @@
-'use client';
+'use client'
 
-import * as React from 'react';
-import { useEffect, useState, useRef } from 'react';
-import { BellIcon, ChevronDownIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ThemeToggleButton } from '@/components/ui/shadcn-io/theme-toggle-button';
+import * as React from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { BellIcon, ChevronDownIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { ThemeToggleButton } from '@/components/ui/shadcn-io/theme-toggle-button'
 import { Logo } from '@/components/ui/Logo'
 import {
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-} from '@/components/ui/navigation-menu';
+} from '@/components/ui/navigation-menu'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
+} from '@/components/ui/popover'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,14 +24,16 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-
+} from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 // Hamburger icon component
-const HamburgerIcon = ({ className, ...props }: React.SVGAttributes<SVGElement>) => (
+const HamburgerIcon = ({
+  className,
+  ...props
+}: React.SVGAttributes<SVGElement>) => (
   <svg
     className={cn('pointer-events-none', className)}
     width={24}
@@ -58,10 +60,14 @@ const HamburgerIcon = ({ className, ...props }: React.SVGAttributes<SVGElement>)
       className="origin-center translate-y-[7px] transition-all duration-300 ease-[cubic-bezier(.5,.85,.25,1.1)] group-aria-expanded:translate-y-0 group-aria-expanded:rotate-[135deg]"
     />
   </svg>
-);
+)
 
 // Info Menu Component
-const InfoMenu = ({ onItemClick }: { onItemClick?: (item: string) => void }) => (
+const InfoMenu = ({
+  onItemClick,
+}: {
+  onItemClick?: (item: string) => void
+}) => (
   <DropdownMenu>
     <DropdownMenuContent align="end" className="w-56">
       <DropdownMenuLabel>Help & Support</DropdownMenuLabel>
@@ -80,24 +86,24 @@ const InfoMenu = ({ onItemClick }: { onItemClick?: (item: string) => void }) => 
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
-);
+)
 
 // Notification Menu Component
 const NotificationMenu = ({
   notificationCount = 3,
   notifications = [],
-  onItemClick
+  onItemClick,
 }: {
-  notificationCount?: number;
+  notificationCount?: number
   notifications?: Array<{
-    id: string;
-    type: string;
-    title: string;
-    message: string;
-    href: string;
-    created_at: string;
-  }>;
-  onItemClick?: (item: string) => void;
+    id: string
+    type: string
+    title: string
+    message: string
+    href: string
+    created_at: string
+  }>
+  onItemClick?: (item: string) => void
 }) => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
@@ -117,10 +123,15 @@ const NotificationMenu = ({
       {notifications.length > 0 ? (
         <>
           {notifications.map((notification) => (
-            <DropdownMenuItem key={notification.id} onClick={() => onItemClick?.(notification.id)}>
+            <DropdownMenuItem
+              key={notification.id}
+              onClick={() => onItemClick?.(notification.id)}
+            >
               <div className="flex flex-col gap-1">
                 <p className="text-sm font-medium">{notification.title}</p>
-                <p className="text-xs text-muted-foreground">{notification.message}</p>
+                <p className="text-xs text-muted-foreground">
+                  {notification.message}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {new Date(notification.created_at).toLocaleDateString()}
                 </p>
@@ -141,27 +152,33 @@ const NotificationMenu = ({
       )}
     </DropdownMenuContent>
   </DropdownMenu>
-);
+)
 
 // User Menu Component
 const UserMenu = ({
   userName = 'John Doe',
   userEmail = 'john@example.com',
   userAvatar,
-  onItemClick
+  onItemClick,
 }: {
-  userName?: string;
-  userEmail?: string;
-  userAvatar?: string;
-  onItemClick?: (item: string) => void;
+  userName?: string
+  userEmail?: string
+  userAvatar?: string
+  onItemClick?: (item: string) => void
 }) => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
-      <Button variant="ghost" className="h-9 px-2 py-0 hover:bg-accent hover:text-accent-foreground">
+      <Button
+        variant="ghost"
+        className="h-9 px-2 py-0 hover:bg-accent hover:text-accent-foreground"
+      >
         <Avatar className="h-9 w-9">
           <AvatarImage src={userAvatar} alt={userName} />
           <AvatarFallback className="text-xs">
-            {userName.split(' ').map(n => n[0]).join('')}
+            {userName
+              .split(' ')
+              .map((n) => n[0])
+              .join('')}
           </AvatarFallback>
         </Avatar>
         <ChevronDownIcon className="h-3 w-3 ml-1" />
@@ -190,34 +207,34 @@ const UserMenu = ({
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
-);
+)
 
 // Types
 export interface Navbar05NavItem {
-  href?: string;
-  label: string;
+  href?: string
+  label: string
 }
 
 export interface Navbar05Props extends React.HTMLAttributes<HTMLElement> {
-  logo?: React.ReactNode;
-  logoHref?: string;
-  navigationLinks?: Navbar05NavItem[];
-  userName?: string;
-  userEmail?: string;
-  userAvatar?: string;
-  notificationCount?: number;
+  logo?: React.ReactNode
+  logoHref?: string
+  navigationLinks?: Navbar05NavItem[]
+  userName?: string
+  userEmail?: string
+  userAvatar?: string
+  notificationCount?: number
   notifications?: Array<{
-    id: string;
-    type: string;
-    title: string;
-    message: string;
-    href: string;
-    created_at: string;
-  }>;
-  onNavItemClick?: (href: string) => void;
-  onInfoItemClick?: (item: string) => void;
-  onNotificationItemClick?: (item: string) => void;
-  onUserItemClick?: (item: string) => void;
+    id: string
+    type: string
+    title: string
+    message: string
+    href: string
+    created_at: string
+  }>
+  onNavItemClick?: (href: string) => void
+  onInfoItemClick?: (item: string) => void
+  onNotificationItemClick?: (item: string) => void
+  onUserItemClick?: (item: string) => void
 }
 
 // Default navigation links
@@ -225,7 +242,7 @@ const defaultNavigationLinks: Navbar05NavItem[] = [
   { href: '/', label: 'Dashboard' },
   { href: '/manage-children', label: 'Students' },
   { href: '/child-view', label: 'Child View' },
-];
+]
 
 export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
   (
@@ -245,47 +262,50 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
       onUserItemClick,
       ...props
     },
-    ref
+    ref,
   ) => {
-    const [isMobile, setIsMobile] = useState(false);
-    const containerRef = useRef<HTMLElement>(null);
+    const [isMobile, setIsMobile] = useState(false)
+    const containerRef = useRef<HTMLElement>(null)
 
     useEffect(() => {
       const checkWidth = () => {
         if (containerRef.current) {
-          const width = containerRef.current.offsetWidth;
-          setIsMobile(width < 768); // 768px is md breakpoint
+          const width = containerRef.current.offsetWidth
+          setIsMobile(width < 768) // 768px is md breakpoint
         }
-      };
+      }
 
-      checkWidth();
+      checkWidth()
 
-      const resizeObserver = new ResizeObserver(checkWidth);
+      const resizeObserver = new ResizeObserver(checkWidth)
       if (containerRef.current) {
-        resizeObserver.observe(containerRef.current);
+        resizeObserver.observe(containerRef.current)
       }
 
       return () => {
-        resizeObserver.disconnect();
-      };
-    }, []);
+        resizeObserver.disconnect()
+      }
+    }, [])
 
     // Combine refs
-    const combinedRef = React.useCallback((node: HTMLElement | null) => {
-      containerRef.current = node;
-      if (typeof ref === 'function') {
-        ref(node);
-      } else if (ref) {
-        ref.current = node;
-      }
-    }, [ref]);
+    const combinedRef = React.useCallback(
+      (node: HTMLElement | null) => {
+        containerRef.current = node
+        if (typeof ref === 'function') {
+          ref(node)
+        } else if (ref) {
+          ref.current = node
+        }
+      },
+      [ref],
+    )
 
     return (
       <header
         ref={combinedRef}
         className={cn(
-          'sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6 [&_*]:no-underline',
-          className
+          'sticky top-0 z-5 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6 [&_*]:no-underline',
+          className,
         )}
         {...props}
       >
@@ -311,8 +331,9 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
                         <NavigationMenuItem key={index} className="w-full">
                           <button
                             onClick={(e) => {
-                              e.preventDefault();
-                              if (onNavItemClick && link.href) onNavItemClick(link.href);
+                              e.preventDefault()
+                              if (onNavItemClick && link.href)
+                                onNavItemClick(link.href)
                             }}
                             className="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer no-underline"
                           >
@@ -331,9 +352,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
                 onClick={(e) => e.preventDefault()}
                 className="flex items-center space-x-2 text-primary hover:text-primary/90 transition-colors cursor-pointer"
               >
-                <div className="h-10">
-                  {logo}
-                </div>
+                <div className="h-10">{logo}</div>
               </button>
               {/* Navigation menu */}
               {!isMobile && (
@@ -344,8 +363,9 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
                         <NavigationMenuLink
                           href={link.href}
                           onClick={(e) => {
-                            e.preventDefault();
-                            if (onNavItemClick && link.href) onNavItemClick(link.href);
+                            e.preventDefault()
+                            if (onNavItemClick && link.href)
+                              onNavItemClick(link.href)
                           }}
                           className="text-muted-foreground hover:text-primary py-1.5 font-medium transition-colors cursor-pointer group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 text-sm focus:bg-accent focus:text-accent-foreground active:bg-accent active:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50"
                         >
@@ -381,10 +401,10 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
           </div>
         </div>
       </header>
-    );
-  }
-);
+    )
+  },
+)
 
-Navbar05.displayName = 'Navbar05';
+Navbar05.displayName = 'Navbar05'
 
-export { Logo, HamburgerIcon, InfoMenu, NotificationMenu, UserMenu };
+export { Logo, HamburgerIcon, InfoMenu, NotificationMenu, UserMenu }

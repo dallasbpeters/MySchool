@@ -28,6 +28,9 @@ export async function GET() {
         last_sign_in_at: user.last_sign_in_at,
       },
       authCheck: 'Passed - user authenticated',
+      profile: {} as unknown,
+      children: {} as unknown,
+      accounts2: {} as unknown,
     }
 
     // Try to get profile with detailed error info

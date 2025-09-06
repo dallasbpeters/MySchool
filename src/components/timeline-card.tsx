@@ -5,7 +5,6 @@ import { motion } from 'framer-motion'
 import {
   CardContent,
   CardDescription,
-  CardHeader,
   CardTitle,
   CardMedia,
   CardFooter,

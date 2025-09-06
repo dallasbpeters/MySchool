@@ -1,5 +1,3 @@
-'use client'
-
 import React, { Suspense } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import ColorfulText from '@/components/ui/colourful-text'
@@ -38,7 +36,7 @@ export function AssignmentList({
   notes,
   onToggle,
   onNoteCreated,
-  onInstanceClick,
+  onInstanceClick: _onInstanceClick,
   isLoading = false,
 }: AssignmentListProps) {
   const { overdue, today, upcoming } =

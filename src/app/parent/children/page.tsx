@@ -86,7 +86,7 @@ export default function ChildrenManagement() {
   }
 
   const fetchChildren = useCallback(
-    async (currentUser = user) => {
+    async (currentUser: { id: string; email: string } | null) => {
       if (!currentUser) return
 
       try {
@@ -104,11 +104,11 @@ export default function ChildrenManagement() {
         // Handle error silently
       }
     },
-    [user],
+    [],
   )
 
   const fetchSignupCodes = useCallback(
-    async (currentUser = user) => {
+    async (currentUser: { id: string; email: string } | null) => {
       if (!currentUser) return
 
       try {
@@ -128,7 +128,7 @@ export default function ChildrenManagement() {
         // Handle error silently
       }
     },
-    [user],
+    [],
   )
 
   useEffect(() => {
@@ -165,8 +165,6 @@ export default function ChildrenManagement() {
             email: session.user.email || 'user@example.com',
           }
           setUser(userObject)
-          fetchChildren(userObject)
-          fetchSignupCodes(userObject)
         } else {
           // Try to get user from profiles
           const { data: profiles } = await supabase
@@ -176,16 +174,11 @@ export default function ChildrenManagement() {
 
           if (profiles && profiles.length > 0) {
             const profile = profiles[0]
-            const user = {
+            const userFromProfile = {
               id: profile.id,
               email: profile.email || 'authenticated@example.com',
-              user_metadata: {
-                full_name: profile.name || 'Authenticated User',
-              },
             }
-            setUser(user)
-            fetchChildren(user)
-            fetchSignupCodes(user)
+            setUser(userFromProfile)
           }
         }
       } catch {
@@ -194,7 +187,7 @@ export default function ChildrenManagement() {
     }
 
     initUser()
-  }, [fetchChildren, fetchSignupCodes])
+  }, [])
 
   // Separate effect to load data when user is authenticated
   useEffect(() => {
@@ -292,10 +285,10 @@ export default function ChildrenManagement() {
           prev.map((c) =>
             c.id === codeData.id
               ? {
-                  ...c,
-                  status: 'error',
-                  error: result.error || 'Unknown error',
-                }
+                ...c,
+                status: 'error',
+                error: result.error || 'Unknown error',
+              }
               : c,
           ),
         )
@@ -630,7 +623,7 @@ export default function ChildrenManagement() {
                             </Label>
                             <Input
                               id="child_name"
-                              placeholder="Enter your child's name"
+                              placeholder="Enter your child&apos;s name"
                               value={newChildName}
                               onChange={(e) => setNewChildName(e.target.value)}
                             />

@@ -47,7 +47,8 @@ export async function GET() {
         role: profile?.role || 'No role set',
         id: user.id,
       },
-      issues: [],
+      issues: [] as unknown[],
+      yourChildren: [] as unknown[],
     }
 
     // 1. Check for role issues
@@ -100,7 +101,7 @@ export async function GET() {
 
     const orphans =
       orphanedChildren?.filter(
-        (child) => !child.parent || child.parent.role !== 'parent',
+        (child) => !child.parent || child.parent.length === 0 || child.parent[0]?.role !== 'parent',
       ) || []
 
     if (orphans.length > 0) {
@@ -113,7 +114,7 @@ export async function GET() {
           name: child.name,
           parent_id: child.parent_id,
           parent_exists: !!child.parent,
-          parent_role: child.parent?.role,
+          parent_role: child.parent?.[0]?.role,
         })),
       })
     }
@@ -135,9 +136,9 @@ export async function GET() {
     const crossFamilyAssignments = []
     assignmentAudit?.forEach((assignment) => {
       assignment.student_assignments?.forEach((sa) => {
-        const student = sa.student
-        const studentParent = student?.parent
-        const assignmentCreator = assignment.creator
+        const student = Array.isArray(sa.student) ? sa.student[0] : sa.student
+        const studentParent = student?.parent?.[0]
+        const assignmentCreator = Array.isArray(assignment.creator) ? assignment.creator[0] : assignment.creator
 
         // Check if assignment creator is different from student's parent
         if (

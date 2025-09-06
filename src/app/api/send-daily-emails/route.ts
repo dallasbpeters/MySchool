@@ -82,37 +82,36 @@ export async function GET(request: Request) {
           <body>
             <div class="container">
               <div class="header">
-                <h1>Today's Assignments</h1>
+                <h1>Today&apos;s Assignments</h1>
                 <p>Hi ${student.name || 'Student'}! Here are your assignments for ${format(new Date(), 'MMMM dd, yyyy')}</p>
               </div>
               <div class="content">
                 ${assignments
-                  .map(
-                    (assignment: {
-                      title: string
-                      links?: Array<{ url: string; title: string }>
-                    }) => `
+            .map(
+              (assignment: {
+                title: string
+                links?: Array<{ url: string; title: string }>
+              }) => `
                   <div class="assignment">
                     <h3>${assignment.title}</h3>
-                    ${
-                      assignment.links && assignment.links.length > 0
-                        ? `
+                    ${assignment.links && assignment.links.length > 0
+                  ? `
                       <div class="links">
                         <strong>Resources:</strong><br>
                         ${assignment.links
-                          .map(
-                            (link) =>
-                              `<a href="${link.url}" class="link">📎 ${link.title}</a><br>`,
-                          )
-                          .join('')}
+                    .map(
+                      (link) =>
+                        `<a href="${link.url}" class="link">📎 ${link.title}</a><br>`,
+                    )
+                    .join('')}
                       </div>
                     `
-                        : ''
-                    }
+                  : ''
+                }
                   </div>
                 `,
-                  )
-                  .join('')}
+            )
+            .join('')}
                 <p style="margin-top: 20px;">
                   <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/student" 
                      style="background: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
@@ -132,7 +131,7 @@ export async function GET(request: Request) {
         return resend.emails.send({
           from: 'MySchool <noreply@myschool.app>',
           to: student.email,
-          subject: `Today's Assignments - ${format(new Date(), 'MMMM dd, yyyy')}`,
+          subject: `Today\'s Assignments - ${format(new Date(), 'MMMM dd, yyyy')}`,
           html: emailHtml,
         })
       },

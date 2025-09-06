@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     let targetStudentId: string
 
     if (userProfile?.role === 'parent' || userProfile?.role === 'admin') {
-      // For parents and admins, studentId must be provided (child's ID)
+      // For parents and admins, studentId must be provided (child&apos;s ID)
       if (!studentId) {
         return NextResponse.json(
           {

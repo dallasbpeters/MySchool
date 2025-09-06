@@ -102,14 +102,20 @@ export async function POST(request: NextRequest) {
                 .eq('id', sa.id)
 
               if (deleteError) {
+                const assignmentTitle = Array.isArray(sa.assignment)
+                  ? (sa.assignment[0] as { title?: string })?.title
+                  : (sa.assignment as { title?: string })?.title
                 removals.push({
-                  assignment_title: sa.assignment.title,
+                  assignment_title: assignmentTitle,
                   status: 'failed',
                   error: deleteError.message,
                 })
               } else {
+                const assignmentTitle = Array.isArray(sa.assignment)
+                  ? (sa.assignment[0] as { title?: string })?.title
+                  : (sa.assignment as { title?: string })?.title
                 removals.push({
-                  assignment_title: sa.assignment.title,
+                  assignment_title: assignmentTitle,
                   status: 'removed',
                 })
               }

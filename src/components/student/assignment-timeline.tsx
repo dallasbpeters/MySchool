@@ -1,15 +1,24 @@
 'use client'
 
-import React from 'react'
+import React, { Suspense } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Calendar } from 'lucide-react'
 import { format } from 'date-fns'
 import { AssignmentService } from '@/services/assignment-service'
-import AssignmentCard from '../assignment-card'
+import TimelineCard from '../timeline-card'
 import { Assignment, Note } from '@/types'
+import { AnimatePresence } from 'framer-motion'
+import {
+  Timeline,
+  TimelineItem,
+  TimelineHeader,
+  TimelineContent,
+} from '@/components/ui/timeline-view'
 
 interface AssignmentTimelineProps {
   assignments: Assignment[]
+  dotColor?: 'default' | 'red' | 'blue' | 'green'
+  textColor?: 'default' | 'red' | 'blue' | 'green'
   expandedCardId: string | null
   setExpandedCardId: (id: string | null) => void
   notes: Note[]
@@ -21,6 +30,8 @@ export function AssignmentTimeline({
   assignments,
   expandedCardId,
   setExpandedCardId,
+  dotColor = 'default',
+  textColor = 'default',
   notes,
   onToggle,
   onNoteCreated,
@@ -61,49 +72,43 @@ export function AssignmentTimeline({
     {} as Record<string, Assignment[]>,
   )
 
-  let runningIndex = 0
-
   return (
-    <ol className="relative border-s border-grey-200 dark:border-gray-400">
-      {Object.entries(groupedByDate).map(([date, dateAssignments]) => (
-        <li key={date} className="mb-10 ms-4">
-          <div className="absolute w-3 h-3 block bg-gray-200 rounded-full mt-0.5 -start-1.5 border border-gray-200 dark:border-gray-900 dark:bg-gray-700"></div>
-          <time className="block mb-2 text-lg font-medium leading-none text-foreground dark:text-foreground">
-            {date}
-          </time>
-          <p className="text-sm text-muted-foreground mb-4">
-            {dateAssignments.length} assignment
-            {dateAssignments.length !== 1 ? 's' : ''}
-          </p>
-          <div
-            className={`grid gap-4 transition-grid-cols duration-500 grid-cols-1 md:grid-cols-3`}
-          >
-            {dateAssignments.map((assignment) => {
-              const currentIndex = runningIndex++
-              return (
-                <AssignmentCard
-                  image={false}
-                  showDate={false}
-                  key={assignment.id}
-                  assignment={assignment}
-                  onToggle={onToggle}
-                  getDateLabel={() =>
-                    AssignmentService.getDateLabel(assignment)
-                  }
-                  getDateColor={() =>
-                    AssignmentService.getDateColor(assignment)
-                  }
-                  imageIndex={currentIndex}
-                  expandedCardId={expandedCardId}
-                  setExpandedCardId={setExpandedCardId}
-                  onNoteCreated={onNoteCreated}
-                  assignmentNotes={notes}
-                />
-              )
-            })}
-          </div>
-        </li>
-      ))}
-    </ol>
+    <Suspense>
+      <Timeline>
+        {Object.entries(groupedByDate).map(([date, dateAssignments], dateIndex) => (
+          <TimelineItem key={date} dotColor={dotColor}>
+            <TimelineHeader textColor={textColor}>
+              {date}
+            </TimelineHeader>
+
+            <TimelineContent>
+              <AnimatePresence mode="popLayout">
+                {dateAssignments.map((assignment, index) => (
+                  <TimelineCard
+                    layoutID={`assignment-${assignment.id}`}
+                    image={false}
+                    showDate={false}
+                    key={assignment.id}
+                    assignment={assignment}
+                    onToggle={onToggle}
+                    getDateLabel={() =>
+                      AssignmentService.getDateLabel(assignment)
+                    }
+                    getDateColor={() =>
+                      AssignmentService.getDateColor(assignment)
+                    }
+                    cardIndex={dateIndex * 10 + index}
+                    expandedCardId={expandedCardId}
+                    setExpandedCardId={setExpandedCardId}
+                    onNoteCreated={onNoteCreated}
+                    assignmentNotes={notes}
+                  />
+                ))}
+              </AnimatePresence>
+            </TimelineContent>
+          </TimelineItem>
+        ))}
+      </Timeline>
+    </Suspense>
   )
 }

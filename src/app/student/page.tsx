@@ -346,7 +346,7 @@ export default function StudentDashboard() {
 
   return (
     <>
-      <div className="z-10 relative container mx-auto p-4 max-w-6xl pb-24">
+      <div className="z-10 py-10 px-2 relative container mx-auto flex flex-col h-16 max-w-screen-2xl">
         <StudentHeader
           userRole={userRole}
           selectedChildId={selectedChildId}

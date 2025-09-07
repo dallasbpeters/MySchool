@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/timeline-view'
 import { AssignmentService } from '@/services/assignment-service'
 import AssignmentCard from '../assignment-card'
-import TimelineCard from '../timeline-card'
 import { Assignment, Note } from '@/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { CheckCircle2 } from 'lucide-react'
@@ -114,7 +113,7 @@ export function AssignmentList({
             <TimelineContent>
               {today.map((assignment, index) => (
                 <AnimatePresence mode="popLayout" key={assignment.id + 1}>
-                  <TimelineCard
+                  <AssignmentCard
                     showDate={true}
                     image={true}
                     assignment={assignment}
@@ -125,7 +124,6 @@ export function AssignmentList({
                     getDateColor={() =>
                       AssignmentService.getDateColor(assignment)
                     }
-                    imageIndex={index + overdue.length}
                     expandedCardId={expandedCardId}
                     setExpandedCardId={setExpandedCardId}
                     onNoteCreated={onNoteCreated}

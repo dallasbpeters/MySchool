@@ -4,21 +4,16 @@ import React, { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   CardContent,
-  CardDescription,
   CardTitle,
-  CardMedia,
   CardFooter,
   MotionCard,
   MotionCardHeader,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
-  Calendar,
-  CheckCircle2,
   Link as LinkIcon,
   BookOpen,
   Plus,
-  Repeat,
   Check,
   X,
 } from 'lucide-react'
@@ -47,6 +42,7 @@ interface Assignment {
     days: string[]
     frequency?: 'weekly' | 'daily'
   }
+  layoutID?: string
   recurrence_end_date?: string
   next_due_date?: string
   instance_completions?: Record<
@@ -73,10 +69,11 @@ interface TimelineCardProps {
   image: boolean
   showDate: boolean
   assignment: Assignment
+  layoutID?: string
   onToggle: (id: string, instanceDate?: string) => void
   getDateLabel: (date: string, completed?: boolean) => string
   getDateColor: (date: string, completed?: boolean) => string
-  imageIndex?: number
+  cardIndex?: number
   expandedCardId: string | null
   setExpandedCardId: (id: string | null) => void
   onNoteCreated?: () => void
@@ -121,13 +118,9 @@ export const images = [
 export default function TimelineCard({
   assignment,
   onToggle,
-  getDateLabel,
-  getDateColor,
-  imageIndex = 0,
+  cardIndex = 0,
   expandedCardId,
   setExpandedCardId,
-  image,
-  showDate,
   onNoteCreated,
   assignmentNotes = [],
   selectedInstanceDate,
@@ -238,16 +231,21 @@ export default function TimelineCard({
     >
       <motion.div
         layout
-        key={assignment.id + 1}
-        id={`assignment-${assignment.id + 1}`}
-        layoutId={`assignment-${assignment.id + 1}`}
-        initial={false}
+        key={assignment.id}
+        id={`assignment-${assignment.id}`}
+        layoutId={`assignment-${assignment.id}`}
+        initial={{
+          opacity: 0,
+          y: -10,
+        }}
         animate={{
           opacity: 1,
+          y: 0,
+          x: 0,
         }}
         transition={{
           duration: 0.5,
-          delay: (imageIndex || 0) * 0.1,
+          delay: (cardIndex || 0) * 0.1,
           layout: { mass: 0.15, damping: 5, stiffness: 70, type: 'spring' },
         }}
         className={`${expanded ? 'flex flex-col items-center justify-center fixed overflow-y-auto left-0 right-0 top-0 bottom-0 z-500 pt-3 md:pt-20 backdrop-blur-xl bg-black/70' : ''}`}
@@ -256,15 +254,6 @@ export default function TimelineCard({
           ref={cardRef}
           className={`max-w-3xl w-full margin-auto overflow-hidden relative pb-3 ${expanded ? 'shadow-lg ring-0! border-0 absolute' : ''} ${assignment.completed ? 'completed bg-muted/30 opacity-75' : ''} ${isCompletedRecurring ? 'border-green-200' : ''}`}
         >
-          {image && (
-            <CardMedia
-              onClick={handleToggleExpand}
-              className="h-40 cursor-pointer bg-clip-border bg-no-repeat bg-cover"
-              style={{
-                backgroundImage: `url(${images[imageIndex % images.length]})`,
-              }}
-            ></CardMedia>
-          )}
           {expanded && (
             <Button
               onClick={handleToggleExpand}
@@ -274,42 +263,11 @@ export default function TimelineCard({
             </Button>
           )}
 
-          <MotionCardHeader className="cursor-pointer z-5" onClick={handleToggleExpand}>
-            <div className="flex items-start gap-3">
-              <div className="grow-1">
-                <CardTitle
-                  className={`text-xl ${assignment.completed ? 'line-through text-muted-foreground' : ''} group:hover-text-primary flex flex-col items-start gap-2`}
-                >
-                  {assignment.category && (
-                    <>
-                      <Badge variant="secondary" className="absolute top-2 left-2">{assignment.category}</Badge>
-                    </>
-                  )}
-                  <span>
-                    {assignment.title}
-                    {assignment.is_recurring && (
-                      <Repeat className="inline-block align-baseline h-4 w-4 ms-1 text-sm text-muted-foreground" />
-                    )}
-                  </span>
-                </CardTitle>
-                {showDate && (
-                  <CardDescription
-                    className={`flex items-center gap-2 mt-0 ${getDateColor(selectedInstanceDate || assignment.due_date, assignment.completed)}`}
-                  >
-                    <Calendar className="h-3 w-3" />
-                    {selectedInstanceDate
-                      ? format(new Date(selectedInstanceDate), 'MMM dd, yyyy')
-                      : getDateLabel(assignment.due_date, assignment.completed)}
-                    {assignment.completed && (
-                      <>
-                        <CheckCircle2 className="h-3 w-4 te4t-green-500 ml-2" />
-                        <span className="text-green-500">Completed</span>
-                      </>
-                    )}
-                  </CardDescription>
-                )}
-              </div>
-            </div>
+          <MotionCardHeader className="cursor-pointer z-5 gap-0" onClick={handleToggleExpand}>
+            <CardTitle
+              className={`text-md mb-0 ${assignment.completed ? 'line-through text-muted-foreground' : ''} group:hover-text-primary flex flex-col items-start gap-2`}
+            >{assignment.title}
+            </CardTitle>
           </MotionCardHeader>
 
           {(assignment.content ||
@@ -394,7 +352,7 @@ export default function TimelineCard({
                     </div>
                   )}
                 </CardContent>
-                <CardFooter className="flex-col space-y-4 border-t border-gray-200 dark:border-gray-400">
+                <CardFooter className="flex-col space-y-2 border-t border-gray-200 dark:border-gray-400">
                   <div className="flex items-center justify-between w-full">
                     <Toggle
                       className={(() => {

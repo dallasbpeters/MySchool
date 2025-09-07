@@ -255,18 +255,20 @@ export default function AssignmentCard({
           delay: (imageIndex || 0) * 0.1,
           layout: { mass: 0.15, damping: 5, stiffness: 70, type: 'spring' },
         }}
-        className={`${expanded ? 'flex flex-col items-center justify-center fixed overflow-y-auto left-0 right-0 top-0 bottom-0 z-500 pt-3 md:pt-20 backdrop-blur-xl bg-black/70' : ''}`}
+        className={`${expanded ? 'flex flex-col items-center justify-center fixed overflow-y-auto left-0 right-0 top-0 bottom-0 z-500 pt-3 md:pt-20 backdrop-blur-xl px-2 bg-black/70' : ''}`}
       >
         <MotionCard
           ref={cardRef}
-          className={`max-w-3xl w-full margin-auto overflow-hidden relative pb-3 ${expanded ? 'shadow-lg ring-0! border-0 absolute' : ''} ${assignment.completed ? 'completed bg-muted/30 opacity-75' : ''} ${isCompletedRecurring ? 'border-green-200' : ''}`}
+          className={`max-w-3xl w-[95%] overflow-hidden pb-3 ${expanded ? 'mx-3 shadow-lg ring-0! border-0 absolute xs:inset-x-3 sm:right-[initial] sm:left-[initial]' : ''} ${assignment.completed ? 'completed bg-muted/30 opacity-75' : ''} ${isCompletedRecurring ? 'border-green-200' : ''}`}
         >
           {image && (
             <CardMedia
               onClick={handleToggleExpand}
-              className="h-40 cursor-pointer bg-clip-border bg-no-repeat bg-cover"
+              className="h-40 cursor-pointer bg-clip-border bg-no-repeat"
               style={{
                 backgroundImage: `url(${images[imageIndex % images.length]})`,
+                backgroundSize: '110%',
+                backgroundPosition: '-10px center',
               }}
             ></CardMedia>
           )}

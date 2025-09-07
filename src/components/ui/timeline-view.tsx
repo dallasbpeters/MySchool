@@ -28,7 +28,7 @@ interface TimelineContentProps {
 export const Timeline = ({ children, className }: TimelineProps) => (
   <ol
     className={cn(
-      ' md:border-l-1 relative before:hidden md:before:block before:absolute before:left-0 before:top-0 before:bottom-0 before:w-px before:bg-grey-200 dark:before:bg-gray-400',
+      'border-l-0 md:border-l-1 relative before:hidden md:before:block before:absolute before:left-0 before:top-0 before:bottom-0 before:w-px before:bg-grey-200 dark:before:bg-gray-400',
       className,
     )}
   >

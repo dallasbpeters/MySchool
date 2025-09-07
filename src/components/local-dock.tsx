@@ -41,7 +41,7 @@ export function LocalDock({ activeTab, onTabChange }: LocalDockProps) {
           <DockItem
             key={idx}
             className={`aspect-square rounded-full transition-colors ${activeTab === item.value
-              ? 'bg-chart-2 text-primary-foreground'
+              ? 'bg-sidebar-primary text-primary-foreground'
               : 'bg-gray-200 dark:bg-neutral-800'
               }`}
             onClick={() => onTabChange(item.value)}

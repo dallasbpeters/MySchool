@@ -158,7 +158,7 @@ function AssignmentCard({
           style={{
             backgroundImage: `url(${images[imageIndex % images.length]})`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center'
+            backgroundPosition: 'center',
           }}
         />
       </motion.div>
@@ -170,7 +170,9 @@ function AssignmentCard({
         <span className="category">{assignment.category}</span>
         <h2 className="font-bold text-xl h2">{assignment.title}</h2>
         {showDate && (
-          <div className={`flex items-center gap-2 mt-2 ${getDateColor(selectedInstanceDate || assignment.due_date, assignment.completed)}`}>
+          <div
+            className={`flex items-center gap-2 mt-2 ${getDateColor(selectedInstanceDate || assignment.due_date, assignment.completed)}`}
+          >
             <Calendar className="h-3 w-3" />
             <span className="text-sm">
               {selectedInstanceDate
@@ -225,7 +227,6 @@ function AssignmentCardExpanded({
     content: string | null
   }>({ title: '', content: null })
   const { toast } = useToast()
-
 
   // Filter notes that belong directly to this assignment
   const relatedNotes = _assignmentNotes.filter((note) => {
@@ -382,7 +383,9 @@ function AssignmentCardExpanded({
           >
             <h2 className="font-bold text-xl h2">{assignment.title}</h2>
             {showDate && (
-              <div className={`flex items-center gap-2 mt-2 ${getDateColor(selectedInstanceDate || assignment.due_date, assignment.completed)}`}>
+              <div
+                className={`flex items-center gap-2 mt-2 ${getDateColor(selectedInstanceDate || assignment.due_date, assignment.completed)}`}
+              >
                 <Calendar className="h-3 w-3" />
                 <span className="text-sm">
                   {selectedInstanceDate
@@ -439,10 +442,7 @@ function AssignmentCardExpanded({
                 </h4>
                 <div className="space-y-2">
                   {relatedNotes.map((note) => (
-                    <div
-                      key={note.id}
-                      className="bg-secondary rounded-md p-4"
-                    >
+                    <div key={note.id} className="bg-secondary rounded-md p-4">
                       <div className="flex items-center justify-between mb-1">
                         <h5 className="text-sm font-medium text-foreground-muted">
                           {note.title}
@@ -540,8 +540,8 @@ function AssignmentCardExpanded({
                 }
 
                 const isCompleted =
-                  assignment.instance_completions?.[dateToCheck]
-                    ?.completed || false
+                  assignment.instance_completions?.[dateToCheck]?.completed ||
+                  false
                 return isCompleted
                   ? 'bg-green-500 text-white w-full h-12'
                   : 'bg-gray-200 text-gray-700 w-full h-12'
@@ -558,8 +558,8 @@ function AssignmentCardExpanded({
                 }
 
                 const isCompleted =
-                  assignment.instance_completions?.[dateToCheck]
-                    ?.completed || false
+                  assignment.instance_completions?.[dateToCheck]?.completed ||
+                  false
                 return isCompleted ? 'checked' : 'unchecked'
               })()}
               pressed={(() => {
@@ -574,8 +574,8 @@ function AssignmentCardExpanded({
                 }
 
                 return (
-                  assignment.instance_completions?.[dateToCheck]
-                    ?.completed || false
+                  assignment.instance_completions?.[dateToCheck]?.completed ||
+                  false
                 )
               })()}
               onPressedChange={() => {
@@ -606,8 +606,8 @@ function AssignmentCardExpanded({
                 }
 
                 const isCompleted =
-                  assignment.instance_completions?.[dateToCheck]
-                    ?.completed || false
+                  assignment.instance_completions?.[dateToCheck]?.completed ||
+                  false
                 return isCompleted ? 'Done' : "I'm Done"
               })()}
             </Toggle>
@@ -654,7 +654,7 @@ export function AssignmentCardList({
             size={size}
             key={assignment.id}
             assignment={assignment}
-            onToggle={() => { }}
+            onToggle={() => {}}
             getDateLabel={(_date, _completed) =>
               AssignmentService.getDateLabel(assignment)
             }
@@ -664,10 +664,10 @@ export function AssignmentCardList({
             imageIndex={currentImageIndex}
             image={image}
             showDate={true}
-            onNoteCreated={() => { }}
+            onNoteCreated={() => {}}
             assignmentNotes={[]}
             expandedCardId={null}
-            setExpandedCardId={() => { }}
+            setExpandedCardId={() => {}}
             selectedInstanceDate={undefined}
             groupId={groupId}
             onClick={() => onCardClick(assignment.id)}
@@ -708,7 +708,7 @@ function AssignmentCardGroup({
             id={openId}
             key="card-item"
             assignment={assignments.find((a) => a.id === openId)!}
-            onToggle={() => { }}
+            onToggle={() => {}}
             getDateLabel={(_date, _completed) =>
               AssignmentService.getDateLabel(
                 assignments.find((a) => a.id === openId)!,
@@ -722,7 +722,7 @@ function AssignmentCardGroup({
             imageIndex={globalAssignmentImageMap.get(openId) || 0}
             image={image}
             showDate={true}
-            onNoteCreated={() => { }}
+            onNoteCreated={() => {}}
             assignmentNotes={[]}
             groupId={groupId}
             onClose={closeCard}
@@ -747,9 +747,7 @@ export default function AssignmentCardContainer({
   size?: 'small' | 'xs'
 }) {
   return (
-    <div
-      id="card-list"
-    >
+    <div id="card-list">
       <AssignmentCardGroup
         assignments={assignments}
         image={image}

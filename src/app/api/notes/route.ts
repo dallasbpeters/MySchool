@@ -50,7 +50,9 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('assignment_notes')
-      .select('*')
+      .select(
+        'id, title, content, category, created_at, updated_at, assignment_id, student_id',
+      )
       .eq('student_id', targetStudentId)
       .order('created_at', { ascending: false })
 
@@ -65,7 +67,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ notes: [], error: notesError.message })
     }
 
-    return NextResponse.json({ notes: notes || [] })
+    // Handle JSONB content format - extract HTML for compatibility
+    const processedNotes = (notes || []).map((note) => ({
+      ...note,
+      content: note.content?.html || note.content || null,
+    }))
+
+    return NextResponse.json({ notes: processedNotes })
   } catch (error: unknown) {
     console.error('API error:', error)
     return NextResponse.json({ notes: [], error: 'Internal server error' })
@@ -74,7 +82,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { category, title, content, assignment_id } = await request.json()
+    const requestBody = await request.json()
+    const { category, title, content, assignment_id, studentId } = requestBody
 
     if (!title?.trim()) {
       return NextResponse.json(
@@ -105,16 +114,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create the note
+    // Determine which student the note should be created for
+    // If studentId is provided, use it (for parents creating notes for children)
+    // Otherwise use the current user's ID
+    const targetStudentId = studentId || user.id
+
+    // Create the note - handle content as JSONB
+    const noteDataToInsert = {
+      student_id: targetStudentId,
+      category: category.trim(),
+      title: title.trim(),
+      content: content ? { html: content, type: 'tiptap' } : null,
+      assignment_id: assignment_id || null,
+    }
+
     const { data: noteData, error: noteError } = await supabase
       .from('assignment_notes')
-      .insert({
-        student_id: user.id,
-        category: category.trim(),
-        title: title.trim(),
-        content: content,
-        assignment_id: assignment_id || null,
-      })
+      .insert(noteDataToInsert)
       .select()
       .single()
 
@@ -132,8 +148,23 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: unknown) {
     console.error('API error:', error)
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : undefined
+
+    console.error('Detailed error info:', {
+      message: errorMessage,
+      stack: errorStack,
+      error,
+    })
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        details:
+          process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined,
+      },
       { status: 500 },
     )
   }

@@ -130,7 +130,6 @@ export function KanbanAssignmentBoard({
 
   const handleDataChange = React.useCallback(
     (newData: KanbanItem[]) => {
-
       // Update assignment categories based on new column positions (only for assignments, not recommendations)
       newData.forEach((item) => {
         if (
@@ -156,7 +155,7 @@ export function KanbanAssignmentBoard({
         }
       })
     },
-    [kanbanData, onAssignmentDragUpdate, onAssignmentUpdate],
+    [onAssignmentDragUpdate, onAssignmentUpdate],
   )
 
   function removeLastName(parentName) {

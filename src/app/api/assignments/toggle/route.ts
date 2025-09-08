@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log('📡 API /assignments/toggle received:', body)
 
     const { assignmentId, studentId, completed, instanceDate } = body
 
@@ -165,12 +166,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       message: completed
         ? 'Assignment marked as complete'
         : 'Assignment marked as incomplete',
-    })
+    }
+    console.log('📡 API /assignments/toggle returning:', responseData)
+    return NextResponse.json(responseData)
   } catch (error: unknown) {
     console.error('Error in PATCH /api/assignments/toggle:', error)
     return NextResponse.json(

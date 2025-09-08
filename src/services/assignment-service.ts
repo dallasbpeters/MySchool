@@ -85,6 +85,9 @@ export class AssignmentService {
 
       // Compare date strings directly to avoid timezone issues
       if (assignment.due_date <= todayString) {
+        console.log(
+          `❌ Assignment ${assignment.id} (${assignment.title}) filtered out: due_date ${assignment.due_date} <= today ${todayString}`,
+        )
         return false
       }
 
@@ -96,11 +99,18 @@ export class AssignmentService {
         // This is a complex case that might need more sophisticated logic.
         // For now, let's show recurring assignments in upcoming regardless of completion
         // since they have multiple instances.
+        console.log(
+          `✅ Recurring assignment ${assignment.id} (${assignment.title}) included in upcoming (completed: ${assignment.completed})`,
+        )
         return true
       }
 
       // For non-recurring assignments, don't show if already completed
-      return !assignment.completed
+      const isIncluded = !assignment.completed
+      console.log(
+        `${isIncluded ? '✅' : '❌'} Non-recurring assignment ${assignment.id} (${assignment.title}) ${isIncluded ? 'included' : 'excluded'} from upcoming (completed: ${assignment.completed})`,
+      )
+      return isIncluded
     },
 
     isPast: (assignment: Assignment): boolean => {
@@ -118,19 +128,79 @@ export class AssignmentService {
   }
 
   static groupAssignments(assignments: Assignment[]): AssignmentGroups {
+    console.log(
+      '🔄 groupAssignments called with assignments:',
+      assignments.map((a) => ({
+        id: a.id,
+        title: a.title,
+        completed: a.completed,
+      })),
+    )
+
     // Filter upcoming assignments to only show next incomplete instance for recurring assignments
-    const filteredUpcoming = this.filterUpcomingAssignments(
-      assignments.filter(this.filters.isUpcoming),
+    const upcomingRaw = assignments.filter(this.filters.isUpcoming)
+    console.log(
+      '📅 Raw upcoming assignments:',
+      upcomingRaw.map((a) => ({
+        id: a.id,
+        title: a.title,
+        completed: a.completed,
+      })),
+    )
+
+    const filteredUpcoming = this.filterUpcomingAssignments(upcomingRaw)
+    console.log(
+      '🎯 Filtered upcoming assignments:',
+      filteredUpcoming.map((a) => ({
+        id: a.id,
+        title: a.title,
+        completed: a.completed,
+      })),
     )
 
     // Further filter to show only one assignment per category (the soonest due)
     const deduplicatedUpcoming = this.deduplicateByCategory(filteredUpcoming)
+    console.log(
+      '🔄 Deduplicated upcoming assignments:',
+      deduplicatedUpcoming.map((a) => ({
+        id: a.id,
+        title: a.title,
+        completed: a.completed,
+      })),
+    )
+
+    const overdue = assignments.filter(this.filters.isOverdue)
+    const today = assignments.filter(this.filters.isToday)
+    const past = assignments.filter(this.filters.isPast)
+
+    console.log('📊 Final grouping:', {
+      overdue: overdue.map((a) => ({
+        id: a.id,
+        title: a.title,
+        completed: a.completed,
+      })),
+      today: today.map((a) => ({
+        id: a.id,
+        title: a.title,
+        completed: a.completed,
+      })),
+      upcoming: deduplicatedUpcoming.map((a) => ({
+        id: a.id,
+        title: a.title,
+        completed: a.completed,
+      })),
+      past: past.map((a) => ({
+        id: a.id,
+        title: a.title,
+        completed: a.completed,
+      })),
+    })
 
     return {
-      overdue: assignments.filter(this.filters.isOverdue),
-      today: assignments.filter(this.filters.isToday),
+      overdue,
+      today,
       upcoming: deduplicatedUpcoming,
-      past: assignments.filter(this.filters.isPast),
+      past,
     }
   }
 
@@ -352,7 +422,7 @@ export class AssignmentService {
         completed,
       }
 
-      console.log('API Payload:', payload)
+      console.log('🚀 toggleAssignment payload:', payload)
 
       const response = await fetch('/api/assignments/toggle', {
         method: 'POST',

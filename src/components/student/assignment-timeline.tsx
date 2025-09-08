@@ -4,7 +4,6 @@ import React, { Suspense } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Calendar } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
-import { AssignmentService } from '@/services/assignment-service'
 import { Assignment } from '@/types'
 import {
   Timeline,
@@ -18,31 +17,83 @@ interface AssignmentTimelineProps {
   assignments: Assignment[]
   dotColor?: 'default' | 'red' | 'blue' | 'green'
   textColor?: 'default' | 'red' | 'blue' | 'green'
+  onToggle?: (assignmentId: string, instanceDate?: string) => void
+  selectedChildId?: string | null
 }
 
 export function AssignmentTimeline({
   assignments,
   dotColor = 'default',
   textColor = 'default',
+  onToggle,
+  selectedChildId,
 }: AssignmentTimelineProps) {
-  const pastAssignments = assignments.filter(
-    (assignment) =>
-      AssignmentService.filters.isPast(assignment) ||
-      AssignmentService.filters.isToday(assignment),
+  // Include completed assignments and assignments due before today
+  console.log(
+    '🔄 Timeline: filtering assignments:',
+    assignments.map((a) => ({
+      id: a.id,
+      title: a.title,
+      completed: a.completed,
+      due_date: a.due_date,
+    })),
   )
 
-  if (pastAssignments.length === 0) {
+  const timelineAssignments = assignments.filter((assignment) => {
+    const today = new Date()
+    const todayString =
+      today.getFullYear() +
+      '-' +
+      String(today.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(today.getDate()).padStart(2, '0')
+
+    // Show assignments due before today
+    const isBeforeToday = assignment.due_date < todayString
+    // Show assignments due today
+    const isDueToday = assignment.due_date === todayString
+    // Show assignments due after today
+    const isAfterToday = assignment.due_date > todayString
+
+    const shouldInclude =
+      // Show all assignments due before today (past assignments)
+      isBeforeToday ||
+      // Show completed assignments due today
+      (assignment.completed && isDueToday) ||
+      // Show completed assignments due after today (future assignments that were completed early)
+      (assignment.completed && isAfterToday) ||
+      // Show recurring assignments with completed instances
+      (assignment.is_recurring &&
+        assignment.instance_completions &&
+        Object.values(assignment.instance_completions).some(
+          (completion) => completion.completed,
+        ))
+
+    return shouldInclude
+  })
+
+  console.log(
+    '📊 Timeline: final assignments:',
+    timelineAssignments.map((a) => ({
+      id: a.id,
+      title: a.title,
+      completed: a.completed,
+      due_date: a.due_date,
+    })),
+  )
+
+  if (timelineAssignments.length === 0) {
     return (
       <Card>
         <CardContent className="text-center py-8">
           <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">No past assignments yet!</p>
+          <p className="text-muted-foreground">No completed assignments yet!</p>
         </CardContent>
       </Card>
     )
   }
 
-  const sortedAssignments = pastAssignments.sort(
+  const sortedAssignments = timelineAssignments.sort(
     (a, b) => parseISO(b.due_date).getTime() - parseISO(a.due_date).getTime(),
   )
 
@@ -64,19 +115,19 @@ export function AssignmentTimeline({
   return (
     <Suspense>
       <Timeline>
-        {Object.entries(groupedByDate).map(
-          ([date, dateAssignments]) => (
-            <TimelineItem key={date} dotColor={dotColor}>
-              <TimelineHeader textColor={textColor}>{date}</TimelineHeader>
+        {Object.entries(groupedByDate).map(([date, dateAssignments]) => (
+          <TimelineItem key={date} dotColor={dotColor}>
+            <TimelineHeader textColor={textColor}>{date}</TimelineHeader>
 
-              <AssignmentCardContainer
-                size="xs"
-                image={false}
-                assignments={dateAssignments}
-              />
-            </TimelineItem>
-          ),
-        )}
+            <AssignmentCardContainer
+              size="xs"
+              image={false}
+              assignments={dateAssignments}
+              onToggle={onToggle}
+              selectedChildId={selectedChildId}
+            />
+          </TimelineItem>
+        ))}
       </Timeline>
     </Suspense>
   )

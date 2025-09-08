@@ -18,7 +18,20 @@ function DropdownItem({
   children: React.ReactNode
   onClick?: () => void
   className?: string
-} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onDrag' | 'onDragEnd' | 'onDragEnter' | 'onDragExit' | 'onDragLeave' | 'onDragOver' | 'onDragStart' | 'onDrop' | 'onAnimationStart' | 'onAnimationEnd' | 'onAnimationIteration'>) {
+} & Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  | 'onDrag'
+  | 'onDragEnd'
+  | 'onDragEnter'
+  | 'onDragExit'
+  | 'onDragLeave'
+  | 'onDragOver'
+  | 'onDragStart'
+  | 'onDrop'
+  | 'onAnimationStart'
+  | 'onAnimationEnd'
+  | 'onAnimationIteration'
+>) {
   return (
     <DropdownMenu.Item asChild>
       <motion.button

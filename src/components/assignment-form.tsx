@@ -179,10 +179,11 @@ export function AssignmentForm({
               <Label className="text-sm font-medium">Assignment Type</Label>
               <div className="grid grid-cols-2 gap-3">
                 <div
-                  className={`p-3 border rounded-lg cursor-pointer transition-all ${!assignmentData.is_recurring
+                  className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                    !assignmentData.is_recurring
                       ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                       : 'border-border hover:border-primary/50'
-                    }`}
+                  }`}
                   onClick={() =>
                     onAssignmentDataChange({
                       ...assignmentData,
@@ -202,10 +203,11 @@ export function AssignmentForm({
                 </div>
 
                 <div
-                  className={`p-3 border rounded-lg cursor-pointer transition-all ${assignmentData.is_recurring
+                  className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                    assignmentData.is_recurring
                       ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                       : 'border-border hover:border-primary/50'
-                    }`}
+                  }`}
                   onClick={() =>
                     onAssignmentDataChange({
                       ...assignmentData,
@@ -299,12 +301,12 @@ export function AssignmentForm({
                                 day,
                               )
                                 ? assignmentData.recurrence_pattern.days.filter(
-                                  (d) => d !== day,
-                                )
+                                    (d) => d !== day,
+                                  )
                                 : [
-                                  ...assignmentData.recurrence_pattern.days,
-                                  day,
-                                ]
+                                    ...assignmentData.recurrence_pattern.days,
+                                    day,
+                                  ]
 
                             onAssignmentDataChange({
                               ...assignmentData,

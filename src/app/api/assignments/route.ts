@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
         const completion = completionMap.get(a.id)
         const instanceCompletions = instanceCompletionMap.get(a.id)
 
-        return {
+        const result = {
           ...a,
           links: Array.isArray(a.links) ? a.links : [],
           completed: completion?.completed || false,
@@ -222,16 +222,23 @@ export async function GET(request: NextRequest) {
             ? Object.fromEntries(instanceCompletions)
             : {},
         }
+
+        return result
       }) || []
 
-    return NextResponse.json({
-      assignments: assignmentsWithCompletion,
-      profile: profile,
-    }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+    return NextResponse.json(
+      {
+        assignments: assignmentsWithCompletion,
+        profile: profile,
       },
-    })
+      {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      },
+    )
   } catch (error: unknown) {
     console.error('Error in GET /api/assignments:', error)
     return NextResponse.json({

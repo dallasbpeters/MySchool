@@ -505,7 +505,6 @@ export async function DELETE(request: NextRequest) {
     )
 
     if (deleteResult) {
-      console.log('Assignment deleted successfully:', deleteResult)
     }
 
     if (deleteError) {

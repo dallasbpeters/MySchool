@@ -42,7 +42,11 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import PageGrid from '@/components/page-grid'
 // Lazy load heavy components
-const KanbanAssignmentBoard = lazy(() => import('@/components/kanban-assignment-board').then(mod => ({ default: mod.KanbanAssignmentBoard })))
+const KanbanAssignmentBoard = lazy(() =>
+  import('@/components/kanban-assignment-board').then((mod) => ({
+    default: mod.KanbanAssignmentBoard,
+  })),
+)
 
 interface Link {
   title: string
@@ -143,8 +147,8 @@ export default function ParentDashboard() {
     () =>
       userRole === 'admin' && selectedParent !== 'all'
         ? assignments.filter(
-          (assignment) => assignment.parent_name === selectedParent,
-        )
+            (assignment) => assignment.parent_name === selectedParent,
+          )
         : assignments,
     [userRole, selectedParent, assignments],
   )
@@ -190,7 +194,10 @@ export default function ParentDashboard() {
           const parentOptions = Array.from(parentNames)
             .map((name) => ({ label: name, value: name }))
             .sort((a, b) => a.label.localeCompare(b.label))
-          setAvailableParents([{ label: 'All Parents', value: 'all' }, ...parentOptions])
+          setAvailableParents([
+            { label: 'All Parents', value: 'all' },
+            ...parentOptions,
+          ])
         }
 
         setAssignments(assignmentsDataArray)
@@ -238,8 +245,6 @@ export default function ParentDashboard() {
   }, [])
 
   // Note: Date synchronization is now handled in AssignmentForm component
-
-
 
   const createOrUpdateAssignment = async () => {
     setIsSaving(true)
@@ -309,7 +314,7 @@ export default function ParentDashboard() {
       if (!response.ok) {
         throw new Error(
           data.error ||
-          `Assignment ${isEditing ? 'update' : 'creation'} failed`,
+            `Assignment ${isEditing ? 'update' : 'creation'} failed`,
         )
       }
 
@@ -406,7 +411,6 @@ export default function ParentDashboard() {
       links: newRecommendation.links.filter((_, i) => i !== index),
     })
   }
-
 
   // Kanban board handlers
   const handleKanbanAssignmentUpdate = async (assignment: Assignment) => {
@@ -533,7 +537,7 @@ export default function ParentDashboard() {
       if (!response.ok) {
         throw new Error(
           data.error ||
-          `Recommendation ${isEditing ? 'update' : 'creation'} failed`,
+            `Recommendation ${isEditing ? 'update' : 'creation'} failed`,
         )
       }
 
@@ -927,10 +931,11 @@ export default function ParentDashboard() {
                             </Label>
                             <div className="grid grid-cols-2 gap-3">
                               <div
-                                className={`p-3 border rounded-lg cursor-pointer transition-all ${!newAssignment.is_recurring
-                                  ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                                  : 'border-border hover:border-primary/50'
-                                  }`}
+                                className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                                  !newAssignment.is_recurring
+                                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                    : 'border-border hover:border-primary/50'
+                                }`}
                                 onClick={() =>
                                   setNewAssignment({
                                     ...newAssignment,
@@ -950,10 +955,11 @@ export default function ParentDashboard() {
                               </div>
 
                               <div
-                                className={`p-3 border rounded-lg cursor-pointer transition-all ${newAssignment.is_recurring
-                                  ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                                  : 'border-border hover:border-primary/50'
-                                  }`}
+                                className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                                  newAssignment.is_recurring
+                                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                    : 'border-border hover:border-primary/50'
+                                }`}
                                 onClick={() =>
                                   setNewAssignment({
                                     ...newAssignment,
@@ -1055,13 +1061,13 @@ export default function ParentDashboard() {
                                               day,
                                             )
                                               ? newAssignment.recurrence_pattern.days.filter(
-                                                (d) => d !== day,
-                                              )
+                                                  (d) => d !== day,
+                                                )
                                               : [
-                                                ...newAssignment
-                                                  .recurrence_pattern.days,
-                                                day,
-                                              ]
+                                                  ...newAssignment
+                                                    .recurrence_pattern.days,
+                                                  day,
+                                                ]
 
                                           setNewAssignment({
                                             ...newAssignment,
@@ -1286,7 +1292,13 @@ export default function ParentDashboard() {
                 </div>
               </div>
 
-              <Suspense fallback={<div className="flex items-center justify-center p-8">Loading kanban board...</div>}>
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center p-8">
+                    Loading kanban board...
+                  </div>
+                }
+              >
                 <KanbanAssignmentBoard
                   assignments={filteredAssignments}
                   recommendations={recommendations}

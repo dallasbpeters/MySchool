@@ -2,7 +2,9 @@ import { cache } from 'react'
 
 // Cached data fetching functions using React's cache
 export const fetchAssignmentsCached = cache(async (childId?: string) => {
-  const url = childId ? `/api/assignments?childId=${childId}` : '/api/assignments'
+  const url = childId
+    ? `/api/assignments?childId=${childId}`
+    : '/api/assignments'
   const response = await fetch(url, {
     next: { revalidate: 300 }, // Cache for 5 minutes
   })
@@ -39,7 +41,9 @@ export const fetchRecommendationCategoriesCached = cache(async () => {
 
 // Force refresh functions for when data needs to be updated immediately
 export const refreshAssignments = async (childId?: string) => {
-  const url = childId ? `/api/assignments?childId=${childId}` : '/api/assignments'
+  const url = childId
+    ? `/api/assignments?childId=${childId}`
+    : '/api/assignments'
   const response = await fetch(url, {
     next: { revalidate: 0 }, // Force refresh
   })

@@ -21,29 +21,17 @@ import { useToast } from '@/hooks/use-toast'
 import { AnimatePresence } from 'motion/react'
 import { Toggle } from '@/components/ui/toggle'
 import { AssignmentService } from '@/services/assignment-service'
+import { Assignment } from '@/types'
 import './ui/shared-card-styles.css'
 
-interface Assignment {
-  id: string
-  title: string
-  content: string | null
-  links: Array<{ title: string; url: string; type?: 'link' | 'video' }>
-  due_date: string
-  completed?: boolean
-  completed_at?: string
-  category?: string
-  is_recurring?: boolean
-  recurrence_pattern?: {
-    days: string[]
-    frequency?: 'weekly' | 'daily'
-  }
-  recurrence_end_date?: string
-  next_due_date?: string
-  instance_completions?: Record<
-    string,
-    { completed: boolean; completed_at?: string; instance_date: string }
-  >
-  // For ExpandingCard component
+// Union type to handle both assignments and recommendations
+type AssignmentOrRecommendation =
+  | (ExtendedAssignment & { type: 'assignment' })
+  | (Recommendation & { type: 'recommendation' })
+
+// Extend Assignment with additional properties for the ExpandingCard component
+interface ExtendedAssignment extends Assignment {
+  type?: 'assignment'
   image?: string
   logo?: string
   alt?: string
@@ -62,7 +50,7 @@ interface Note {
 interface AssignmentCardProps {
   image: boolean
   showDate: boolean
-  assignment: Assignment
+  assignment: AssignmentOrRecommendation
   size: 'small' | 'xs'
   onToggle: (id: string, instanceDate?: string) => void
   getDateLabel: (date: string, completed?: boolean) => string
@@ -73,6 +61,7 @@ interface AssignmentCardProps {
   onNoteCreated?: () => void
   assignmentNotes?: Note[]
   selectedInstanceDate?: string
+  selectedChildId?: string | null
 }
 
 // Separate component for rendering note content to avoid hook rule violations
@@ -134,7 +123,15 @@ function AssignmentCard({
 }: AssignmentCardProps & { groupId?: string; onClick?: () => void }) {
   return (
     <motion.div
-      className={`card card__${size} cursor-pointer ${assignment.completed ? 'completed' : ''}`}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      exit={{
+        opacity: 0,
+        scale: 0.8,
+        y: -20,
+        transition: { duration: 0.3, ease: 'easeInOut' },
+      }}
+      className={`card card__${size} cursor-pointer ${assignment.type === 'assignment' && assignment.completed ? 'completed' : ''}`}
       onClick={onClick}
       layoutId={`assignment-card-container-${assignment.id}-${groupId || 'default'}`}
     >
@@ -158,7 +155,7 @@ function AssignmentCard({
           style={{
             backgroundImage: `url(${images[imageIndex % images.length]})`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center'
+            backgroundPosition: 'center',
           }}
         />
       </motion.div>
@@ -173,14 +170,23 @@ function AssignmentCard({
         <h2 className="font-bold text-xl h2">{assignment.title}</h2>
       </motion.div>
       {showDate && (
-        <div className={`bg-background/70 p-2 absolute bottom-0 left-0 right-0 flex items-center gap-2 mt-2 ${getDateColor(selectedInstanceDate || assignment.due_date, assignment.completed)}`}>
+        <div
+          className={`bg-background/70 p-2 absolute bottom-0 left-0 right-0 flex items-center gap-2 mt-2 ${getDateColor(selectedInstanceDate || (assignment.type === 'assignment' ? assignment.due_date || '' : assignment.created_at), assignment.type === 'assignment' ? assignment.completed : false)}`}
+        >
           <Calendar className="h-3 w-3" />
           <span className="text-sm">
             {selectedInstanceDate
               ? format(parseISO(selectedInstanceDate), 'MMM dd, yyyy')
-              : getDateLabel(assignment.due_date, assignment.completed)}
+              : getDateLabel(
+                assignment.type === 'assignment'
+                  ? assignment.due_date || ''
+                  : assignment.created_at,
+                assignment.type === 'assignment'
+                  ? assignment.completed
+                  : false,
+              )}
           </span>
-          {assignment.completed && (
+          {assignment.type === 'assignment' && assignment.completed && (
             <>
               <CheckCircle2 className="h-3 w-3 text-green-500 ml-2" />
               <span className="text-green-500 text-sm">Completed</span>
@@ -204,11 +210,12 @@ function AssignmentCardExpanded({
   onNoteCreated: _onNoteCreated,
   assignmentNotes: _assignmentNotes = [],
   selectedInstanceDate,
+  selectedChildId,
   groupId,
   onClose,
 }: {
   id: string
-  assignment: Assignment
+  assignment: AssignmentOrRecommendation
   onToggle: (id: string, instanceDate?: string) => void
   getDateLabel: (date: string, completed?: boolean) => string
   getDateColor: (date: string, completed?: boolean) => string
@@ -218,28 +225,31 @@ function AssignmentCardExpanded({
   onNoteCreated?: () => void
   assignmentNotes?: Note[]
   selectedInstanceDate?: string
+  selectedChildId?: string | null
   groupId?: string
   onClose?: () => void
 }) {
   const [isCreatingNote, setIsCreatingNote] = useState(false)
+  const [isToggling, setIsToggling] = useState(false)
   const [newNote, setNewNote] = useState<{
     title: string
     content: string | null
   }>({ title: '', content: null })
   const { toast } = useToast()
 
-
   // Filter notes that belong directly to this assignment
   const relatedNotes = _assignmentNotes.filter((note) => {
     // First check for direct assignment association
     if (note.assignment_id) {
-      return note.assignment_id === assignment.id
+      const matches = note.assignment_id === assignment.id
+      return matches
     }
 
     // Fallback to category matching for legacy notes
     const assignmentCategory = assignment.category?.trim() || 'General'
     const noteCategory = note.category?.trim() || 'General'
-    return noteCategory === assignmentCategory
+    const matches = noteCategory === assignmentCategory
+    return matches
   })
 
   const editor = useEditor({
@@ -267,17 +277,30 @@ function AssignmentCardExpanded({
 
       const category = assignment.category?.trim() || 'General'
 
+      const requestBody: {
+        title: string
+        content: string
+        category: string
+        assignment_id: string
+        studentId?: string
+      } = {
+        title: newNote.title.trim(),
+        content: newNote.content,
+        category,
+        assignment_id: assignment.id,
+      }
+
+      // If we have a selected child ID, pass it to create the note for that child
+      if (selectedChildId) {
+        requestBody.studentId = selectedChildId
+      }
+
       const response = await fetch('/api/notes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          title: newNote.title.trim(),
-          content: newNote.content,
-          category,
-          assignment_id: assignment.id,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const data = await response.json()
@@ -293,6 +316,7 @@ function AssignmentCardExpanded({
           _onNoteCreated()
         }
       } else {
+        console.error('Note creation failed:', data)
         toast({
           title: 'Error',
           description: data.error || 'Failed to create note',
@@ -313,7 +337,7 @@ function AssignmentCardExpanded({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.2, delay: 0.1 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
         style={{ pointerEvents: 'auto' }}
         className="card-overlay"
       />
@@ -386,87 +410,231 @@ function AssignmentCardExpanded({
               <span className="category">{assignment.category}</span>
             )}
             <h2 className="font-bold text-xl h2">{assignment.title}</h2>
-            {assignment.is_recurring && (
+            {assignment.type === 'assignment' && assignment.is_recurring && (
               <Repeat className="inline-block align-baseline h-4 w-4 ms-1 text-sm text-muted-foreground" />
             )}
           </motion.div>
-
-          <motion.div className="content-container small">
-            {assignment.content && (
-              <div className="prose prose-sm max-w-none">
-                <p className="big">{assignment.title}</p>
-                <EditorContent editor={editor} />
-              </div>
-            )}
-
-            {assignment.links && assignment.links.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-sm font-medium mb-2">Resources:</h4>
-                <ul className="space-y-1">
-                  {assignment.links.map((link, index) => (
-                    <li key={index}>
-                      <a
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:text-secondary underline"
-                      >
-                        {link.title}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Display related notes */}
-            {relatedNotes.length > 0 && (
-              <div className="my-4 pt-4 border-t border-gray-200">
-                <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  Notes ({relatedNotes.length})
-                </h4>
-                <div className="space-y-2">
-                  {relatedNotes.map((note) => (
-                    <div
-                      key={note.id}
-                      className="bg-secondary rounded-md p-4"
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <h5 className="text-sm font-medium text-foreground-muted">
-                          {note.title}
-                        </h5>
-                        <span className="text-sm font-medium text-gray-500">
-                          {format(new Date(note.created_at), 'MMM dd')}
-                        </span>
-                      </div>
-                      {note.content && (
-                        <div className="text-sm text-foreground-muted">
-                          <NoteContent content={note.content} />
-                        </div>
-                      )}
+          <AnimatePresence>
+            {!isCreatingNote && (
+              <motion.div initial={false} className="content-container small">
+                {assignment.content && (
+                  <div className="prose prose-sm max-w-none">
+                    <p className="big">{assignment.title}</p>
+                    <EditorContent editor={editor} />
+                  </div>
+                )}
+                {assignment.links && assignment.links.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium mb-2">Resources:</h4>
+                    <ul className="space-y-1">
+                      {assignment.links.map((link, index) => (
+                        <li key={index}>
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:text-secondary underline"
+                          >
+                            {link.title}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {/* Display related notes */}
+                {!isCreatingNote && relatedNotes.length > 0 && (
+                  <div className="my-4 pt-4 border-t border-gray-200">
+                    <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      Notes ({relatedNotes.length})
+                    </h4>
+                    <div className="space-y-2">
+                      <AnimatePresence mode="sync">
+                        {relatedNotes.map((note) => (
+                          <motion.div
+                            layout
+                            key={note.id}
+                            className="border border-border rounded-md p-4"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <h5 className="text-sm font-medium text-foreground-muted">
+                                {note.title}
+                              </h5>
+                              <span className="text-sm font-medium text-gray-500">
+                                {format(new Date(note.created_at), 'MMM dd')}
+                              </span>
+                            </div>
+                            {note.content && (
+                              <div className="text-sm text-foreground-muted">
+                                <NoteContent content={note.content} />
+                              </div>
+                            )}
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                )}
+              </motion.div>
             )}
-          </motion.div>
+          </AnimatePresence>
 
           {/* Footer with Add Note and Completion Toggle */}
-          <motion.div className="flex flex-col gap-4 p-6 border-t border-gray-200 dark:border-gray-400">
-            <div className="flex items-center justify-between w-full">
-              <Button
-                variant="outline"
-                onClick={() => setIsCreatingNote(true)}
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Note
-              </Button>
+          <motion.div className="flex flex-col gap-4 p-6 border-t border-border dark:border-gray-400">
+            <div className="flex gap-4">
+              <AnimatePresence>
+                {!isCreatingNote && (
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={() => setIsCreatingNote(true)}
+                    className="cursor-pointer gap-2 flex justify-self-start items-center justify-center w-full border border-border rounded-md h-12"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Note
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
+              {!isCreatingNote && (
+                <Toggle
+                  disabled={isToggling}
+                  className={(() => {
+                    'w-full h-12 transition-colors cursor-pointer'
+                    if (assignment.type !== 'assignment') {
+                      return 'bg-gray-200 text-gray-700 w-full h-12'
+                    }
+                    if (!assignment.is_recurring) {
+                      return assignment.completed
+                        ? 'bg-green-500 text-white w-full h-12'
+                        : 'ring-inset ring-1 ring-green-500 text-foreground hover:bg-green-500 hover:text-white w-full h-12'
+                    }
+
+                    let dateToCheck = selectedInstanceDate
+                    if (!dateToCheck) {
+                      const todayStr = format(new Date(), 'yyyy-MM-dd')
+                      dateToCheck = todayStr
+                    }
+
+                    const isCompleted =
+                      assignment.instance_completions?.[dateToCheck]
+                        ?.completed || false
+                    return isCompleted
+                      ? 'bg-green-500 text-white w-full h-12'
+                      : 'bg-gray-200 text-gray-700 w-full h-12'
+                  })()}
+                  data-state={(() => {
+                    if (assignment.type !== 'assignment') {
+                      return 'unchecked'
+                    }
+                    if (!assignment.is_recurring) {
+                      return assignment.completed ? 'checked' : 'unchecked'
+                    }
+
+                    let dateToCheck = selectedInstanceDate
+                    if (!dateToCheck) {
+                      const todayStr = format(new Date(), 'yyyy-MM-dd')
+                      dateToCheck = todayStr
+                    }
+
+                    const isCompleted =
+                      assignment.instance_completions?.[dateToCheck]
+                        ?.completed || false
+                    return isCompleted ? 'checked' : 'unchecked'
+                  })()}
+                  pressed={(() => {
+                    if (assignment.type !== 'assignment') {
+                      return false
+                    }
+                    if (!assignment.is_recurring) {
+                      return assignment.completed || false
+                    }
+
+                    let dateToCheck = selectedInstanceDate
+                    if (!dateToCheck) {
+                      const todayStr = format(new Date(), 'yyyy-MM-dd')
+                      dateToCheck = todayStr
+                    }
+
+                    return (
+                      assignment.instance_completions?.[dateToCheck]
+                        ?.completed || false
+                    )
+                  })()}
+                  onPressedChange={async () => {
+                    if (assignment.type !== 'assignment' || isToggling) return
+
+                    console.log('🎯 Toggle pressed for assignment:', {
+                      id: assignment.id,
+                      title: assignment.title,
+                      completed: assignment.completed,
+                    })
+
+                    setIsToggling(true)
+
+                    let instanceDate: string | undefined = undefined
+
+                    if (assignment.is_recurring) {
+                      instanceDate = selectedInstanceDate
+
+                      // If no instance date is selected, use today's date for today's assignments
+                      if (!instanceDate) {
+                        instanceDate = format(new Date(), 'yyyy-MM-dd')
+                      }
+                    }
+
+                    try {
+                      // Toggle the assignment
+                      await _onToggle(assignment.id, instanceDate)
+
+                      // Close the modal after the toggle completes and any animations finish
+                      if (onClose) {
+                        // Delay to allow the card to animate back to its position before closing
+                        setTimeout(() => {
+                          onClose()
+                        }, 600) // Increased delay for smoother UX
+                      }
+                    } finally {
+                      setIsToggling(false)
+                    }
+                  }}
+                >
+                  {isToggling ? (
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  ) : (
+                    <Check className="h-4 w-4" />
+                  )}
+                  {(() => {
+                    if (assignment.type !== 'assignment') {
+                      return 'View'
+                    }
+                    if (isToggling) {
+                      return 'Updating...'
+                    }
+                    if (!assignment.is_recurring) {
+                      return assignment.completed ? 'Done' : "I'm Done"
+                    }
+
+                    let dateToCheck = selectedInstanceDate
+                    if (!dateToCheck) {
+                      const todayStr = format(new Date(), 'yyyy-MM-dd')
+                      dateToCheck = todayStr
+                    }
+
+                    const isCompleted =
+                      assignment.instance_completions?.[dateToCheck]
+                        ?.completed || false
+                    return isCompleted ? 'Done' : "I'm Done"
+                  })()}
+                </Toggle>
+              )}
             </div>
 
             {isCreatingNote && (
-              <div
+              <motion.div
                 className="w-full justify-end space-y-3"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -510,96 +678,8 @@ function AssignmentCardExpanded({
                   </Button>
                   <Button onClick={createNote}>Save Note</Button>
                 </div>
-              </div>
+              </motion.div>
             )}
-
-            <Toggle
-              className={(() => {
-                'w-full h-12 transition-colors cursor-pointer'
-                if (!assignment.is_recurring) {
-                  return assignment.completed
-                    ? 'bg-green-500 text-white w-full h-12'
-                    : 'ring-inset ring-1 ring-green-500 text-foreground hover:bg-green-500 hover:text-white w-full h-12'
-                }
-
-                let dateToCheck = selectedInstanceDate
-                if (!dateToCheck) {
-                  const todayStr = format(new Date(), 'yyyy-MM-dd')
-                  dateToCheck = todayStr
-                }
-
-                const isCompleted =
-                  assignment.instance_completions?.[dateToCheck]
-                    ?.completed || false
-                return isCompleted
-                  ? 'bg-green-500 text-white w-full h-12'
-                  : 'bg-gray-200 text-gray-700 w-full h-12'
-              })()}
-              data-state={(() => {
-                if (!assignment.is_recurring) {
-                  return assignment.completed ? 'checked' : 'unchecked'
-                }
-
-                let dateToCheck = selectedInstanceDate
-                if (!dateToCheck) {
-                  const todayStr = format(new Date(), 'yyyy-MM-dd')
-                  dateToCheck = todayStr
-                }
-
-                const isCompleted =
-                  assignment.instance_completions?.[dateToCheck]
-                    ?.completed || false
-                return isCompleted ? 'checked' : 'unchecked'
-              })()}
-              pressed={(() => {
-                if (!assignment.is_recurring) {
-                  return assignment.completed || false
-                }
-
-                let dateToCheck = selectedInstanceDate
-                if (!dateToCheck) {
-                  const todayStr = format(new Date(), 'yyyy-MM-dd')
-                  dateToCheck = todayStr
-                }
-
-                return (
-                  assignment.instance_completions?.[dateToCheck]
-                    ?.completed || false
-                )
-              })()}
-              onPressedChange={() => {
-                let instanceDate: string | undefined = undefined
-
-                if (assignment.is_recurring) {
-                  instanceDate = selectedInstanceDate
-
-                  // If no instance date is selected, use today's date for today's assignments
-                  if (!instanceDate) {
-                    instanceDate = format(new Date(), 'yyyy-MM-dd')
-                  }
-                }
-
-                _onToggle(assignment.id, instanceDate)
-              }}
-            >
-              <Check className="h-4 w-4" />
-              {(() => {
-                if (!assignment.is_recurring) {
-                  return assignment.completed ? 'Done' : "I'm Done"
-                }
-
-                let dateToCheck = selectedInstanceDate
-                if (!dateToCheck) {
-                  const todayStr = format(new Date(), 'yyyy-MM-dd')
-                  dateToCheck = todayStr
-                }
-
-                const isCompleted =
-                  assignment.instance_completions?.[dateToCheck]
-                    ?.completed || false
-                return isCompleted ? 'Done' : "I'm Done"
-              })()}
-            </Toggle>
           </motion.div>
         </motion.div>
       </div>
@@ -613,56 +693,83 @@ export function AssignmentCardList({
   onCardClick,
   groupId,
   size = 'small',
+  assignmentNotes = [],
+  onNoteCreated,
+  onToggle,
+  recommendations,
 }: {
   assignments: Assignment[]
   image: boolean
   onCardClick: (assignmentId: string) => void
   groupId?: string
   size?: 'small' | 'xs'
+  assignmentNotes?: Note[]
+  onNoteCreated?: () => void
+  onToggle?: (id: string, instanceDate?: string) => void
+  recommendations?: Recommendation[]
 }) {
+  // Combine assignments and recommendations into a single list
+  const allItems = [
+    ...assignments.map((item) => ({ ...item, type: 'assignment' as const })),
+    ...(recommendations || []).map((item) => ({
+      ...item,
+      type: 'recommendation' as const,
+    })),
+  ]
+
   return (
-    <div id={`expanding-card-${groupId || 'default'}`} className="expanding-card-list">
-      {assignments.map((assignment) => {
-        // Get or create the image index for this assignment
-        let currentImageIndex: number
+    <div
+      id={`expanding-card-${groupId || 'default'}`}
+      className="expanding-card-list"
+    >
+      <AnimatePresence mode="popLayout">
+        {allItems.map((item) => {
+          const isAssignment = item.type === 'assignment'
+          // Get or create the image index for this item
+          let currentImageIndex: number
 
-        if (globalAssignmentImageMap.has(assignment.id)) {
-          // Use existing image index if already assigned
-          currentImageIndex = globalAssignmentImageMap.get(assignment.id)!
-        } else {
-          // Assign new image index and increment global counter
-          currentImageIndex = globalImageIndex % images.length
-          globalImageIndex++
+          if (globalAssignmentImageMap.has(item.id)) {
+            // Use existing image index if already assigned
+            currentImageIndex = globalAssignmentImageMap.get(item.id)!
+          } else {
+            // Assign new image index and increment global counter
+            currentImageIndex = globalImageIndex % images.length
+            globalImageIndex++
 
-          // Store the imageIndex for this assignment
-          globalAssignmentImageMap.set(assignment.id, currentImageIndex)
-        }
+            // Store the imageIndex for this item
+            globalAssignmentImageMap.set(item.id, currentImageIndex)
+          }
 
-        return (
-          <AssignmentCard
-            size={size}
-            key={assignment.id}
-            assignment={assignment}
-            onToggle={() => { }}
-            getDateLabel={(_date, _completed) =>
-              AssignmentService.getDateLabel(assignment)
-            }
-            getDateColor={(_date, _completed) =>
-              AssignmentService.getDateColor(assignment)
-            }
-            imageIndex={currentImageIndex}
-            image={image}
-            showDate={true}
-            onNoteCreated={() => { }}
-            assignmentNotes={[]}
-            expandedCardId={null}
-            setExpandedCardId={() => { }}
-            selectedInstanceDate={undefined}
-            groupId={groupId}
-            onClick={() => onCardClick(assignment.id)}
-          />
-        )
-      })}
+          return (
+            <AssignmentCard
+              size={size}
+              key={item.id}
+              assignment={item}
+              onToggle={onToggle || (() => { })}
+              getDateLabel={(date, _completed) =>
+                isAssignment
+                  ? AssignmentService.getDateLabel(item as Assignment)
+                  : format(parseISO(date), 'MMM dd, yyyy')
+              }
+              getDateColor={(_date, _completed) =>
+                isAssignment
+                  ? AssignmentService.getDateColor(item as Assignment)
+                  : 'text-gray-600'
+              }
+              imageIndex={currentImageIndex}
+              image={image}
+              showDate={isAssignment}
+              onNoteCreated={onNoteCreated}
+              assignmentNotes={assignmentNotes}
+              expandedCardId={null}
+              setExpandedCardId={() => { }}
+              selectedInstanceDate={undefined}
+              groupId={groupId}
+              onClick={() => onCardClick(item.id)}
+            />
+          )
+        })}
+      </AnimatePresence>
     </div>
   )
 }
@@ -672,15 +779,41 @@ function AssignmentCardGroup({
   image,
   groupId,
   size = 'small',
+  assignmentNotes = [],
+  onNoteCreated,
+  onToggle,
+  recommendations,
+  selectedChildId,
 }: {
   assignments: Assignment[]
   image: boolean
   groupId?: string
   size?: 'small' | 'xs'
+  assignmentNotes?: Note[]
+  onNoteCreated?: () => void
+  onToggle?: (id: string, instanceDate?: string) => void
+  recommendations?: Recommendation[]
+  selectedChildId?: string | null
 }) {
+  // Debug: Track group re-renders
+  console.log(
+    '🔄 AssignmentCardGroup rendered with',
+    assignments.length,
+    'assignments',
+  )
+
   const [openId, setOpenId] = useState<string | null>(null)
   const openCard = (id: string) => setOpenId(id)
   const closeCard = () => setOpenId(null)
+
+  // Combine assignments and recommendations into a single list for the expanded card
+  const allItems = [
+    ...assignments.map((item) => ({ ...item, type: 'assignment' as const })),
+    ...(recommendations || []).map((item) => ({
+      ...item,
+      type: 'recommendation' as const,
+    })),
+  ]
 
   return (
     <>
@@ -690,29 +823,45 @@ function AssignmentCardGroup({
         onCardClick={openCard}
         groupId={groupId}
         size={size}
+        assignmentNotes={assignmentNotes}
+        onNoteCreated={onNoteCreated}
+        onToggle={onToggle}
+        recommendations={recommendations}
       />
       <AnimatePresence>
         {openId && (
           <AssignmentCardExpanded
             id={openId}
             key="card-item"
-            assignment={assignments.find((a) => a.id === openId)!}
-            onToggle={() => { }}
-            getDateLabel={(_date, _completed) =>
-              AssignmentService.getDateLabel(
-                assignments.find((a) => a.id === openId)!,
-              )
+            assignment={
+              allItems.find((item) => item.id === openId) || {
+                ...assignments.find((a) => a.id === openId)!,
+                type: 'assignment' as const,
+              }
             }
-            getDateColor={(_date, _completed) =>
-              AssignmentService.getDateColor(
-                assignments.find((a) => a.id === openId)!,
-              )
-            }
+            onToggle={onToggle || (() => { })}
+            getDateLabel={(_date, _completed) => {
+              const foundItem = allItems.find((item) => item.id === openId)
+              const isItemAssignment = foundItem?.type === 'assignment'
+              return isItemAssignment
+                ? AssignmentService.getDateLabel(foundItem as Assignment)
+                : format(parseISO(date), 'MMM dd, yyyy')
+            }}
+            getDateColor={(_date, _completed) => {
+              const foundItem = allItems.find((item) => item.id === openId)
+              const isItemAssignment = foundItem?.type === 'assignment'
+              return isItemAssignment
+                ? AssignmentService.getDateColor(foundItem as Assignment)
+                : 'text-gray-600'
+            }}
             imageIndex={globalAssignmentImageMap.get(openId) || 0}
             image={image}
-            showDate={true}
-            onNoteCreated={() => { }}
-            assignmentNotes={[]}
+            showDate={
+              allItems.find((item) => item.id === openId)?.type === 'assignment'
+            }
+            onNoteCreated={onNoteCreated}
+            assignmentNotes={assignmentNotes}
+            selectedChildId={selectedChildId}
             groupId={groupId}
             onClose={closeCard}
           />
@@ -724,26 +873,58 @@ function AssignmentCardGroup({
 
 export { AssignmentCard }
 
+interface Recommendation {
+  id: string
+  title: string
+  content?: string
+  category?: string
+  links?: Array<{ title: string; url: string; type?: 'link' | 'video' }>
+  created_at: string
+  updated_at: string
+  created_by: string
+  parent_name?: string
+}
+
 export default function AssignmentCardContainer({
   assignments,
   image,
   groupId,
   size = 'small',
+  assignmentNotes = [],
+  onNoteCreated,
+  onToggle,
+  recommendations,
+  selectedChildId,
 }: {
   assignments: Assignment[]
   image: boolean
   groupId?: string
   size?: 'small' | 'xs'
+  assignmentNotes?: Note[]
+  onNoteCreated?: () => void
+  onToggle?: (id: string, instanceDate?: string) => void
+  recommendations?: Recommendation[]
+  selectedChildId?: string | null
 }) {
+  // Debug: Track container re-renders
+  console.log(
+    '🔄 AssignmentCardContainer rendered with',
+    assignments.length,
+    'assignments',
+  )
+
   return (
-    <div
-      id="expanding-card"
-    >
+    <div id="expanding-card">
       <AssignmentCardGroup
         assignments={assignments}
         image={image}
         groupId={groupId}
         size={size}
+        assignmentNotes={assignmentNotes}
+        onNoteCreated={onNoteCreated}
+        onToggle={onToggle}
+        recommendations={recommendations}
+        selectedChildId={selectedChildId}
       />
     </div>
   )

@@ -24,39 +24,39 @@ export default function PageGrid({
   const gridStyle =
     variant === 'grid'
       ? {
-        backgroundImage:
-          'linear-gradient(to right, var(--border) 1px, transparent 1px), linear-gradient(to bottom, var(--border) 1px, transparent 1px)',
-        backgroundSize: '20px 30px',
-        WebkitMaskImage:
-          'radial-gradient(ellipse 70% 60% at 50% 100%, #000 60%, transparent 100%)',
-        maskImage:
-          'radial-gradient(ellipse 70% 60% at 50% 100%, #000 60%, transparent 100%)',
-      }
-      : variant === 'gridTight'
-        ? {
           backgroundImage:
             'linear-gradient(to right, var(--border) 1px, transparent 1px), linear-gradient(to bottom, var(--border) 1px, transparent 1px)',
-          backgroundSize: '10px 10px',
+          backgroundSize: '20px 30px',
           WebkitMaskImage:
-            'radial-gradient(ellipse 70% 60% at 50% 100%, #fff 60%, transparent 100%)',
+            'radial-gradient(ellipse 70% 60% at 50% 100%, #000 60%, transparent 100%)',
           maskImage:
-            'radial-gradient(ellipse 70% 60% at 50% 100%, #fff 60%, transparent 100%)',
+            'radial-gradient(ellipse 70% 60% at 50% 100%, #000 60%, transparent 100%)',
         }
+      : variant === 'gridTight'
+        ? {
+            backgroundImage:
+              'linear-gradient(to right, var(--border) 1px, transparent 1px), linear-gradient(to bottom, var(--border) 1px, transparent 1px)',
+            backgroundSize: '10px 10px',
+            WebkitMaskImage:
+              'radial-gradient(ellipse 70% 60% at 50% 100%, #fff 60%, transparent 100%)',
+            maskImage:
+              'radial-gradient(ellipse 70% 60% at 50% 100%, #fff 60%, transparent 100%)',
+          }
         : variant === 'gradient'
           ? {
-            backgroundImage: `linear-gradient(to right, var(--color-border) 1px, transparent 1px), linear-gradient(to bottom, var(--color-border) 1px, transparent 1px), radial-gradient(circle 800px at 0% 100%, color-mix(in srgb, var(--color-primary) 50%, transparent), transparent), radial-gradient(circle 500px at 100% 0%, color-mix(in srgb, var(--color-primary) 50%, transparent), transparent)`,
-            backgroundSize: '8px 8px, 8px 8px, 100% 100%, 100% 100%',
-            WebkitMaskImage:
-              'radial-gradient(ellipse 100% 60% at 50% 100%, #fff 60%, transparent 100%)',
-            maskImage:
-              'radial-gradient(ellipse 100% 60% at 50% 100%, #fff 60%, transparent 100%)',
-          }
+              backgroundImage: `linear-gradient(to right, var(--color-border) 1px, transparent 1px), linear-gradient(to bottom, var(--color-border) 1px, transparent 1px), radial-gradient(circle 800px at 0% 100%, color-mix(in srgb, var(--color-primary) 50%, transparent), transparent), radial-gradient(circle 500px at 100% 0%, color-mix(in srgb, var(--color-primary) 50%, transparent), transparent)`,
+              backgroundSize: '8px 8px, 8px 8px, 100% 100%, 100% 100%',
+              WebkitMaskImage:
+                'radial-gradient(ellipse 100% 60% at 50% 100%, #fff 60%, transparent 100%)',
+              maskImage:
+                'radial-gradient(ellipse 100% 60% at 50% 100%, #fff 60%, transparent 100%)',
+            }
           : variant === 'color'
             ? {
-              backgroundImage: `radial-gradient(125% 125% at 50% 10%, var(--color-background) 60%, var(--color-primary) 100%)
+                backgroundImage: `radial-gradient(125% 125% at 50% 10%, var(--color-background) 60%, var(--color-primary) 100%)
       `,
-              backgroundSize: '100% 100%',
-            }
+                backgroundSize: '100% 100%',
+              }
             : {}
 
   return <div className={pageGridVariants({ variant })} style={gridStyle} />

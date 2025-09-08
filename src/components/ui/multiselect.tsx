@@ -541,7 +541,7 @@ const MultipleSelector = ({
                 disabled ||
                 selected.length < 1 ||
                 selected.filter((s) => s.fixed).length === selected.length) &&
-              'hidden',
+                'hidden',
             )}
             aria-label="Clear all"
           >
@@ -610,7 +610,7 @@ const MultipleSelector = ({
                               className={cn(
                                 'cursor-pointer',
                                 option.disable &&
-                                'pointer-events-none cursor-not-allowed opacity-50',
+                                  'pointer-events-none cursor-not-allowed opacity-50',
                               )}
                             >
                               {option.label}

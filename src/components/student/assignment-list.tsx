@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react'
+import React, { Suspense, useEffect, memo } from 'react'
 import ColorfulText from '@/components/ui/colourful-text'
 import {
   Timeline,
@@ -12,26 +12,65 @@ import { Card, CardContent } from '@/components/ui/card'
 import { CheckCircle2 } from 'lucide-react'
 import NoAssignments from '@/components/no-assignments'
 
+interface Note {
+  id: string
+  title: string
+  content: string | null
+  category: string
+  created_at: string
+  assignment_id?: string
+}
+
 interface AssignmentListProps {
   assignments: Assignment[]
   selectedChildName?: string
   onInstanceClick: (assignmentId: string, date: string, dayName: string) => void
   isLoading?: boolean
+  notes?: Note[]
+  onNoteCreated?: () => void
+  onToggle?: (assignmentId: string, instanceDate?: string) => void
+  selectedChildId?: string | null
 }
 
-export function AssignmentList({
+const AssignmentListComponent: React.FC<AssignmentListProps> = ({
   assignments,
   onInstanceClick: _onInstanceClick,
   isLoading = false,
-}: AssignmentListProps) {
+  notes = [],
+  onNoteCreated,
+  onToggle,
+  selectedChildId,
+}) => {
+  // Debug: Watch for prop changes to ensure re-renders
+  useEffect(() => {
+    console.log(
+      '🔄 AssignmentList props changed - received',
+      assignments.length,
+      'assignments',
+    )
+  }, [assignments, notes, onToggle, selectedChildId])
+
   const { overdue, today, upcoming } =
     AssignmentService.groupAssignments(assignments)
+
+  console.log('📋 AssignmentList grouped:', {
+    overdue: overdue.map((a) => ({ id: a.id, title: a.title })),
+    today: today.map((a) => ({ id: a.id, title: a.title })),
+    upcoming: upcoming.map((a) => ({ id: a.id, title: a.title })),
+  })
+
+  console.log('🔍 AssignmentList filtering details:', {
+    overdueCount: overdue.length,
+    todayCount: today.length,
+    upcomingCount: upcoming.length,
+    totalAssignments: assignments.length,
+  })
 
   // Show loading state while assignments are being fetched
   if (isLoading) {
     return (
       <Card className="relative">
-        <CardContent className="text-center py-40">
+        <CardContent className="text-center py-40 text-2xl">
           <ColorfulText text="Loading assignments..." />
         </CardContent>
       </Card>
@@ -72,6 +111,10 @@ export function AssignmentList({
               image={true}
               assignments={overdue}
               groupId="overdue"
+              assignmentNotes={notes}
+              onNoteCreated={onNoteCreated}
+              onToggle={onToggle}
+              selectedChildId={selectedChildId}
             />
           </TimelineItem>
         )}
@@ -85,6 +128,10 @@ export function AssignmentList({
               image={true}
               assignments={today}
               groupId="today"
+              assignmentNotes={notes}
+              onNoteCreated={onNoteCreated}
+              onToggle={onToggle}
+              selectedChildId={selectedChildId}
             />
           </TimelineItem>
         )}
@@ -97,6 +144,10 @@ export function AssignmentList({
               image={true}
               assignments={upcoming}
               groupId="upcoming"
+              assignmentNotes={notes}
+              onNoteCreated={onNoteCreated}
+              onToggle={onToggle}
+              selectedChildId={selectedChildId}
             />
           </TimelineItem>
         )}
@@ -104,3 +155,5 @@ export function AssignmentList({
     </Suspense>
   )
 }
+
+export const AssignmentList = memo(AssignmentListComponent)

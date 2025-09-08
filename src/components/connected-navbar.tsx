@@ -42,7 +42,7 @@ export function ConnectedNavbar() {
         setNotifications(data.notifications)
         setNotificationCount(data.count)
       }
-    } catch { }
+    } catch {}
   }
 
   useEffect(() => {
@@ -56,8 +56,8 @@ export function ConnectedNavbar() {
           setUser(data.user)
           setUserName(
             data.user.user_metadata?.full_name ||
-            data.user.email?.split('@')[0] ||
-            'User',
+              data.user.email?.split('@')[0] ||
+              'User',
           )
 
           // Force admin role for Dallas
@@ -111,8 +111,8 @@ export function ConnectedNavbar() {
         setUser(session.user)
         setUserName(
           session.user.user_metadata?.full_name ||
-          session.user.email?.split('@')[0] ||
-          'User',
+            session.user.email?.split('@')[0] ||
+            'User',
         )
         // Fetch role in background, but override for admin emails
         try {

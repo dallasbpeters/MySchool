@@ -39,10 +39,11 @@ export function LocalDock({ activeTab, onTabChange }: LocalDockProps) {
         {data.map((item, idx) => (
           <DockItem
             key={idx}
-            className={`cursor-pointer aspect-square rounded-full transition-colors ${activeTab === item.value
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-background text-foreground dark:bg-neutral-800'
-              }`}
+            className={`cursor-pointer aspect-square rounded-full transition-colors ${
+              activeTab === item.value
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-background text-foreground dark:bg-neutral-800'
+            }`}
             onClick={() => onTabChange(item.value)}
           >
             <DockLabel>{item.title}</DockLabel>

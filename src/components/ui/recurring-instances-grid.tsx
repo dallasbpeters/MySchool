@@ -133,10 +133,11 @@ export const RecurringInstancesGrid = ({
             return (
               <Card
                 key={instance.date}
-                className={`md:py-0 h-30 border rounded-md transition-colors relative overflow-hidden min-w-60 flex-shrink-0 cursor-pointer ${isSelected
+                className={`md:py-0 h-30 border rounded-md transition-colors relative overflow-hidden min-w-60 flex-shrink-0 cursor-pointer ${
+                  isSelected
                     ? 'bg-primary/20 border-primary hover:bg-primary/30'
                     : 'bg-muted/30 hover:bg-muted/50'
-                  }`}
+                }`}
                 onClick={() =>
                   onInstanceClick?.(instance.date, instance.dayName)
                 }

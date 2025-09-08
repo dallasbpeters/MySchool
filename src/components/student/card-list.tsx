@@ -330,4 +330,3 @@ function transformDataToItems(
 
   return [...assignmentItems, ...recommendationItems]
 }
-

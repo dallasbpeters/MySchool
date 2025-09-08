@@ -198,9 +198,6 @@ const UserMenu = ({
       <DropdownMenuItem onClick={() => onItemClick?.('profile')}>
         Profile
       </DropdownMenuItem>
-      {/* <DropdownMenuItem onClick={() => onItemClick?.('settings')}>
-        Settings
-      </DropdownMenuItem> */}
       <DropdownMenuSeparator />
       <DropdownMenuItem onClick={() => onItemClick?.('logout')}>
         Log out
@@ -333,7 +330,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
                               if (onNavItemClick && link.href)
                                 onNavItemClick(link.href)
                             }}
-                            className="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-primary hover:text-primary-foreground cursor-pointer no-underline"
+                            className="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-primary hover:text-primary active:text-primary cursor-pointer no-underline"
                           >
                             {link.label}
                           </button>
@@ -365,7 +362,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
                             if (onNavItemClick && link.href)
                               onNavItemClick(link.href)
                           }}
-                          className="text-muted-foreground hover:text-primary py-1.5 font-medium transition-colors cursor-pointer group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 text-sm active:bg-primary active:text-primary-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+                          className="text-muted-foreground hover:text-primary py-1.5 font-medium transition-colors cursor-pointer group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 text-sm active:text-primary focus:outline-none disabled:pointer-events-none disabled:opacity-50"
                         >
                           {link.label}
                         </NavigationMenuLink>

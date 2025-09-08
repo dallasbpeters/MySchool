@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-
 export async function GET() {
   try {
     let supabase
@@ -69,17 +68,20 @@ export async function GET() {
       recommendations = data || []
     }
 
-    return NextResponse.json({
-      recommendations,
-      profile: {
-        role: profile?.role,
-        parent_id: profile?.parent_id,
+    return NextResponse.json(
+      {
+        recommendations,
+        profile: {
+          role: profile?.role,
+          parent_id: profile?.parent_id,
+        },
       },
-    }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        },
       },
-    })
+    )
   } catch (error) {
     console.error('Unexpected error:', error)
     return NextResponse.json(

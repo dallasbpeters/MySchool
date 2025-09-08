@@ -204,17 +204,17 @@ export function ConnectedNavbar() {
       return [
         { href: '/admin', label: 'Admin' },
         { href: '/debug', label: 'Debug' },
-        { href: '/parent', label: 'Dashboard' },
+        { href: '/parent', label: 'Manage Assignments' },
+        { href: '/parent/children', label: 'Your Students' },
+        { href: '/student', label: 'Student View' },
         { href: '/calendar', label: 'Calendar' },
-        { href: '/parent/children', label: 'Students' },
-        { href: '/student', label: 'Student Assignments' },
       ]
     }
     if (userRole === 'parent') {
       return [
-        { href: '/parent', label: 'Dashboard' },
-        { href: '/parent/children', label: 'Students' },
-        { href: '/student', label: 'Student Assignments' },
+        { href: '/parent', label: 'Manage Assignments' },
+        { href: '/parent/children', label: 'Your Students' },
+        { href: '/student', label: 'Student View' },
         { href: '/calendar', label: 'Calendar' },
       ]
     } else if (userRole === 'student') {

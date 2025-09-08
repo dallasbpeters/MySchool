@@ -1,6 +1,11 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react'
+import {
+  fetchAssignmentsCached,
+  fetchChildrenCached,
+  fetchRecommendationsCached,
+} from '@/lib/cache-utils'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { LocalDock, type TabValue } from '@/components/local-dock'
 import PageGrid from '@/components/page-grid'
@@ -13,6 +18,7 @@ import { AssignmentTimeline } from '@/components/student/assignment-timeline'
 import { NotesTab } from '@/components/student/notes-tab'
 import { AssignmentService } from '@/services/assignment-service'
 import { NoteService } from '@/services/note-service'
+import ExpandingCardContainer from '@/components/expanding-card'
 
 interface Assignment {
   id: string
@@ -52,9 +58,22 @@ interface Note {
   assignment_id?: string
 }
 
+interface Recommendation {
+  id: string
+  title: string
+  content?: string
+  category?: string
+  links?: Array<{ title: string; url: string; type?: 'link' | 'video' }>
+  created_at: string
+  updated_at: string
+  created_by: string
+  parent_name?: string
+}
+
 export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState<TabValue>('assignments')
   const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [_recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [userRole, setUserRole] = useState<string>('')
   const [children, setChildren] = useState<Child[]>([])
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
@@ -63,7 +82,7 @@ export default function StudentDashboard() {
   )
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null)
   const [notes, setNotes] = useState<Note[]>([])
-  const [selectedInstanceDates, setSelectedInstanceDates] = useState<
+  const [_selectedInstanceDates, setSelectedInstanceDates] = useState<
     Record<string, string>
   >({})
   const [editingNote, setEditingNote] = useState<Note | null>(null)
@@ -84,11 +103,7 @@ export default function StudentDashboard() {
   const fetchAssignments = useCallback(async (childId?: string) => {
     try {
       setIsLoadingAssignments(true)
-      const url = childId
-        ? `/api/assignments?childId=${childId}`
-        : '/api/assignments'
-      const response = await fetch(url)
-      const data = await response.json()
+      const data = await fetchAssignmentsCached(childId)
 
       if (data.assignments) {
         setAssignments(data.assignments)
@@ -103,20 +118,38 @@ export default function StudentDashboard() {
     }
   }, [])
 
-  const fetchNotes = useCallback(async (childId?: string) => {
+  const fetchNotes = useCallback(
+    async (childId?: string) => {
+      try {
+        const studentId = childId || selectedChildId
+        const url = studentId
+          ? `/api/notes?studentId=${studentId}`
+          : '/api/notes'
+        const response = await fetch(url)
+        const data = await response.json()
+
+        if (data.notes) {
+          setNotes(data.notes)
+        }
+      } catch (error) {
+        console.error('Error fetching notes:', error)
+      }
+    },
+    [selectedChildId],
+  )
+
+  const _fetchRecommendations = useCallback(async () => {
     try {
-      const studentId = childId || selectedChildId
-      const url = studentId ? `/api/notes?studentId=${studentId}` : '/api/notes'
-      const response = await fetch(url)
+      const response = await fetch('/api/recommendations')
       const data = await response.json()
 
-      if (data.notes) {
-        setNotes(data.notes)
+      if (data.recommendations) {
+        setRecommendations(data.recommendations)
       }
     } catch (error) {
-      console.error('Error fetching notes:', error)
+      console.error('Error fetching recommendations:', error)
     }
-  }, [selectedChildId])
+  }, [])
 
   const fetchChildren = useCallback(
     async (roleOverride?: string) => {
@@ -157,8 +190,7 @@ export default function StudentDashboard() {
             setIsLoadingAssignments(false)
           }
         } else {
-          response = await fetch('/api/children')
-          data = await response.json()
+          data = await fetchChildrenCached()
           if (data.children && data.children.length > 0) {
             // Add default email if missing to match Child interface
             const childrenWithEmail = data.children.map((child) => ({
@@ -233,8 +265,27 @@ export default function StudentDashboard() {
 
   // Initialize data
   useEffect(() => {
-    checkUserRole()
-    fetchNotes()
+    const loadInitialData = async () => {
+      try {
+        // Load data in parallel for better performance
+        const [_notesData, recommendationsData] = await Promise.all([
+          fetchNotes(),
+          fetchRecommendationsCached(),
+        ])
+
+        // Process recommendations data
+        if (recommendationsData.recommendations) {
+          setRecommendations(recommendationsData.recommendations)
+        }
+
+        // Check user role and load children if needed
+        await checkUserRole()
+      } catch (error) {
+        console.error('Error loading initial data:', error)
+      }
+    }
+
+    loadInitialData()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChildSelect = (childId: string, childName: string) => {
@@ -245,7 +296,7 @@ export default function StudentDashboard() {
     fetchNotes(childId)
   }
 
-  const handleToggle = async (assignmentId: string, instanceDate?: string) => {
+  const _handleToggle = async (assignmentId: string, instanceDate?: string) => {
     // Find the assignment to determine current completion state
     const assignment = assignments.find((a) => a.id === assignmentId)
     if (!assignment) return
@@ -346,7 +397,7 @@ export default function StudentDashboard() {
 
   return (
     <>
-      <div className="z-10 py-10 px-2 relative container mx-auto flex flex-col h-16 max-w-screen-2xl">
+      <div className="z-3 py-10 px-4 relative container mx-auto flex flex-col max-w-screen-xl">
         <StudentHeader
           userRole={userRole}
           selectedChildId={selectedChildId}
@@ -365,12 +416,6 @@ export default function StudentDashboard() {
               <AssignmentList
                 assignments={assignments}
                 selectedChildName={selectedChildName}
-                expandedCardId={expandedCardId}
-                setExpandedCardId={setExpandedCardId}
-                selectedInstanceDates={selectedInstanceDates}
-                notes={notes}
-                onToggle={handleToggle}
-                onNoteCreated={fetchNotes}
                 onInstanceClick={handleInstanceClick}
                 isLoading={isLoadingAssignments}
               />
@@ -380,11 +425,6 @@ export default function StudentDashboard() {
           <TabsContent value="timeline" className="relative">
             <AssignmentTimeline
               assignments={assignments}
-              expandedCardId={expandedCardId}
-              setExpandedCardId={setExpandedCardId}
-              notes={notes}
-              onToggle={handleToggle}
-              onNoteCreated={fetchNotes}
             />
           </TabsContent>
 
@@ -401,9 +441,12 @@ export default function StudentDashboard() {
               onDeleteNote={handleDeleteNote}
             />
           </TabsContent>
+          <TabsContent value="recommendations" className="relative">
+            <ExpandingCardContainer assignments={[]} image={true} />
+          </TabsContent>
         </Tabs>
         <LocalDock activeTab={activeTab} onTabChange={handleTabChange} />
-      </div >
+      </div>
 
       <PageGrid variant="grid" />
     </>

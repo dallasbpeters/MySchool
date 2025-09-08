@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -10,27 +10,17 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  RadixDropdown,
+  DropdownItem,
+} from '@/components/ui/motion/motion-dropdown-menu'
 import { Option } from '@/components/ui/multiselect'
 import { AssignmentForm } from '@/components/assignment-form'
-import {
-  Plus,
-  Trash2,
-  Calendar,
-  Repeat,
-  Edit,
-  Users,
-  Shield,
-  Filter,
-} from 'lucide-react'
-import { format } from 'date-fns'
+import { Plus, Filter } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import PageGrid from '@/components/page-grid'
+import { KanbanAssignmentBoard } from '@/components/kanban-assignment-board'
 interface Link {
   title: string
   url: string
@@ -132,23 +122,7 @@ export default function AdminDashboard() {
     checkAdminAccess()
   }, [checkAdminAccess])
 
-  // Update due date when calendar date is selected
-  useEffect(() => {
-    if (selectedCalendarDate) {
-      const formattedDate = format(selectedCalendarDate, 'yyyy-MM-dd')
-      console.log('DATE DEBUG:', {
-        selectedCalendarDate,
-        formattedDate,
-        selectedYear: selectedCalendarDate.getFullYear(),
-        selectedMonth: selectedCalendarDate.getMonth() + 1,
-        selectedDay: selectedCalendarDate.getDate(),
-      })
-      setNewAssignment((prev) => ({
-        ...prev,
-        due_date: formattedDate,
-      }))
-    }
-  }, [selectedCalendarDate])
+  // Note: Date synchronization is now handled in AssignmentForm component
 
   const fetchAllAssignments = async () => {
     try {
@@ -297,7 +271,7 @@ export default function AdminDashboard() {
       if (!response.ok || data?.error) {
         throw new Error(
           data?.error ||
-          `Assignment ${isEditing ? 'update' : 'creation'} failed`,
+            `Assignment ${isEditing ? 'update' : 'creation'} failed`,
         )
       }
 
@@ -436,16 +410,22 @@ export default function AdminDashboard() {
       },
       recurrence_end_date: assignment.recurrence_end_date || '',
     })
+
+    // Set the calendar date to match the assignment's due date
+    // Use parseISO to properly handle the date string from the database
+    setSelectedCalendarDate(parseISO(assignment.due_date))
+
     setIsCreating(true)
   }
 
   const resetForm = () => {
     setEditingAssignment(null)
+    const today = new Date()
     setNewAssignment({
       title: '',
       content: null,
       links: [] as Link[],
-      due_date: format(new Date(), 'yyyy-MM-dd'),
+      due_date: format(today, 'yyyy-MM-dd'),
       category: [] as Option[],
       selectedChildren: [] as Option[],
       is_recurring: false,
@@ -455,17 +435,95 @@ export default function AdminDashboard() {
       },
       recurrence_end_date: '',
     })
+    // Reset calendar to today when creating new assignment
+    setSelectedCalendarDate(today)
     setIsCreating(false)
   }
 
   // Filter assignments by selected family
-  const filteredAssignments =
-    selectedFamily === 'all'
-      ? assignments
-      : assignments.filter((a) => {
-        const family = families.find((f) => f.parent_name === a.parent_name)
-        return family?.parent_id === selectedFamily
+  const filteredAssignments = useMemo(
+    () =>
+      selectedFamily === 'all'
+        ? assignments
+        : assignments.filter((a) => {
+            const family = families.find((f) => f.parent_name === a.parent_name)
+            return family?.parent_id === selectedFamily
+          }),
+    [selectedFamily, assignments, families],
+  )
+
+  // Kanban board handlers
+  const handleKanbanAssignmentUpdate = (assignment: Assignment) => {
+    // Open the edit form instead of updating directly
+    startEditAssignment(assignment)
+  }
+
+  const handleKanbanAssignmentDragUpdate = async (assignment: Assignment) => {
+    // Handle category updates from drag & drop in kanban
+    try {
+      const response = await fetch(
+        `/api/admin/assignments?id=${assignment.id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: assignment.title,
+            content: assignment.content,
+            links: assignment.links,
+            due_date: assignment.due_date,
+            category: assignment.category,
+            selectedChildren: assignment.assigned_children || [],
+            is_recurring: assignment.is_recurring,
+            recurrence_pattern: assignment.is_recurring
+              ? assignment.recurrence_pattern
+              : null,
+            recurrence_end_date:
+              assignment.is_recurring && assignment.recurrence_end_date
+                ? assignment.recurrence_end_date
+                : null,
+          }),
+        },
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Update failed')
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast({
+          title: 'Success',
+          description: 'Assignment category updated',
+        })
+        fetchAllAssignments()
+      }
+    } catch (error: unknown) {
+      toast({
+        title: 'Error',
+        description: (error as Error).message || 'Failed to update assignment',
+        variant: 'destructive',
       })
+    }
+  }
+
+  const handleKanbanCreateAssignment = (category: string) => {
+    // Clear any existing edit state first
+    setEditingAssignment(null)
+
+    // Pre-populate the category and open the create form
+    const categoryOptions =
+      category !== 'Uncategorized' ? [{ label: category, value: category }] : []
+
+    setNewAssignment((prev) => ({
+      ...prev,
+      category: categoryOptions,
+    }))
+    setIsCreating(true)
+  }
 
   // Get all children options for assignment (deduplicated by ID)
   const allChildrenOptions = Array.from(
@@ -488,51 +546,69 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <div className="z-5 relative container mx-auto p-4 max-w-6xl">
-        <div className="gap-4 flex md:flex-row flex-col justify-between items-start md:items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Shield className="h-8 w-8 text-blue-600" />
-              Admin Dashboard
-            </h1>
-            <p className="text-muted-foreground">
-              Manage assignments across all families
-            </p>
+      <div className="z-5 relative mx-auto p-4 ">
+        <Tabs defaultValue="assignments" className=" w-auto self-start">
+          <div className="gap-4 flex md:flex-row flex-col justify-start items-start md:items-center mb-6 z-20">
+            <TabsList className="inline-flex self-start w-auto">
+              <TabsTrigger value="assignments">All Assignments</TabsTrigger>
+              <TabsTrigger value="families">Families</TabsTrigger>
+            </TabsList>
+            <Button
+              className="gap-2"
+              onClick={() => {
+                setEditingAssignment(null)
+                setIsCreating(true)
+              }}
+              disabled={families.length === 0}
+            >
+              <Plus className="h-4 w-4" />
+              Create Assignment
+              {families.length === 0 && ' (Loading...)'}
+            </Button>
+            <RadixDropdown
+              triggerText={
+                <>
+                  <Filter className="h-4 w-4" />
+                  {selectedFamily === 'all'
+                    ? 'All Families '
+                    : families.find((f) => f.parent_id === selectedFamily)
+                        ?.parent_name || 'Unknown Family '}
+                  ▾
+                </>
+              }
+            >
+              <DropdownItem
+                onClick={() => setSelectedFamily('all')}
+                className={
+                  selectedFamily === 'all'
+                    ? 'bg-accent text-accent-foreground'
+                    : ''
+                }
+              >
+                All Families ({assignments.length} assignments)
+              </DropdownItem>
+              {families.map((family) => {
+                const familyAssignmentCount = assignments.filter(
+                  (a) => a.parent_name === family.parent_name,
+                ).length
+                return (
+                  <DropdownItem
+                    key={family.parent_id}
+                    onClick={() => setSelectedFamily(family.parent_id)}
+                    className={
+                      selectedFamily === family.parent_id
+                        ? 'bg-accent text-accent-foreground'
+                        : ''
+                    }
+                  >
+                    {family.parent_name} ({familyAssignmentCount} assignments)
+                  </DropdownItem>
+                )
+              })}
+            </RadixDropdown>
           </div>
 
-          <Button
-            className="gap-2"
-            onClick={() => setIsCreating(true)}
-            disabled={families.length === 0}
-          >
-            <Plus className="h-4 w-4" />
-            Create Assignment
-            {families.length === 0 && ' (Loading...)'}
-          </Button>
-
-          <AssignmentForm
-            isOpen={isCreating}
-            onOpenChange={setIsCreating}
-            editingAssignment={editingAssignment}
-            assignmentData={newAssignment}
-            onAssignmentDataChange={setNewAssignment}
-            onSave={createOrUpdateAssignment}
-            onCancel={resetForm}
-            isSaving={isSaving}
-            categories={categories}
-            childrenOptions={allChildrenOptions}
-            selectedCalendarDate={selectedCalendarDate}
-            onCalendarDateChange={setSelectedCalendarDate}
-          />
-        </div>
-
-        <Tabs defaultValue="assignments" className="w-full">
-          <TabsList>
-            <TabsTrigger value="assignments">All Assignments</TabsTrigger>
-            <TabsTrigger value="families">Families</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="assignments" className="space-y-4">
+          <TabsContent value="assignments" className="space-y-4 z-10">
             <Suspense
               fallback={
                 <div className="flex items-center justify-center h-64">
@@ -540,52 +616,6 @@ export default function AdminDashboard() {
                 </div>
               }
             >
-              <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-semibold">
-                  All Assignments ({filteredAssignments.length}
-                  {selectedFamily !== 'all' && ` of ${assignments.length}`})
-                </h2>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Filter className="h-4 w-4" />
-                      {selectedFamily === 'all'
-                        ? 'All Families'
-                        : families.find((f) => f.parent_id === selectedFamily)
-                          ?.parent_name || 'Unknown Family'}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => setSelectedFamily('all')}
-                      className={selectedFamily === 'all' ? 'bg-accent' : ''}
-                    >
-                      All Families ({assignments.length} assignments)
-                    </DropdownMenuItem>
-                    {families.map((family) => {
-                      const familyAssignmentCount = assignments.filter(
-                        (a) => a.parent_name === family.parent_name,
-                      ).length
-                      return (
-                        <DropdownMenuItem
-                          key={family.parent_id}
-                          onClick={() => setSelectedFamily(family.parent_id)}
-                          className={
-                            selectedFamily === family.parent_id
-                              ? 'bg-accent'
-                              : ''
-                          }
-                        >
-                          {family.parent_name} ({familyAssignmentCount}{' '}
-                          assignments)
-                        </DropdownMenuItem>
-                      )
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
               {assignments.length > 0 &&
                 (() => {
                   // const parentBreakdown = assignments.reduce((acc, a) => {
@@ -596,81 +626,25 @@ export default function AdminDashboard() {
                   return null
                 })()}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredAssignments.map((assignment) => (
-                  <Card key={assignment.id} className="group">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="flex items-center gap-2">
-                            {assignment.title}
-                            {assignment.is_recurring && (
-                              <Repeat className="h-4 w-4 text-blue-500" />
-                            )}
-                          </CardTitle>
-                          <CardDescription className="flex items-center gap-2 mt-1">
-                            <Calendar className="h-4 w-4" />
-                            Due:{' '}
-                            {format(
-                              new Date(assignment.due_date),
-                              'MMM dd, yyyy',
-                            )}
-                          </CardDescription>
-                          <CardDescription className="flex items-center gap-2 mt-1">
-                            <Users className="h-4 w-4" />
-                            {assignment.parent_name}
-                          </CardDescription>
-                        </div>
-                        <div className="hidden group-hover:flex gap-0 bg-background absolute top-2 right-2 rounded-lg">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="group-hover:text-foreground"
-                            onClick={() => startEditAssignment(assignment)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="hover:bg-red-500"
-                            onClick={() => deleteAssignment(assignment.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    {assignment.assigned_children &&
-                      assignment.assigned_children.length > 0 && (
-                        <CardContent>
-                          <div className="space-y-1 flex items-center gap-2">
-                            <span className="text-sm font-medium">
-                              Assigned to:
-                            </span>
-                            <div className="flex flex-wrap gap-2 items-baseline">
-                              {assignment.assigned_children.map(
-                                (childName, index) => (
-                                  <span
-                                    key={index}
-                                    className="bg-primary/30 text-foreground text-xs px-2 leading-4 rounded-full"
-                                  >
-                                    {childName}
-                                  </span>
-                                ),
-                              )}
-                              {assignment.category && (
-                                <span className="flex items-center gap-1 whitespace-nowrap text-xs border border-primary/30 text-foreground px-2 leading-4 rounded-full">
-                                  {assignment.category}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      )}
-                  </Card>
-                ))}
-              </div>
+              <KanbanAssignmentBoard
+                assignments={filteredAssignments}
+                categories={useMemo(
+                  () =>
+                    Array.from(
+                      new Set(
+                        filteredAssignments
+                          .map((a) => a.category)
+                          .filter(Boolean),
+                      ),
+                    ),
+                  [filteredAssignments],
+                )}
+                onAssignmentUpdate={handleKanbanAssignmentUpdate}
+                onAssignmentDelete={deleteAssignment}
+                onCreateAssignment={handleKanbanCreateAssignment}
+                onAssignmentDragUpdate={handleKanbanAssignmentDragUpdate}
+                userRole="admin"
+              />
 
               {filteredAssignments.length === 0 && (
                 <Card>
@@ -746,7 +720,31 @@ export default function AdminDashboard() {
           </TabsContent>
         </Tabs>
       </div>
-      <PageGrid variant="color" />
+      <AssignmentForm
+        isOpen={isCreating}
+        onOpenChange={setIsCreating}
+        editingAssignment={editingAssignment}
+        assignmentData={newAssignment}
+        onAssignmentDataChange={setNewAssignment}
+        onSave={createOrUpdateAssignment}
+        onCancel={resetForm}
+        isSaving={isSaving}
+        categories={categories}
+        childrenOptions={allChildrenOptions}
+        selectedCalendarDate={selectedCalendarDate}
+        onCalendarDateChange={(date) => {
+          setSelectedCalendarDate(date)
+          // Also update the assignment data's due_date when calendar date changes
+          if (date) {
+            const formattedDate = format(date, 'yyyy-MM-dd')
+            setNewAssignment((prev) => ({
+              ...prev,
+              due_date: formattedDate,
+            }))
+          }
+        }}
+      />
+      <PageGrid variant="gradient" />
     </>
   )
 }

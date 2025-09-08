@@ -1,20 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-
-interface Assignment {
-  id: string
-  title: string
-  content?: string
-  due_date: string
-  is_recurring?: boolean
-  recurrence_pattern?: {
-    days: string[]
-    frequency: string
-  }
-  parent_id: string
-  links?: string[]
-  [key: string]: unknown
-}
+import type { Assignment } from '@/types'
 
 export async function GET(request: NextRequest) {
   try {
@@ -241,6 +227,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       assignments: assignmentsWithCompletion,
       profile: profile,
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+      },
     })
   } catch (error: unknown) {
     console.error('Error in GET /api/assignments:', error)
@@ -303,7 +293,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create the assignment
+    // Create the assignment - ensure dates are properly formatted
+    const parsedDueDate = due_date
+      ? new Date(due_date).toISOString().split('T')[0]
+      : null
+    const parsedRecurrenceEndDate =
+      is_recurring && recurrence_end_date
+        ? new Date(recurrence_end_date).toISOString().split('T')[0]
+        : null
+
     const { data: assignmentData, error: assignmentError } = await supabase
       .from('assignments')
       .insert({
@@ -311,13 +309,12 @@ export async function POST(request: NextRequest) {
         title: title.trim(),
         content: content,
         links: links || [],
-        due_date: due_date,
+        due_date: parsedDueDate,
         category: category || '',
         is_recurring: is_recurring || false,
         recurrence_pattern: is_recurring ? recurrence_pattern : null,
-        recurrence_end_date:
-          is_recurring && recurrence_end_date ? recurrence_end_date : null,
-        next_due_date: is_recurring ? due_date : null,
+        recurrence_end_date: parsedRecurrenceEndDate,
+        next_due_date: is_recurring ? parsedDueDate : null,
       })
       .select()
       .single()
@@ -432,20 +429,27 @@ export async function PUT(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Update the assignment
+    // Update the assignment - ensure dates are properly formatted
+    const parsedDueDate = due_date
+      ? new Date(due_date).toISOString().split('T')[0]
+      : null
+    const parsedRecurrenceEndDate =
+      is_recurring && recurrence_end_date
+        ? new Date(recurrence_end_date).toISOString().split('T')[0]
+        : null
+
     let updateQuery = supabase
       .from('assignments')
       .update({
         title: title.trim(),
         content: content,
         links: links || [],
-        due_date: due_date,
+        due_date: parsedDueDate,
         category: category || '',
         is_recurring: is_recurring || false,
         recurrence_pattern: is_recurring ? recurrence_pattern : null,
-        recurrence_end_date:
-          is_recurring && recurrence_end_date ? recurrence_end_date : null,
-        next_due_date: is_recurring ? due_date : null,
+        recurrence_end_date: parsedRecurrenceEndDate,
+        next_due_date: is_recurring ? parsedDueDate : null,
       })
       .eq('id', assignmentId)
 

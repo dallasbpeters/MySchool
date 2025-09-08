@@ -3,7 +3,7 @@
 import { format } from 'date-fns'
 import { Card, CardHeader, CardTitle, CardMedia } from '@/components/ui/card'
 import Image from 'next/image'
-import { images as defaultImages } from '@/components/assignment-card'
+import { images as defaultImages } from '@/components/expanding-card'
 import { motion } from 'framer-motion'
 
 interface Assignment {
@@ -134,10 +134,12 @@ export const RecurringInstancesGrid = ({
               <Card
                 key={instance.date}
                 className={`md:py-0 h-30 border rounded-md transition-colors relative overflow-hidden min-w-60 flex-shrink-0 cursor-pointer ${isSelected
-                  ? 'bg-primary/20 border-primary hover:bg-primary/30'
-                  : 'bg-muted/30 hover:bg-muted/50'
+                    ? 'bg-primary/20 border-primary hover:bg-primary/30'
+                    : 'bg-muted/30 hover:bg-muted/50'
                   }`}
-                onClick={() => onInstanceClick?.(instance.date, instance.dayName)}
+                onClick={() =>
+                  onInstanceClick?.(instance.date, instance.dayName)
+                }
               >
                 {showImages && (
                   <CardMedia className="-mt-0 md:-mt-0 mb-0">

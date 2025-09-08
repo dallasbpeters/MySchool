@@ -167,25 +167,27 @@ function AssignmentCard({
         layoutId={`title-container-${assignment.id}-${groupId || 'default'}`}
         layout="position"
       >
-        <span className="category">{assignment.category}</span>
-        <h2 className="font-bold text-xl h2">{assignment.title}</h2>
-        {showDate && (
-          <div className={`flex items-center gap-2 mt-2 ${getDateColor(selectedInstanceDate || assignment.due_date, assignment.completed)}`}>
-            <Calendar className="h-3 w-3" />
-            <span className="text-sm">
-              {selectedInstanceDate
-                ? format(parseISO(selectedInstanceDate), 'MMM dd, yyyy')
-                : getDateLabel(assignment.due_date, assignment.completed)}
-            </span>
-            {assignment.completed && (
-              <>
-                <CheckCircle2 className="h-3 w-3 text-green-500 ml-2" />
-                <span className="text-green-500 text-sm">Completed</span>
-              </>
-            )}
-          </div>
+        {assignment.category && (
+          <span className="category">{assignment.category}</span>
         )}
+        <h2 className="font-bold text-xl h2">{assignment.title}</h2>
       </motion.div>
+      {showDate && (
+        <div className={`bg-background/70 p-2 absolute bottom-0 left-0 right-0 flex items-center gap-2 mt-2 ${getDateColor(selectedInstanceDate || assignment.due_date, assignment.completed)}`}>
+          <Calendar className="h-3 w-3" />
+          <span className="text-sm">
+            {selectedInstanceDate
+              ? format(parseISO(selectedInstanceDate), 'MMM dd, yyyy')
+              : getDateLabel(assignment.due_date, assignment.completed)}
+          </span>
+          {assignment.completed && (
+            <>
+              <CheckCircle2 className="h-3 w-3 text-green-500 ml-2" />
+              <span className="text-green-500 text-sm">Completed</span>
+            </>
+          )}
+        </div>
+      )}
     </motion.div>
   )
 }
@@ -194,11 +196,11 @@ function AssignmentCardExpanded({
   id: _id,
   assignment,
   onToggle: _onToggle,
-  getDateLabel,
-  getDateColor,
+  getDateLabel: _getDateLabel,
+  getDateColor: _getDateColor,
   imageIndex,
   image: _image,
-  showDate,
+  showDate: _showDate,
   onNoteCreated: _onNoteCreated,
   assignmentNotes: _assignmentNotes = [],
   selectedInstanceDate,
@@ -380,23 +382,10 @@ function AssignmentCardExpanded({
             layoutId={`assignment-title-container-${assignment.id}-${groupId || 'default'}`}
             layout="position"
           >
-            <h2 className="font-bold text-xl h2">{assignment.title}</h2>
-            {showDate && (
-              <div className={`flex items-center gap-2 mt-2 ${getDateColor(selectedInstanceDate || assignment.due_date, assignment.completed)}`}>
-                <Calendar className="h-3 w-3" />
-                <span className="text-sm">
-                  {selectedInstanceDate
-                    ? format(parseISO(selectedInstanceDate), 'MMM dd, yyyy')
-                    : getDateLabel(assignment.due_date, assignment.completed)}
-                </span>
-                {assignment.completed && (
-                  <>
-                    <CheckCircle2 className="h-3 w-3 text-green-500 ml-2" />
-                    <span className="text-green-500 text-sm">Completed</span>
-                  </>
-                )}
-              </div>
+            {assignment.category && (
+              <span className="category">{assignment.category}</span>
             )}
+            <h2 className="font-bold text-xl h2">{assignment.title}</h2>
             {assignment.is_recurring && (
               <Repeat className="inline-block align-baseline h-4 w-4 ms-1 text-sm text-muted-foreground" />
             )}
@@ -632,7 +621,7 @@ export function AssignmentCardList({
   size?: 'small' | 'xs'
 }) {
   return (
-    <div id={`card-list-${groupId || 'default'}`} className="card-list">
+    <div id={`expanding-card-${groupId || 'default'}`} className="expanding-card-list">
       {assignments.map((assignment) => {
         // Get or create the image index for this assignment
         let currentImageIndex: number
@@ -748,7 +737,7 @@ export default function AssignmentCardContainer({
 }) {
   return (
     <div
-      id="card-list"
+      id="expanding-card"
     >
       <AssignmentCardGroup
         assignments={assignments}

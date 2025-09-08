@@ -201,7 +201,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create the assignment
+    // Create the assignment - ensure dates are properly formatted
+    const parsedDueDate = due_date
+      ? new Date(due_date).toISOString().split('T')[0]
+      : null
+    const parsedRecurrenceEndDate =
+      is_recurring && recurrence_end_date
+        ? new Date(recurrence_end_date).toISOString().split('T')[0]
+        : null
+
     const { data: assignmentData, error: assignmentError } = await supabase
       .from('assignments')
       .insert({
@@ -209,13 +217,12 @@ export async function POST(request: NextRequest) {
         title: title.trim(),
         content: content,
         links: links || [],
-        due_date: due_date,
+        due_date: parsedDueDate,
         category: category || '',
         is_recurring: is_recurring || false,
         recurrence_pattern: is_recurring ? recurrence_pattern : null,
-        recurrence_end_date:
-          is_recurring && recurrence_end_date ? recurrence_end_date : null,
-        next_due_date: is_recurring ? due_date : null,
+        recurrence_end_date: parsedRecurrenceEndDate,
+        next_due_date: is_recurring ? parsedDueDate : null,
       })
       .select()
 
@@ -239,7 +246,7 @@ export async function POST(request: NextRequest) {
     if (selectedChildren.length > 0) {
       // For admins creating across families, we must bypass RLS when inserting
       // student_assignments; use a SECURITY DEFINER RPC to perform the insert.
-      const { data: rpcResult, error: rpcError } = await supabase.rpc(
+      const { error: rpcError } = await supabase.rpc(
         'admin_upsert_student_assignments',
         {
           p_assignment_id: createdAssignment.id,
@@ -338,18 +345,26 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update the assignment using admin RPC function to bypass RLS
+    // Ensure due_date is properly formatted for the database
+    const parsedDueDate = due_date
+      ? new Date(due_date).toISOString().split('T')[0]
+      : null
+    const parsedRecurrenceEndDate =
+      is_recurring && recurrence_end_date
+        ? new Date(recurrence_end_date).toISOString().split('T')[0]
+        : null
+
     const rpcParams = {
       assignment_id: assignmentId,
       assignment_title: title.trim(),
       assignment_content: content,
       assignment_links: links || [],
-      assignment_due_date: due_date,
+      assignment_due_date: parsedDueDate,
       assignment_category: category || '',
       assignment_is_recurring: is_recurring || false,
       assignment_recurrence_pattern: is_recurring ? recurrence_pattern : null,
-      assignment_recurrence_end_date:
-        is_recurring && recurrence_end_date ? recurrence_end_date : null,
-      assignment_next_due_date: is_recurring ? due_date : null,
+      assignment_recurrence_end_date: parsedRecurrenceEndDate,
+      assignment_next_due_date: is_recurring ? parsedDueDate : null,
     }
 
     // DEBUG: Log parameters being sent to RPC - this won't be stripped
@@ -373,7 +388,7 @@ export async function PUT(request: NextRequest) {
     if (!assignmentError && assignmentData) {
       const { data: dbVerify, error: dbVerifyError } = await supabase
         .from('assignments')
-        .select('id, title, links, updated_at')
+        .select('id, title, due_date, links, updated_at')
         .eq('id', assignmentId)
         .single()
 

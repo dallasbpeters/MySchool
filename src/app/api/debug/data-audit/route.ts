@@ -101,7 +101,10 @@ export async function GET() {
 
     const orphans =
       orphanedChildren?.filter(
-        (child) => !child.parent || child.parent.length === 0 || child.parent[0]?.role !== 'parent',
+        (child) =>
+          !child.parent ||
+          child.parent.length === 0 ||
+          child.parent[0]?.role !== 'parent',
       ) || []
 
     if (orphans.length > 0) {
@@ -138,7 +141,9 @@ export async function GET() {
       assignment.student_assignments?.forEach((sa) => {
         const student = Array.isArray(sa.student) ? sa.student[0] : sa.student
         const studentParent = student?.parent?.[0]
-        const assignmentCreator = Array.isArray(assignment.creator) ? assignment.creator[0] : assignment.creator
+        const assignmentCreator = Array.isArray(assignment.creator)
+          ? assignment.creator[0]
+          : assignment.creator
 
         // Check if assignment creator is different from student's parent
         if (

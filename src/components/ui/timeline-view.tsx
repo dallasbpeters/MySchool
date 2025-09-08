@@ -20,6 +20,11 @@ interface TimelineHeaderProps {
   textColor?: 'default' | 'red' | 'blue' | 'green'
 }
 
+interface TimelineListContentProps {
+  children: ReactNode
+  className?: string
+}
+
 interface TimelineContentProps {
   children: ReactNode
   className?: string
@@ -78,7 +83,7 @@ export const TimelineHeader = ({
   return (
     <time
       className={cn(
-        'block mb-2 text-lg font-medium leading-none',
+        'block mb-3 text-lg font-medium leading-none',
         textColors[textColor],
         className,
       )}
@@ -94,10 +99,17 @@ export const TimelineContent = ({
 }: TimelineContentProps) => (
   <div
     className={cn(
-      "mb-6 grid gap-4 duration-600 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'",
+      "mb-6 grid gap-3 duration-600 grid-cols-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4'",
       className,
     )}
   >
     {children}
   </div>
+)
+
+export const TimelineListContent = ({
+  children,
+  className,
+}: TimelineListContentProps) => (
+  <div className={cn('mb-6 grid gap-3 grid-cols-1', className)}>{children}</div>
 )

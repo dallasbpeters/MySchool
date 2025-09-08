@@ -21,7 +21,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         if (!response.ok) {
           throw new Error(
             data.error ||
-            `HTTP ${response.status}: Failed to fetch calendar data`,
+              `HTTP ${response.status}: Failed to fetch calendar data`,
           )
         }
 

@@ -87,31 +87,32 @@ export async function GET(request: Request) {
               </div>
               <div class="content">
                 ${assignments
-            .map(
-              (assignment: {
-                title: string
-                links?: Array<{ url: string; title: string }>
-              }) => `
+                  .map(
+                    (assignment: {
+                      title: string
+                      links?: Array<{ url: string; title: string }>
+                    }) => `
                   <div class="assignment">
                     <h3>${assignment.title}</h3>
-                    ${assignment.links && assignment.links.length > 0
-                  ? `
+                    ${
+                      assignment.links && assignment.links.length > 0
+                        ? `
                       <div class="links">
                         <strong>Resources:</strong><br>
                         ${assignment.links
-                    .map(
-                      (link) =>
-                        `<a href="${link.url}" class="link">📎 ${link.title}</a><br>`,
-                    )
-                    .join('')}
+                          .map(
+                            (link) =>
+                              `<a href="${link.url}" class="link">📎 ${link.title}</a><br>`,
+                          )
+                          .join('')}
                       </div>
                     `
-                  : ''
-                }
+                        : ''
+                    }
                   </div>
                 `,
-            )
-            .join('')}
+                  )
+                  .join('')}
                 <p style="margin-top: 20px;">
                   <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/student" 
                      style="background: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">

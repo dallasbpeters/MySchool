@@ -26,6 +26,7 @@ import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import ColourfulText from '@/components/ui/colourful-text'
 import PageGrid from '@/components/page-grid'
+import { ChartLineInteractive } from '@/components/ui/shadcn-io/line-chart-01'
 
 interface Child {
   id: string
@@ -285,10 +286,10 @@ export default function ChildrenManagement() {
           prev.map((c) =>
             c.id === codeData.id
               ? {
-                ...c,
-                status: 'error',
-                error: result.error || 'Unknown error',
-              }
+                  ...c,
+                  status: 'error',
+                  error: result.error || 'Unknown error',
+                }
               : c,
           ),
         )
@@ -455,13 +456,7 @@ export default function ChildrenManagement() {
 
   return (
     <>
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center h-64">
-            Loading children...
-          </div>
-        }
-      >
+      <Suspense>
         <div className="z-5 relative container mx-auto p-6">
           <div className="mb-6">
             <h1 className="text-3xl font-bold">Students</h1>
@@ -469,6 +464,14 @@ export default function ChildrenManagement() {
               Manage your students and track their assignment progress
             </p>
           </div>
+
+          {children.length > 0 && (
+            <Card className="mb-6 mt-0 py-0">
+              <CardContent className="px-2">
+                <ChartLineInteractive />
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Existing Children */}
@@ -623,7 +626,7 @@ export default function ChildrenManagement() {
                             </Label>
                             <Input
                               id="child_name"
-                              placeholder="Enter your child&apos;s name"
+                              placeholder="Enter your child's name"
                               value={newChildName}
                               onChange={(e) => setNewChildName(e.target.value)}
                             />

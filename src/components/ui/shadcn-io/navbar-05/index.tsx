@@ -232,7 +232,6 @@ export interface Navbar05Props extends React.HTMLAttributes<HTMLElement> {
     created_at: string
   }>
   onNavItemClick?: (href: string) => void
-  onInfoItemClick?: (item: string) => void
   onNotificationItemClick?: (item: string) => void
   onUserItemClick?: (item: string) => void
 }
@@ -257,7 +256,6 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
       notificationCount = 3,
       notifications = [],
       onNavItemClick,
-      onInfoItemClick,
       onNotificationItemClick,
       onUserItemClick,
       ...props
@@ -335,7 +333,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
                               if (onNavItemClick && link.href)
                                 onNavItemClick(link.href)
                             }}
-                            className="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer no-underline"
+                            className="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-primary hover:text-primary-foreground cursor-pointer no-underline"
                           >
                             {link.label}
                           </button>
@@ -367,7 +365,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
                             if (onNavItemClick && link.href)
                               onNavItemClick(link.href)
                           }}
-                          className="text-muted-foreground hover:text-primary py-1.5 font-medium transition-colors cursor-pointer group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 text-sm focus:bg-accent focus:text-accent-foreground active:bg-accent active:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+                          className="text-muted-foreground hover:text-primary py-1.5 font-medium transition-colors cursor-pointer group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 text-sm active:bg-primary active:text-primary-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50"
                         >
                           {link.label}
                         </NavigationMenuLink>
@@ -381,8 +379,6 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
           {/* Right side */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              {/* Info menu */}
-              <InfoMenu onItemClick={onInfoItemClick} />
               {/* Notification */}
               <NotificationMenu
                 notificationCount={notificationCount}

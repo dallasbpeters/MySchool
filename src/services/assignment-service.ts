@@ -1,4 +1,5 @@
 import { Assignment } from '@/types'
+import { parseISO } from 'date-fns'
 
 export interface AssignmentFilters {
   isOverdue: (assignment: Assignment) => boolean
@@ -25,21 +26,27 @@ export class AssignmentService {
         '-' +
         String(today.getDate()).padStart(2, '0')
 
-      // Compare date strings directly to avoid timezone issues
-      if (assignment.due_date >= todayString) {
+      // For recurring assignments, check if any past due instances are incomplete
+      if (assignment.is_recurring && assignment.instance_completions) {
+        // Check if there are any overdue instances that haven't been completed
+        for (const [instanceDate, completion] of Object.entries(
+          assignment.instance_completions,
+        )) {
+          if (instanceDate < todayString && !completion.completed) {
+            return true
+          }
+        }
+        // If no overdue incomplete instances found, not overdue
         return false
       }
 
-      // For recurring assignments, check if any overdue instances are incomplete
-      if (assignment.is_recurring) {
-        // For recurring assignments, we need to check if there are any overdue instances
-        // that haven't been completed. This is more complex and might need a different approach.
-        // For now, let's use the simple check for non-recurring assignments
+      // For non-recurring assignments or recurring without instance data
+      // Compare due date directly with today
+      if (assignment.due_date < todayString) {
         return !assignment.completed
       }
 
-      // For non-recurring assignments, check if the assignment is completed
-      return !assignment.completed
+      return false
     },
 
     isToday: (assignment: Assignment): boolean => {
@@ -111,23 +118,208 @@ export class AssignmentService {
   }
 
   static groupAssignments(assignments: Assignment[]): AssignmentGroups {
+    // Filter upcoming assignments to only show next incomplete instance for recurring assignments
+    const filteredUpcoming = this.filterUpcomingAssignments(
+      assignments.filter(this.filters.isUpcoming),
+    )
+
+    // Further filter to show only one assignment per category (the soonest due)
+    const deduplicatedUpcoming = this.deduplicateByCategory(filteredUpcoming)
+
     return {
       overdue: assignments.filter(this.filters.isOverdue),
       today: assignments.filter(this.filters.isToday),
-      upcoming: assignments.filter(this.filters.isUpcoming),
+      upcoming: deduplicatedUpcoming,
       past: assignments.filter(this.filters.isPast),
     }
   }
 
+  /**
+   * For recurring assignments, only show the next upcoming instance that hasn't been completed.
+   * For non-recurring assignments, return as-is.
+   */
+  static filterUpcomingAssignments(assignments: Assignment[]): Assignment[] {
+    return assignments
+      .map((assignment) => {
+        if (!assignment.is_recurring) {
+          return assignment
+        }
+
+        // For recurring assignments, find the next upcoming instance
+        const nextInstance = this.findNextUpcomingInstance(assignment)
+        if (nextInstance) {
+          // Return the assignment with the next due date
+          return {
+            ...assignment,
+            due_date: nextInstance.date,
+            next_due_date: nextInstance.date,
+          }
+        }
+
+        // If no upcoming instances found, don't include this assignment
+        return null
+      })
+      .filter((assignment): assignment is Assignment => assignment !== null)
+  }
+
+  /**
+   * Find the next upcoming incomplete instance for a recurring assignment
+   */
+  static findNextUpcomingInstance(
+    assignment: Assignment,
+  ): { date: string; isCompleted: boolean } | null {
+    if (!assignment.is_recurring || !assignment.recurrence_pattern) {
+      return null
+    }
+
+    const today = new Date()
+
+    const { days, frequency = 'weekly' } = assignment.recurrence_pattern
+
+    // Generate upcoming dates based on recurrence pattern
+    let upcomingInstances: string[] = []
+
+    if (frequency === 'daily') {
+      // For daily recurrence, generate next 30 days
+      for (let i = 1; i <= 30; i++) {
+        const futureDate = new Date(today)
+        futureDate.setDate(today.getDate() + i)
+        const dateString =
+          futureDate.getFullYear() +
+          '-' +
+          String(futureDate.getMonth() + 1).padStart(2, '0') +
+          '-' +
+          String(futureDate.getDate()).padStart(2, '0')
+        upcomingInstances.push(dateString)
+      }
+    } else if (frequency === 'weekly') {
+      // For weekly recurrence, generate dates for the specified days of the week
+      const dayMap: Record<string, number> = {
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5,
+        saturday: 6,
+        sunday: 0,
+      }
+
+      // Generate dates for the next 12 weeks
+      for (let week = 0; week < 12; week++) {
+        days.forEach((day) => {
+          const targetDayOfWeek = dayMap[day.toLowerCase()]
+          if (targetDayOfWeek !== undefined) {
+            const futureDate = new Date(today)
+            futureDate.setDate(
+              today.getDate() +
+              week * 7 +
+              ((targetDayOfWeek - today.getDay() + 7) % 7),
+            )
+
+            // If the calculated date is today or in the past, skip to next week
+            if (futureDate <= today) {
+              futureDate.setDate(futureDate.getDate() + 7)
+            }
+
+            const dateString =
+              futureDate.getFullYear() +
+              '-' +
+              String(futureDate.getMonth() + 1).padStart(2, '0') +
+              '-' +
+              String(futureDate.getDate()).padStart(2, '0')
+            upcomingInstances.push(dateString)
+          }
+        })
+      }
+    }
+
+    // Check if assignment has an end date
+    if (assignment.recurrence_end_date) {
+      const endDate = assignment.recurrence_end_date
+      upcomingInstances = upcomingInstances.filter((date) => date <= endDate)
+    }
+
+    // Find the first upcoming instance that hasn't been completed
+    for (const date of upcomingInstances) {
+      const isCompleted =
+        assignment.instance_completions?.[date]?.completed || false
+      if (!isCompleted) {
+        return { date, isCompleted: false }
+      }
+    }
+
+    return null // No upcoming incomplete instances found
+  }
+
+  /**
+   * Deduplicate assignments by category, keeping only the soonest due assignment per category
+   */
+  static deduplicateByCategory(assignments: Assignment[]): Assignment[] {
+    const categoryMap = new Map<string, Assignment[]>()
+
+    // Group assignments by category
+    assignments.forEach((assignment) => {
+      const category = assignment.category || 'Uncategorized'
+      if (!categoryMap.has(category)) {
+        categoryMap.set(category, [])
+      }
+      categoryMap.get(category)!.push(assignment)
+    })
+
+    // For each category, keep only the assignment with the soonest due date
+    const deduplicated: Assignment[] = []
+
+    categoryMap.forEach((categoryAssignments) => {
+      if (categoryAssignments.length === 1) {
+        // Only one assignment in this category
+        deduplicated.push(categoryAssignments[0])
+      } else {
+        // Multiple assignments in this category - find the soonest due
+        const soonestAssignment = categoryAssignments.reduce(
+          (soonest, current) => {
+            if (!soonest) return current
+
+            // Compare due dates
+            if (current.due_date < soonest.due_date) {
+              return current
+            }
+
+            return soonest
+          },
+        )
+
+        deduplicated.push(soonestAssignment)
+      }
+    })
+
+    // Sort the final result by due date (soonest first)
+    return deduplicated.sort((a, b) => a.due_date.localeCompare(b.due_date))
+  }
+
   static getDateLabel(assignment: Assignment): string {
-    const dueDate = new Date(assignment.due_date)
+    const dueDate = parseISO(assignment.due_date)
     const today = new Date()
     const tomorrow = new Date(today)
     tomorrow.setDate(today.getDate() + 1)
 
+    // Always check if overdue first, regardless of assignment type
     if (this.filters.isOverdue(assignment)) {
       return 'Overdue'
-    } else if (this.filters.isToday(assignment)) {
+    }
+
+    // For recurring assignments that show next instance, show contextual labels
+    if (assignment.is_recurring && assignment.next_due_date) {
+      if (this.filters.isToday(assignment)) {
+        return 'Due Today'
+      } else if (dueDate.toDateString() === tomorrow.toDateString()) {
+        return 'Due Tomorrow'
+      } else {
+        return `Due ${dueDate.toLocaleDateString()}`
+      }
+    }
+
+    // For non-recurring assignments or recurring without next_due_date
+    if (this.filters.isToday(assignment)) {
       return 'Due Today'
     } else if (dueDate.toDateString() === tomorrow.toDateString()) {
       return 'Due Tomorrow'
@@ -142,7 +334,7 @@ export class AssignmentService {
     } else if (this.filters.isToday(assignment)) {
       return 'text-blue-600'
     } else {
-      return 'text-muted-foreground'
+      return 'text-foreground'
     }
   }
 

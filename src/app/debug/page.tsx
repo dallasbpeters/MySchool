@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { AssignmentService } from '@/services/assignment-service'
 import { Assignment } from '@/types'
+import { parseISO } from 'date-fns'
 
 export default function DebugPage() {
   const [debugInfo, setDebugInfo] = useState<{
@@ -66,7 +67,7 @@ export default function DebugPage() {
           rawAssignments: data.assignments.map((a: Assignment) => {
             const todayParsed = new Date()
             todayParsed.setHours(0, 0, 0, 0)
-            const dueDateParsed = new Date(a.due_date)
+            const dueDateParsed = parseISO(a.due_date)
             dueDateParsed.setHours(0, 0, 0, 0)
 
             return {
@@ -77,7 +78,7 @@ export default function DebugPage() {
               completed: a.completed,
               daysDifference: Math.floor(
                 (dueDateParsed.getTime() - todayParsed.getTime()) /
-                (1000 * 60 * 60 * 24),
+                  (1000 * 60 * 60 * 24),
               ),
               isOverdue: AssignmentService.filters.isOverdue(a),
               isToday: AssignmentService.filters.isToday(a),

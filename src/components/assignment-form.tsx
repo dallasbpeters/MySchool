@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { WysiwygEditor } from '@/components/editor/wysiwyg-editor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -104,6 +104,14 @@ export function AssignmentForm({
     type: 'link' as 'link' | 'video',
   })
 
+  // Store the latest onAssignmentDataChange function
+  const onAssignmentDataChangeRef = React.useRef(onAssignmentDataChange)
+  React.useEffect(() => {
+    onAssignmentDataChangeRef.current = onAssignmentDataChange
+  }, [onAssignmentDataChange])
+
+  // Date synchronization is handled by the parent component
+
   const addLink = () => {
     if (newLink.title && newLink.url) {
       onAssignmentDataChange({
@@ -171,11 +179,10 @@ export function AssignmentForm({
               <Label className="text-sm font-medium">Assignment Type</Label>
               <div className="grid grid-cols-2 gap-3">
                 <div
-                  className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                    !assignmentData.is_recurring
+                  className={`p-3 border rounded-lg cursor-pointer transition-all ${!assignmentData.is_recurring
                       ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                       : 'border-border hover:border-primary/50'
-                  }`}
+                    }`}
                   onClick={() =>
                     onAssignmentDataChange({
                       ...assignmentData,
@@ -195,11 +202,10 @@ export function AssignmentForm({
                 </div>
 
                 <div
-                  className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                    assignmentData.is_recurring
+                  className={`p-3 border rounded-lg cursor-pointer transition-all ${assignmentData.is_recurring
                       ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                       : 'border-border hover:border-primary/50'
-                  }`}
+                    }`}
                   onClick={() =>
                     onAssignmentDataChange({
                       ...assignmentData,
@@ -293,12 +299,12 @@ export function AssignmentForm({
                                 day,
                               )
                                 ? assignmentData.recurrence_pattern.days.filter(
-                                    (d) => d !== day,
-                                  )
+                                  (d) => d !== day,
+                                )
                                 : [
-                                    ...assignmentData.recurrence_pattern.days,
-                                    day,
-                                  ]
+                                  ...assignmentData.recurrence_pattern.days,
+                                  day,
+                                ]
 
                             onAssignmentDataChange({
                               ...assignmentData,

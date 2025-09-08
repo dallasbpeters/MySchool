@@ -29,13 +29,13 @@ interface ICalendarContext {
 const CalendarContext = createContext({} as ICalendarContext)
 
 const WORKING_HOURS = {
-  0: { from: 0, to: 0 },
+  0: { from: 8, to: 15 },
   1: { from: 8, to: 17 },
   2: { from: 8, to: 17 },
   3: { from: 8, to: 17 },
   4: { from: 8, to: 17 },
   5: { from: 8, to: 17 },
-  6: { from: 8, to: 12 },
+  6: { from: 8, to: 15 },
 }
 
 const VISIBLE_HOURS = { from: 6, to: 22 }

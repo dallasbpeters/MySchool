@@ -1,15 +1,13 @@
 import React, { Suspense } from 'react'
-import { AnimatePresence } from 'framer-motion'
 import ColorfulText from '@/components/ui/colourful-text'
 import {
   Timeline,
   TimelineItem,
   TimelineHeader,
-  TimelineContent,
 } from '@/components/ui/timeline-view'
 import { AssignmentService } from '@/services/assignment-service'
-import AssignmentCard from '../assignment-card'
-import { Assignment, Note } from '@/types'
+import AssignmentCardContainer from '../expanding-card'
+import { Assignment } from '@/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { CheckCircle2 } from 'lucide-react'
 import NoAssignments from '@/components/no-assignments'
@@ -17,24 +15,12 @@ import NoAssignments from '@/components/no-assignments'
 interface AssignmentListProps {
   assignments: Assignment[]
   selectedChildName?: string
-  expandedCardId: string | null
-  setExpandedCardId: (id: string | null) => void
-  selectedInstanceDates: Record<string, string | undefined>
-  notes: Note[]
-  onToggle: (assignmentId: string, instanceDate?: string) => void
-  onNoteCreated: () => void
   onInstanceClick: (assignmentId: string, date: string, dayName: string) => void
   isLoading?: boolean
 }
 
 export function AssignmentList({
   assignments,
-  expandedCardId,
-  setExpandedCardId,
-  selectedInstanceDates,
-  notes,
-  onToggle,
-  onNoteCreated,
   onInstanceClick: _onInstanceClick,
   isLoading = false,
 }: AssignmentListProps) {
@@ -53,7 +39,12 @@ export function AssignmentList({
   }
 
   // Show "No Assignments" card only when we're not loading AND there are 0 assignments in any category
-  if (!isLoading && overdue.length === 0 && today.length === 0 && upcoming.length === 0) {
+  if (
+    !isLoading &&
+    overdue.length === 0 &&
+    today.length === 0 &&
+    upcoming.length === 0
+  ) {
     return (
       <Card className="relative">
         <NoAssignments className="absolute h-full w-full inset-0 z-0" />
@@ -77,30 +68,11 @@ export function AssignmentList({
         {overdue.length > 0 && (
           <TimelineItem dotColor="red">
             <TimelineHeader textColor="red">Overdue</TimelineHeader>
-            <TimelineContent>
-              <AnimatePresence mode="popLayout">
-                {overdue.map((assignment, index) => (
-                  <AssignmentCard
-                    showDate={true}
-                    image={true}
-                    key={assignment.id}
-                    assignment={assignment}
-                    onToggle={onToggle}
-                    getDateLabel={() =>
-                      AssignmentService.getDateLabel(assignment)
-                    }
-                    getDateColor={() =>
-                      AssignmentService.getDateColor(assignment)
-                    }
-                    imageIndex={index}
-                    expandedCardId={expandedCardId}
-                    setExpandedCardId={setExpandedCardId}
-                    onNoteCreated={onNoteCreated}
-                    selectedInstanceDate={selectedInstanceDates[assignment.id]}
-                  />
-                ))}
-              </AnimatePresence>
-            </TimelineContent>
+            <AssignmentCardContainer
+              image={true}
+              assignments={overdue}
+              groupId="overdue"
+            />
           </TimelineItem>
         )}
 
@@ -109,61 +81,23 @@ export function AssignmentList({
             <TimelineHeader textColor="default">
               Today&apos;s Assignments
             </TimelineHeader>
-
-            <TimelineContent>
-              {today.map((assignment, index) => (
-                <AnimatePresence mode="popLayout" key={assignment.id + 1}>
-                  <AssignmentCard
-                    showDate={true}
-                    image={true}
-                    assignment={assignment}
-                    onToggle={onToggle}
-                    getDateLabel={() =>
-                      AssignmentService.getDateLabel(assignment)
-                    }
-                    getDateColor={() =>
-                      AssignmentService.getDateColor(assignment)
-                    }
-                    expandedCardId={expandedCardId}
-                    setExpandedCardId={setExpandedCardId}
-                    onNoteCreated={onNoteCreated}
-                    assignmentNotes={notes}
-                    selectedInstanceDate={
-                      selectedInstanceDates[assignment.id]
-                    }
-                  />
-                </AnimatePresence>
-              ))}
-            </TimelineContent>
+            <AssignmentCardContainer
+              image={true}
+              assignments={today}
+              groupId="today"
+            />
           </TimelineItem>
         )}
 
         {upcoming.length > 0 && (
           <TimelineItem dotColor="default">
             <TimelineHeader textColor="default">Upcoming</TimelineHeader>
-            <TimelineContent>
-              {upcoming.map((assignment, index) => (
-                <AssignmentCard
-                  showDate={true}
-                  image={true}
-                  key={assignment.id}
-                  assignment={assignment}
-                  onToggle={onToggle}
-                  getDateLabel={() =>
-                    AssignmentService.getDateLabel(assignment)
-                  }
-                  getDateColor={() =>
-                    AssignmentService.getDateColor(assignment)
-                  }
-                  imageIndex={index + overdue.length + today.length}
-                  expandedCardId={expandedCardId}
-                  setExpandedCardId={setExpandedCardId}
-                  onNoteCreated={onNoteCreated}
-                  assignmentNotes={notes}
-                  selectedInstanceDate={selectedInstanceDates[assignment.id]}
-                />
-              ))}
-            </TimelineContent>
+            <AssignmentCardContainer
+              size="small"
+              image={true}
+              assignments={upcoming}
+              groupId="upcoming"
+            />
           </TimelineItem>
         )}
       </Timeline>

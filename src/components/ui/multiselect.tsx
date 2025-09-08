@@ -126,22 +126,14 @@ function transToGroupOption(options: Option[], groupBy?: string) {
 }
 
 function removePickedOption(groupOption: GroupOption, picked: Option[]) {
-  console.log('removePickedOption Debug - groupOption:', groupOption)
-  console.log('removePickedOption Debug - picked:', picked)
-
   const cloneOption = JSON.parse(JSON.stringify(groupOption)) as GroupOption
 
   for (const [key, value] of Object.entries(cloneOption)) {
-    const originalLength = value.length
     cloneOption[key] = value.filter(
       (val) => !picked.find((p) => p.value === val.value),
     )
-    console.log(
-      `removePickedOption Debug - Group "${key}": ${originalLength} -> ${cloneOption[key].length} options`,
-    )
   }
 
-  console.log('removePickedOption Debug - result:', cloneOption)
   return cloneOption
 }
 
@@ -204,29 +196,16 @@ const MultipleSelector = ({
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [open, setOpen] = React.useState(false)
 
-  // Debug logging for MultipleSelector
-  console.log('MultipleSelector Debug - arrayOptions prop:', arrayOptions)
-  console.log(
-    'MultipleSelector Debug - arrayOptions length:',
-    arrayOptions?.length || 0,
-  )
   const [onScrollbar, setOnScrollbar] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(false)
   const dropdownRef = React.useRef<HTMLDivElement>(null) // Added this
 
   const [selected, setSelected] = React.useState<Option[]>(value || [])
 
-  // Debug logging for selected state
-  console.log('MultipleSelector Debug - selected state:', selected)
-  console.log('MultipleSelector Debug - selected length:', selected.length)
   const [options, setOptions] = React.useState<GroupOption>(() => {
     const initialOptions = transToGroupOption(
       arrayDefaultOptions || arrayOptions || [],
       groupBy,
-    )
-    console.log(
-      'MultipleSelector Debug - Initial options state:',
-      initialOptions,
     )
     return initialOptions
   })
@@ -299,29 +278,15 @@ const MultipleSelector = ({
 
   useEffect(() => {
     /** If `onSearch` is provided, do not trigger options updated. */
-    console.log('MultipleSelector Debug - useEffect triggered for arrayOptions')
-    console.log(
-      'MultipleSelector Debug - arrayOptions in useEffect:',
-      arrayOptions,
-    )
 
     if (!arrayOptions || onSearch) {
-      console.log(
-        'MultipleSelector Debug - Early return: arrayOptions empty or onSearch provided',
-      )
       return
     }
     const newOption = transToGroupOption(arrayOptions || [], groupBy)
-    console.log(
-      'MultipleSelector Debug - newOption from transToGroupOption:',
-      newOption,
-    )
 
     if (JSON.stringify(newOption) !== JSON.stringify(options)) {
-      console.log('MultipleSelector Debug - Setting new options')
       setOptions(newOption)
     } else {
-      console.log('MultipleSelector Debug - Options unchanged')
     }
   }, [arrayDefaultOptions, arrayOptions, groupBy, onSearch, options])
 
@@ -438,21 +403,10 @@ const MultipleSelector = ({
   const selectables = React.useMemo<GroupOption>(() => {
     // Ensure we have valid options before processing
     if (!options || Object.keys(options).length === 0) {
-      console.log(
-        'MultipleSelector Debug - selectables called with empty options, returning empty',
-      )
       return {}
     }
 
     const result = removePickedOption(options, selected)
-    console.log(
-      'MultipleSelector Debug - selectables after removePickedOption:',
-      result,
-    )
-    console.log(
-      'MultipleSelector Debug - Object.entries(selectables):',
-      Object.entries(result),
-    )
     return result
   }, [options, selected])
 
@@ -511,7 +465,7 @@ const MultipleSelector = ({
               <div
                 key={option.value}
                 className={cn(
-                  'animate-fadeIn bg-background text-secondary-foreground hover:bg-background relative inline-flex h-7 cursor-default items-center rounded-md border ps-2 pe-7 pl-2 text-xs font-medium transition-all disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-fixed:pe-2',
+                  'animate-fadeIn bg-background text-foreground hover:bg-background relative inline-flex h-7 cursor-default items-center rounded-md border ps-2 pe-7 pl-2 text-xs font-medium transition-all disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-fixed:pe-2',
                   badgeClassName,
                 )}
                 data-fixed={option.fixed}
@@ -587,7 +541,7 @@ const MultipleSelector = ({
                 disabled ||
                 selected.length < 1 ||
                 selected.filter((s) => s.fixed).length === selected.length) &&
-                'hidden',
+              'hidden',
             )}
             aria-label="Clear all"
           >
@@ -656,7 +610,7 @@ const MultipleSelector = ({
                               className={cn(
                                 'cursor-pointer',
                                 option.disable &&
-                                  'pointer-events-none cursor-not-allowed opacity-50',
+                                'pointer-events-none cursor-not-allowed opacity-50',
                               )}
                             >
                               {option.label}

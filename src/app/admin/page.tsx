@@ -9,18 +9,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  RadixDropdown,
-  DropdownItem,
-} from '@/components/ui/motion/motion-dropdown-menu'
 import { Option } from '@/components/ui/multiselect'
 import { AssignmentForm } from '@/components/assignment-form'
-import { Plus, Filter } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import PageGrid from '@/components/page-grid'
 import { KanbanAssignmentBoard } from '@/components/kanban-assignment-board'
+import MotionTabs from '@/components/ui/motion/motion-tabs'
 interface Link {
   title: string
   url: string
@@ -73,7 +69,6 @@ export default function AdminDashboard() {
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(
     null,
   )
-  const [selectedFamily, setSelectedFamily] = useState<string>('all')
   const [newAssignment, setNewAssignment] = useState({
     title: '',
     content: null,
@@ -271,7 +266,7 @@ export default function AdminDashboard() {
       if (!response.ok || data?.error) {
         throw new Error(
           data?.error ||
-            `Assignment ${isEditing ? 'update' : 'creation'} failed`,
+          `Assignment ${isEditing ? 'update' : 'creation'} failed`,
         )
       }
 
@@ -328,23 +323,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Remove unused link management functions for now
-  // const addLink = () => {
-  //   if (newLink.title && newLink.url) {
-  //     setNewAssignment({
-  //       ...newAssignment,
-  //       links: [...newAssignment.links, newLink]
-  //     })
-  //     setNewLink({ title: '', url: '', type: 'link' })
-  //   }
-  // }
-
-  // const removeLink = (index: number) => {
-  //   setNewAssignment({
-  //     ...newAssignment,
-  //     links: newAssignment.links.filter((_, i) => i !== index)
-  //   })
-  // }
 
   const startEditAssignment = (assignment: Assignment) => {
     setEditingAssignment(assignment)
@@ -440,18 +418,6 @@ export default function AdminDashboard() {
     setIsCreating(false)
   }
 
-  // Filter assignments by selected family
-  const filteredAssignments = useMemo(
-    () =>
-      selectedFamily === 'all'
-        ? assignments
-        : assignments.filter((a) => {
-            const family = families.find((f) => f.parent_name === a.parent_name)
-            return family?.parent_id === selectedFamily
-          }),
-    [selectedFamily, assignments, families],
-  )
-
   // Kanban board handlers
   const handleKanbanAssignmentUpdate = (assignment: Assignment) => {
     // Open the edit form instead of updating directly
@@ -546,180 +512,127 @@ export default function AdminDashboard() {
 
   return (
     <>
+
       <div className="z-5 relative mx-auto p-4 ">
-        <Tabs defaultValue="assignments" className=" w-auto self-start">
-          <div className="gap-4 flex md:flex-row flex-col justify-start items-start md:items-center mb-6 z-20">
-            <TabsList className="inline-flex self-start w-auto">
-              <TabsTrigger value="assignments">All Assignments</TabsTrigger>
-              <TabsTrigger value="families">Families</TabsTrigger>
-            </TabsList>
-            <Button
-              className="gap-2"
-              onClick={() => {
-                setEditingAssignment(null)
-                setIsCreating(true)
-              }}
-              disabled={families.length === 0}
-            >
-              <Plus className="h-4 w-4" />
-              Create Assignment
-              {families.length === 0 && ' (Loading...)'}
-            </Button>
-            <RadixDropdown
-              triggerText={
-                <>
-                  <Filter className="h-4 w-4" />
-                  {selectedFamily === 'all'
-                    ? 'All Families '
-                    : families.find((f) => f.parent_id === selectedFamily)
-                        ?.parent_name || 'Unknown Family '}
-                  ▾
-                </>
-              }
-            >
-              <DropdownItem
-                onClick={() => setSelectedFamily('all')}
-                className={
-                  selectedFamily === 'all'
-                    ? 'bg-accent text-accent-foreground'
-                    : ''
-                }
-              >
-                All Families ({assignments.length} assignments)
-              </DropdownItem>
-              {families.map((family) => {
-                const familyAssignmentCount = assignments.filter(
-                  (a) => a.parent_name === family.parent_name,
-                ).length
-                return (
-                  <DropdownItem
-                    key={family.parent_id}
-                    onClick={() => setSelectedFamily(family.parent_id)}
-                    className={
-                      selectedFamily === family.parent_id
-                        ? 'bg-accent text-accent-foreground'
-                        : ''
+        <MotionTabs
+          tabs={[
+            {
+              id: 'assignments',
+              label: 'All Assignments',
+              content: (
+                <div className="space-y-4 z-10">
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center justify-center h-64">
+                        Loading assignments...
+                      </div>
                     }
                   >
-                    {family.parent_name} ({familyAssignmentCount} assignments)
-                  </DropdownItem>
-                )
-              })}
-            </RadixDropdown>
-          </div>
 
-          <TabsContent value="assignments" className="space-y-4 z-10">
-            <Suspense
-              fallback={
-                <div className="flex items-center justify-center h-64">
-                  Loading assignments...
-                </div>
-              }
-            >
-              {assignments.length > 0 &&
-                (() => {
-                  // const parentBreakdown = assignments.reduce((acc, a) => {
-                  //   acc[a.parent_name || 'Unknown'] = (acc[a.parent_name || 'Unknown'] || 0) + 1
-                  //   return acc
-                  // }, {} as Record<string, number>)
 
-                  return null
-                })()}
+                    <KanbanAssignmentBoard
+                      assignments={assignments}
+                      categories={useMemo(
+                        () =>
+                          Array.from(
+                            new Set(
+                              assignments
+                                .map((a) => a.category)
+                                .filter(Boolean),
+                            ),
+                          ),
+                        [assignments],
+                      )}
+                      onAssignmentUpdate={handleKanbanAssignmentUpdate}
+                      onAssignmentDelete={deleteAssignment}
+                      onCreateAssignment={handleKanbanCreateAssignment}
+                      onAssignmentDragUpdate={handleKanbanAssignmentDragUpdate}
+                      userRole="admin"
+                    />
 
-              <KanbanAssignmentBoard
-                assignments={filteredAssignments}
-                categories={useMemo(
-                  () =>
-                    Array.from(
-                      new Set(
-                        filteredAssignments
-                          .map((a) => a.category)
-                          .filter(Boolean),
-                      ),
-                    ),
-                  [filteredAssignments],
-                )}
-                onAssignmentUpdate={handleKanbanAssignmentUpdate}
-                onAssignmentDelete={deleteAssignment}
-                onCreateAssignment={handleKanbanCreateAssignment}
-                onAssignmentDragUpdate={handleKanbanAssignmentDragUpdate}
-                userRole="admin"
-              />
-
-              {filteredAssignments.length === 0 && (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      {selectedFamily === 'all'
-                        ? 'No assignments found across all families.'
-                        : `No assignments found for ${families.find((f) => f.parent_id === selectedFamily)?.parent_name || 'this family'}.`}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </Suspense>
-          </TabsContent>
-
-          <TabsContent value="families" className="space-y-4">
-            <Suspense
-              fallback={
-                <div className="flex items-center justify-center h-64">
-                  Loading families...
-                </div>
-              }
-            >
-              <h2 className="text-2xl font-semibold">
-                All Families ({families.length})
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {families.map((family) => (
-                  <Card key={family.parent_id}>
-                    <CardHeader>
-                      <CardTitle>{family.parent_name}</CardTitle>
-                      <CardDescription>{family.parent_email}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium">
-                          Children ({family.children.length}):
-                        </h4>
-                        {family.children.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">
-                            No children registered
+                    {assignments.length === 0 && (
+                      <Card>
+                        <CardContent className="text-center py-8">
+                          <p className="text-muted-foreground">
+                            No assignments found.
                           </p>
-                        ) : (
-                          <div className="space-y-1">
-                            {family.children.map((child) => (
-                              <div
-                                key={child.id}
-                                className="flex justify-between items-center text-sm"
-                              >
-                                <span>{child.name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {child.email}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        </CardContent>
+                      </Card>
+                    )}
+                  </Suspense>
+                </div>
+              )
+            },
+            {
+              id: 'families',
+              label: 'Families',
+              content: (
+                <div className="space-y-4">
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center justify-center h-64">
+                        Loading families...
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                    }
+                  >
+                    <h2 className="text-2xl font-semibold">
+                      All Families ({families.length})
+                    </h2>
 
-              {families.length === 0 && (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <p className="text-muted-foreground">No families found.</p>
-                  </CardContent>
-                </Card>
-              )}
-            </Suspense>
-          </TabsContent>
-        </Tabs>
-      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {families.map((family) => (
+                        <Card key={family.parent_id}>
+                          <CardHeader>
+                            <CardTitle>{family.parent_name}</CardTitle>
+                            <CardDescription>{family.parent_email}</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-medium">
+                                Children ({family.children.length}):
+                              </h4>
+                              {family.children.length === 0 ? (
+                                <p className="text-xs text-muted-foreground">
+                                  No children registered
+                                </p>
+                              ) : (
+                                <div className="space-y-1">
+                                  {family.children.map((child) => (
+                                    <div
+                                      key={child.id}
+                                      className="flex justify-between items-center text-sm"
+                                    >
+                                      <span>{child.name}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {child.email}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+
+                    {families.length === 0 && (
+                      <Card>
+                        <CardContent className="text-center py-8">
+                          <p className="text-muted-foreground">No families found.</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </Suspense>
+                </div>
+              )
+            }
+          ]}
+          defaultSelectedId="assignments"
+          className="w-full"
+          contentClassName="mt-4"
+        />
+      </div >
       <AssignmentForm
         isOpen={isCreating}
         onOpenChange={setIsCreating}

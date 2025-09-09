@@ -349,7 +349,7 @@ export function KanbanAssignmentBoard({
       <KanbanBoard
         key={column.id}
         id={column.id}
-        className="w-full min-w-[200px]"
+        className="w-full min-w-[275px]"
       >
         <KanbanHeader>
           <div className="flex items-center justify-between">

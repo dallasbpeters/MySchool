@@ -10,8 +10,8 @@
 #expanding-card .card {
   position: relative;
   padding: 0px;
-  height: 420px;
-  flex: 0 0 30%;
+  height: 300px;
+  flex: 0 0 25%;
   box-sizing: border-box;
   border-radius: calc(var(--radius) * 2);
   overflow: hidden;
@@ -19,12 +19,17 @@
   border: 1px solid var(--border);
 }
 
+/* Alternating card sizes for visual interest */
+#expanding-card .card:nth-child(3n + 1) {
+  flex: 0 1 calc(50% - 20px);
+}
+
 #expanding-card .card.card__small {
   height: 250px;
 }
 
 #expanding-card .card.card__xs {
-  height: 150px;
+  height: 175px;
 }
 
 /* Make cards clickable */
@@ -34,11 +39,6 @@
 
 #expanding-card .card.completed {
   opacity: 0.75;
-}
-
-/* Alternating card sizes for visual interest */
-#expanding-card .card:nth-of-type(3n + 1) {
-  flex: 0 1 calc(50% - 20px);
 }
 
 /* Close Button */
@@ -51,20 +51,18 @@
   border-radius: 22px;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   pointer-events: auto;
-  transition: all 0.2s ease;
+  transition: all 0.2s ease-in-out;
   z-index: 1000002;
 }
 
 .close-button:hover {
   background: rgba(0, 0, 0, 0.9);
-  border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Card Content Container */
@@ -174,6 +172,9 @@
   left: 30px;
 }
 
+/* #expanding-card .title-container {
+} */
+
 #expanding-card .title-container h2 {
   color: var(--foreground);
   margin: 8px 0;
@@ -202,7 +203,7 @@
   border-radius: 8px;
   color: var(--foreground);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   text-transform: capitalize;
   padding: 2px 8px;
 }

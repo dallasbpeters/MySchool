@@ -444,7 +444,7 @@ function AssignmentCardExpanded({
                 )}
                 {/* Display related notes */}
                 {!isCreatingNote && relatedNotes.length > 0 && (
-                  <div className="my-4 pt-4 border-t border-gray-200">
+                  <div className="my-4 pt-4 border-t border-border">
                     <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                       <BookOpen className="h-4 w-4" />
                       Notes ({relatedNotes.length})
@@ -481,7 +481,7 @@ function AssignmentCardExpanded({
           </AnimatePresence>
 
           {/* Footer with Add Note and Completion Toggle */}
-          <motion.div className="flex flex-col gap-4 p-6 border-t border-border dark:border-gray-400">
+          <motion.div className="flex flex-col gap-4 p-6 border-t border-border">
             <div className="flex gap-4">
               <AnimatePresence>
                 {!isCreatingNote && (
@@ -845,7 +845,7 @@ function AssignmentCardGroup({
               const isItemAssignment = foundItem?.type === 'assignment'
               return isItemAssignment
                 ? AssignmentService.getDateLabel(foundItem as Assignment)
-                : format(parseISO(date), 'MMM dd, yyyy')
+                : format(parseISO(_date), 'MMM dd, yyyy')
             }}
             getDateColor={(_date, _completed) => {
               const foundItem = allItems.find((item) => item.id === openId)

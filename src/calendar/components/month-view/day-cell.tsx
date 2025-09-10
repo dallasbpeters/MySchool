@@ -40,7 +40,7 @@ export function DayCell({ cell, events, eventPositions }: IProps) {
             'h-6 px-1 text-xs font-semibold lg:px-2',
             !currentMonth && 'opacity-20',
             isToday(date) &&
-              'flex w-6 translate-x-1 items-center justify-center rounded-full bg-primary px-0 font-bold text-primary-foreground',
+            'flex w-6 translate-x-1 items-center justify-center rounded-full bg-primary px-0 font-bold text-primary-foreground',
           )}
         >
           {day}
@@ -48,7 +48,7 @@ export function DayCell({ cell, events, eventPositions }: IProps) {
 
         <div
           className={cn(
-            'flex h-6 gap-1 px-2 lg:h-[94px] lg:flex-col lg:gap-2 lg:px-0',
+            'flex h-6 gap-1 px-2 lg:h-[94px] lg:flex-col lg:gap-0 lg:px-0',
             !currentMonth && 'opacity-50',
           )}
         >
@@ -78,7 +78,7 @@ export function DayCell({ cell, events, eventPositions }: IProps) {
         {cellEvents.length > MAX_VISIBLE_EVENTS && (
           <p
             className={cn(
-              'h-4.5 px-1.5 text-xs font-semibold text-muted-foreground',
+              'h-5 px-1.5 text-xs font-semibold text-muted-foreground',
               !currentMonth && 'opacity-50',
             )}
           >

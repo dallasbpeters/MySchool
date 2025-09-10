@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo, useCallback } from 'react'
 import { useDrop } from 'react-dnd'
 import { parseISO, differenceInMilliseconds } from 'date-fns'
 
@@ -18,51 +19,78 @@ interface DroppableDayCellProps {
 export function DroppableDayCell({ cell, children }: DroppableDayCellProps) {
   const { updateEvent } = useUpdateEvent()
 
-  const [{ isOver, canDrop }, drop] = useDrop(
-    () => ({
-      accept: ItemTypes.EVENT,
-      drop: (item: { event: IEvent }) => {
-        const droppedEvent = item.event
+  // 🔧 Stabilize drop handler to prevent React DND target errors
+  const handleDrop = useCallback(async (item: { event: IEvent }) => {
+    const droppedEvent = item.event
 
-        const eventStartDate = parseISO(droppedEvent.startDate)
-        const eventEndDate = parseISO(droppedEvent.endDate)
+    const eventStartDate = parseISO(droppedEvent.startDate)
+    const eventEndDate = parseISO(droppedEvent.endDate)
 
-        const eventDurationMs = differenceInMilliseconds(
-          eventEndDate,
-          eventStartDate,
-        )
+    const eventDurationMs = differenceInMilliseconds(
+      eventEndDate,
+      eventStartDate,
+    )
 
-        const newStartDate = new Date(cell.date)
-        newStartDate.setHours(
-          eventStartDate.getHours(),
-          eventStartDate.getMinutes(),
-          eventStartDate.getSeconds(),
-          eventStartDate.getMilliseconds(),
-        )
-        const newEndDate = new Date(newStartDate.getTime() + eventDurationMs)
+    const newStartDate = new Date(cell.date)
+    newStartDate.setHours(
+      eventStartDate.getHours(),
+      eventStartDate.getMinutes(),
+      eventStartDate.getSeconds(),
+      eventStartDate.getMilliseconds(),
+    )
+    const newEndDate = new Date(newStartDate.getTime() + eventDurationMs)
 
-        updateEvent({
-          ...droppedEvent,
-          startDate: newStartDate.toISOString(),
-          endDate: newEndDate.toISOString(),
-        })
+    try {
+      await updateEvent({
+        ...droppedEvent,
+        startDate: newStartDate.toISOString(),
+        endDate: newEndDate.toISOString(),
+      })
+      return { moved: true }
+    } catch (error) {
+      console.error('Failed to move event:', error)
+      return { moved: false, error: error }
+    }
+  }, [cell.date, updateEvent])
 
-        return { moved: true }
-      },
-      collect: (monitor) => ({
-        isOver: monitor.isOver(),
-        canDrop: monitor.canDrop(),
-      }),
+  // 🔧 Memoize drop configuration to prevent re-registration
+  const dropConfig = useMemo(() => ({
+    accept: ItemTypes.EVENT,
+    drop: handleDrop,
+    collect: (monitor: any) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
     }),
-    [cell.date, updateEvent],
-  )
+  }), [handleDrop])
+
+  const [{ isOver, canDrop }, drop] = useDrop(dropConfig)
 
   return (
     <div
       ref={drop as unknown as React.RefObject<HTMLDivElement>}
-      className={cn(isOver && canDrop && 'bg-accent/50')}
+      className={cn(
+        'relative',
+        // 🎨 CSS-only hover effects (no Motion during drag)
+        isOver && canDrop && 'bg-primary/5'
+      )}
+      style={{
+        // 🚀 CSS transforms for performance (no React re-renders)
+        transform: isOver && canDrop ? 'scale(1.02)' : 'scale(1)',
+        transition: 'all 0.15s ease-out',
+      }}
     >
       {children}
+
+      {/* 🎯 Simple drop indicator - no Motion animations during drag */}
+      {isOver && canDrop && (
+        <div
+          className="absolute inset-1 pointer-events-none border-1 border-dashed border-primary/50 rounded-sm bg-primary/5 flex items-center justify-center"
+          style={{
+            animation: 'pulse 0.5s ease-in-out infinite'
+          }}
+        >
+        </div>
+      )}
     </div>
   )
 }

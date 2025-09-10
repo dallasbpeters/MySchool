@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo, useCallback } from 'react'
 import { useDrop } from 'react-dnd'
 import { parseISO, differenceInMilliseconds } from 'date-fns'
 
@@ -25,39 +26,46 @@ export function DroppableTimeBlock({
 }: DroppableTimeBlockProps) {
   const { updateEvent } = useUpdateEvent()
 
-  const [{ isOver, canDrop }, drop] = useDrop(
-    () => ({
-      accept: ItemTypes.EVENT,
-      drop: (item: { event: IEvent }) => {
-        const droppedEvent = item.event
+  // 🔧 Stabilize drop handler to prevent React DND target errors
+  const handleDrop = useCallback(async (item: { event: IEvent }) => {
+    const droppedEvent = item.event
 
-        const eventStartDate = parseISO(droppedEvent.startDate)
-        const eventEndDate = parseISO(droppedEvent.endDate)
+    const eventStartDate = parseISO(droppedEvent.startDate)
+    const eventEndDate = parseISO(droppedEvent.endDate)
 
-        const eventDurationMs = differenceInMilliseconds(
-          eventEndDate,
-          eventStartDate,
-        )
+    const eventDurationMs = differenceInMilliseconds(
+      eventEndDate,
+      eventStartDate,
+    )
 
-        const newStartDate = new Date(date)
-        newStartDate.setHours(hour, minute, 0, 0)
-        const newEndDate = new Date(newStartDate.getTime() + eventDurationMs)
+    const newStartDate = new Date(date)
+    newStartDate.setHours(hour, minute, 0, 0)
+    const newEndDate = new Date(newStartDate.getTime() + eventDurationMs)
 
-        updateEvent({
-          ...droppedEvent,
-          startDate: newStartDate.toISOString(),
-          endDate: newEndDate.toISOString(),
-        })
+    try {
+      await updateEvent({
+        ...droppedEvent,
+        startDate: newStartDate.toISOString(),
+        endDate: newEndDate.toISOString(),
+      })
+      return { moved: true }
+    } catch (error) {
+      console.error('Failed to move event:', error)
+      return { moved: false, error: error }
+    }
+  }, [date, hour, minute, updateEvent])
 
-        return { moved: true }
-      },
-      collect: (monitor) => ({
-        isOver: monitor.isOver(),
-        canDrop: monitor.canDrop(),
-      }),
+  // 🔧 Memoize drop configuration to prevent re-registration
+  const dropConfig = useMemo(() => ({
+    accept: ItemTypes.EVENT,
+    drop: handleDrop,
+    collect: (monitor: any) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
     }),
-    [date, hour, minute, updateEvent],
-  )
+  }), [handleDrop])
+
+  const [{ isOver, canDrop }, drop] = useDrop(dropConfig)
 
   return (
     <div

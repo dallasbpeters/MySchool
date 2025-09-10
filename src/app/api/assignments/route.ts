@@ -375,11 +375,17 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  console.log('🚀 PUT /api/assignments - Request received')
   try {
     const url = new URL(request.url)
     const assignmentId = url.searchParams.get('id')
 
+    console.log('📝 PUT Request Details:')
+    console.log('  - URL:', url.toString())
+    console.log('  - Assignment ID from query:', assignmentId)
+
     if (!assignmentId) {
+      console.log('❌ No assignment ID provided')
       return NextResponse.json(
         { error: 'Assignment ID is required' },
         { status: 400 },
@@ -436,6 +442,44 @@ export async function PUT(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
+    console.log('🔍 ASSIGNMENTS API DEBUG - Update Request:')
+    console.log('  - Assignment ID:', assignmentId)
+    console.log('  - User ID:', user.id)
+    console.log('  - User role:', profile?.role)
+    console.log('  - Request body:', { title, due_date, category })
+
+    // First, check if the assignment exists
+    const { data: existingAssignment, error: checkError } = await supabase
+      .from('assignments')
+      .select('id, title, parent_id')
+      .eq('id', assignmentId)
+      .single()
+
+    console.log('  - Assignment exists check:', { existingAssignment, checkError })
+
+    if (checkError || !existingAssignment) {
+      console.log('❌ Assignment not found in database')
+      return NextResponse.json(
+        { error: 'Assignment not found' },
+        { status: 404 },
+      )
+    }
+
+    console.log('  - Found assignment:', existingAssignment)
+    console.log('  - Assignment parent_id:', existingAssignment.parent_id)
+    console.log('  - User can update?', profile?.role === 'admin' || existingAssignment.parent_id === user.id)
+
+    // Check permissions
+    if (profile?.role !== 'admin' && existingAssignment.parent_id !== user.id) {
+      console.log('❌ Permission denied - user is not admin and not assignment owner')
+      return NextResponse.json(
+        { error: 'You do not have permission to update this assignment' },
+        { status: 403 },
+      )
+    }
+
+    console.log('✅ Permission check passed, proceeding with update')
+
     // Update the assignment - ensure dates are properly formatted
     const parsedDueDate = due_date
       ? new Date(due_date).toISOString().split('T')[0]
@@ -445,38 +489,52 @@ export async function PUT(request: NextRequest) {
         ? new Date(recurrence_end_date).toISOString().split('T')[0]
         : null
 
+    const updateData = {
+      title: title.trim(),
+      content: content,
+      links: links || [],
+      due_date: parsedDueDate,
+      category: category || '',
+      is_recurring: is_recurring || false,
+      recurrence_pattern: is_recurring ? recurrence_pattern : null,
+      recurrence_end_date: parsedRecurrenceEndDate,
+      next_due_date: is_recurring ? parsedDueDate : null,
+    }
+
+    console.log('📝 Update data:', updateData)
+
     let updateQuery = supabase
       .from('assignments')
-      .update({
-        title: title.trim(),
-        content: content,
-        links: links || [],
-        due_date: parsedDueDate,
-        category: category || '',
-        is_recurring: is_recurring || false,
-        recurrence_pattern: is_recurring ? recurrence_pattern : null,
-        recurrence_end_date: parsedRecurrenceEndDate,
-        next_due_date: is_recurring ? parsedDueDate : null,
-      })
+      .update(updateData)
       .eq('id', assignmentId)
 
     // Only filter by parent_id for non-admin users
-    if (profile?.role !== 'admin') {
+    if (profile?.role === 'admin') {
+      console.log('  - Admin user: no parent_id filter applied')
+    } else {
+      console.log('  - Non-admin user: applying parent_id filter')
       updateQuery = updateQuery.eq('parent_id', user.id)
     }
 
+    console.log('🔄 Executing update query...')
     const { data: assignmentData, error: assignmentError } = await updateQuery
       .select()
-      .single()
+
+    console.log('📊 Update query result:')
+    console.log('  - assignmentData:', assignmentData)
+    console.log('  - assignmentError:', assignmentError)
+    console.log('  - Data length:', assignmentData?.length)
 
     if (assignmentError) {
+      console.log('❌ Update query failed:', assignmentError.message)
       return NextResponse.json(
         { error: `Failed to update assignment: ${assignmentError.message}` },
         { status: 500 },
       )
     }
 
-    if (!assignmentData) {
+    if (!assignmentData || assignmentData.length === 0) {
+      console.log('❌ No data returned from update - assignment not found or no permission')
       return NextResponse.json(
         {
           error:
@@ -485,6 +543,10 @@ export async function PUT(request: NextRequest) {
         { status: 404 },
       )
     }
+
+    // Get the first (and should be only) updated assignment
+    const updatedAssignment = assignmentData[0]
+    console.log('✅ Assignment updated successfully:', updatedAssignment)
 
     // Update student assignments if selectedChildren is provided
     if (selectedChildren && Array.isArray(selectedChildren)) {
@@ -520,11 +582,13 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      assignment: assignmentData,
+      assignment: updatedAssignment,
       message: `Assignment "${title.trim()}" updated successfully`,
     })
   } catch (error: unknown) {
-    console.error('Error in PUT /api/assignments:', error)
+    console.error('💥 Error in PUT /api/assignments:', error)
+    console.error('💥 Error details:', (error as Error).message)
+    console.error('💥 Error stack:', (error as Error).stack)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 },

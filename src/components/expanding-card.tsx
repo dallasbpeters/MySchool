@@ -22,7 +22,7 @@ import { AnimatePresence } from 'motion/react'
 import { Toggle } from '@/components/ui/toggle'
 import { AssignmentService } from '@/services/assignment-service'
 import { Assignment } from '@/types'
-import './ui/shared-card-styles.css'
+import SplitText from '@/components/ui/motion/splittext'
 
 // Union type to handle both assignments and recommendations
 type AssignmentOrRecommendation =
@@ -147,16 +147,14 @@ function AssignmentCard({
             {assignment.category}
           </motion.div>
         )}
-        <motion.img
+        <motion.div
           className="card-image"
-          src={images[imageIndex % images.length]}
-          alt=""
-          layoutId={`assignment-image-${assignment.id}-${groupId || 'default'}`}
           style={{
             backgroundImage: `url(${images[imageIndex % images.length]})`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            backgroundPosition: 'center center',
           }}
+          layoutId={`assignment-image-${assignment.id}-${groupId || 'default'}`}
         />
       </motion.div>
       <motion.div
@@ -167,11 +165,11 @@ function AssignmentCard({
         {assignment.category && (
           <span className="category">{assignment.category}</span>
         )}
-        <h2 className="font-bold text-xl h2">{assignment.title}</h2>
+        <motion.h2>{assignment.title}</motion.h2>
       </motion.div>
       {showDate && (
         <div
-          className={`bg-background/70 p-2 absolute bottom-0 left-0 right-0 flex items-center gap-2 mt-2 ${getDateColor(selectedInstanceDate || (assignment.type === 'assignment' ? assignment.due_date || '' : assignment.created_at), assignment.type === 'assignment' ? assignment.completed : false)}`}
+          className={`bg-background/70 px-3 py-2 absolute bottom-0 left-0 right-0 flex items-baseline gap-1 mt-2 ${getDateColor(selectedInstanceDate || (assignment.type === 'assignment' ? assignment.due_date || '' : assignment.created_at), assignment.type === 'assignment' ? assignment.completed : false)}`}
         >
           <Calendar className="h-3 w-3" />
           <span className="text-sm">
@@ -389,16 +387,14 @@ function AssignmentCardExpanded({
                 {assignment.category}
               </motion.div>
             )}
-            <motion.img
+            <motion.div
               className="card-image expanded"
-              src={images[imageIndex % images.length]}
-              alt=""
-              layoutId={`assignment-image-${assignment.id}-${groupId || 'default'}`}
               style={{
-                objectFit: 'cover',
-                backgroundSize: 'cover',
+                backgroundImage: `url(${images[imageIndex % images.length]})`,
+                backgroundSize: '105%',
                 backgroundPosition: 'center',
               }}
+              layoutId={`assignment-image-${assignment.id}-${groupId || 'default'}`}
             />
           </motion.div>
           <motion.div
@@ -409,34 +405,26 @@ function AssignmentCardExpanded({
             {assignment.category && (
               <span className="category">{assignment.category}</span>
             )}
-            <h2 className="font-bold text-xl h2">{assignment.title}</h2>
-            {assignment.type === 'assignment' && assignment.is_recurring && (
-              <Repeat className="inline-block align-baseline h-4 w-4 ms-1 text-sm text-muted-foreground" />
-            )}
+            <motion.h2>{assignment.title}</motion.h2>
           </motion.div>
           <AnimatePresence>
             {!isCreatingNote && (
               <motion.div initial={false} className="content-container small">
                 {assignment.content && (
                   <div className="prose prose-sm max-w-none">
-                    <p className="big">{assignment.title}</p>
                     <EditorContent editor={editor} />
                   </div>
                 )}
                 {assignment.links && assignment.links.length > 0 && (
                   <div className="mt-4">
-                    <h4 className="text-sm font-medium mb-2">Resources:</h4>
-                    <ul className="space-y-1">
+                    <ul className="space-y-1 flex gap-2">
                       {assignment.links.map((link, index) => (
                         <li key={index}>
-                          <a
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:text-secondary underline"
+                          <Button
+                            onClick={() => window.open(link.url, '_blank')}
                           >
                             {link.title}
-                          </a>
+                          </Button>
                         </li>
                       ))}
                     </ul>
@@ -505,7 +493,7 @@ function AssignmentCardExpanded({
                   className={(() => {
                     'w-full h-12 transition-colors cursor-pointer'
                     if (assignment.type !== 'assignment') {
-                      return 'bg-gray-200 text-gray-700 w-full h-12'
+                      return 'ring-inset ring-1 ring-offset-green-600 text-gray-700 w-full h-12'
                     }
                     if (!assignment.is_recurring) {
                       return assignment.completed
@@ -524,7 +512,7 @@ function AssignmentCardExpanded({
                         ?.completed || false
                     return isCompleted
                       ? 'bg-green-500 text-white w-full h-12'
-                      : 'bg-gray-200 text-gray-700 w-full h-12'
+                      : 'ring-1 ring-green-500 text-gray-700 w-full h-12'
                   })()}
                   data-state={(() => {
                     if (assignment.type !== 'assignment') {

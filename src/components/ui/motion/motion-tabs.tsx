@@ -151,7 +151,7 @@ function StyleSheet() {
         .motion-tabs {
             background-color: var(--card);
             border-radius: 10px;
-            border: 1px solid #1d2628;
+            border: 1px solid var(--border);
             padding: 5px;
         }
 

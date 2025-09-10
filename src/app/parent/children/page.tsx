@@ -198,20 +198,6 @@ export default function ChildrenManagement() {
     }
   }, [user, fetchChildren, fetchSignupCodes])
 
-  // If no user after loading, show login message
-  if (!user) {
-    return (
-      <div className="p-8 text-center">
-        <p>You need to be logged in to access this page.</p>
-        <button
-          onClick={() => (window.location.href = '/login')}
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-        >
-          Go to Login
-        </button>
-      </div>
-    )
-  }
 
   const generateSignupCode = async () => {
     // Input validation only
@@ -286,10 +272,10 @@ export default function ChildrenManagement() {
           prev.map((c) =>
             c.id === codeData.id
               ? {
-                  ...c,
-                  status: 'error',
-                  error: result.error || 'Unknown error',
-                }
+                ...c,
+                status: 'error',
+                error: result.error || 'Unknown error',
+              }
               : c,
           ),
         )

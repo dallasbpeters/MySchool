@@ -16,6 +16,75 @@ export interface AssignmentGroups {
 }
 
 export class AssignmentService {
+
+  /**
+   * Check if today is a recurring day for the given assignment
+   */
+  static isTodayRecurringDay(assignment: Assignment): boolean {
+    if (!assignment.is_recurring || !assignment.recurrence_pattern) {
+      return false
+    }
+
+    const today = new Date()
+    const todayString =
+      today.getFullYear() +
+      '-' +
+      String(today.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(today.getDate()).padStart(2, '0')
+
+    const { days, frequency = 'weekly' } = assignment.recurrence_pattern
+
+    if (frequency === 'daily') {
+      return true // Every day is a recurring day for daily tasks
+    } else if (frequency === 'weekly') {
+      const dayMap: Record<string, number> = {
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5,
+        saturday: 6,
+        sunday: 0,
+      }
+
+      const todayDayOfWeek = today.getDay()
+      return days.some((day) => dayMap[day.toLowerCase()] === todayDayOfWeek)
+    }
+
+    return false
+  }
+
+  /**
+   * Check if a given date is a recurring day for the assignment
+   */
+  static isDateRecurringDay(assignment: Assignment, date: Date): boolean {
+    if (!assignment.is_recurring || !assignment.recurrence_pattern) {
+      return false
+    }
+
+    const { days, frequency = 'weekly' } = assignment.recurrence_pattern
+
+    if (frequency === 'daily') {
+      return true // Every day is a recurring day for daily tasks
+    } else if (frequency === 'weekly') {
+      const dayMap: Record<string, number> = {
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5,
+        saturday: 6,
+        sunday: 0,
+      }
+
+      const dateDayOfWeek = date.getDay()
+      return days.some((day) => dayMap[day.toLowerCase()] === dateDayOfWeek)
+    }
+
+    return false
+  }
+
   static filters: AssignmentFilters = {
     isOverdue: (assignment: Assignment): boolean => {
       const today = new Date()
@@ -26,22 +95,55 @@ export class AssignmentService {
         '-' +
         String(today.getDate()).padStart(2, '0')
 
-      // For recurring assignments, check if any past due instances are incomplete
-      if (assignment.is_recurring && assignment.instance_completions) {
-        // Check if there are any overdue instances that haven't been completed
-        for (const [instanceDate, completion] of Object.entries(
-          assignment.instance_completions,
-        )) {
-          if (instanceDate < todayString && !completion.completed) {
-            return true
+      // For recurring assignments
+      if (assignment.is_recurring) {
+        // Check if any past due instances are incomplete
+        if (assignment.instance_completions) {
+          for (const [instanceDate, completion] of Object.entries(
+            assignment.instance_completions,
+          )) {
+            if (instanceDate < todayString && !completion.completed) {
+              return true
+            }
           }
         }
-        // If no overdue incomplete instances found, not overdue
+
+        // Check if today is a recurring day and if today's instance is incomplete
+        if (AssignmentService.isTodayRecurringDay(assignment)) {
+          const todayInstanceCompleted =
+            assignment.instance_completions?.[todayString]?.completed || false
+          if (!todayInstanceCompleted) {
+            return false // Today is a recurring day and it's not completed, so it's not overdue
+          }
+        }
+
+        // Check if there are any past recurring days that weren't completed
+        let checkDate = new Date(today)
+        checkDate.setDate(checkDate.getDate() - 1)
+
+        for (let i = 0; i < 30; i++) { // Check last 30 days
+          const dateString =
+            checkDate.getFullYear() +
+            '-' +
+            String(checkDate.getMonth() + 1).padStart(2, '0') +
+            '-' +
+            String(checkDate.getDate()).padStart(2, '0')
+
+          if (AssignmentService.isDateRecurringDay(assignment, checkDate)) {
+            const instanceCompleted =
+              assignment.instance_completions?.[dateString]?.completed || false
+            if (!instanceCompleted) {
+              return true
+            }
+          }
+
+          checkDate.setDate(checkDate.getDate() - 1)
+        }
+
         return false
       }
 
-      // For non-recurring assignments or recurring without instance data
-      // Compare due date directly with today
+      // For non-recurring assignments, compare due date directly with today
       if (assignment.due_date < todayString) {
         return !assignment.completed
       }
@@ -50,6 +152,11 @@ export class AssignmentService {
     },
 
     isToday: (assignment: Assignment): boolean => {
+      // First check if this assignment should be overdue - if so, don't show in today
+      if (AssignmentService.filters.isOverdue(assignment)) {
+        return false
+      }
+
       const today = new Date()
       const todayString =
         today.getFullYear() +
@@ -58,16 +165,22 @@ export class AssignmentService {
         '-' +
         String(today.getDate()).padStart(2, '0')
 
-      // Compare date strings directly to avoid timezone issues
-      if (assignment.due_date !== todayString) {
-        return false
-      }
-
-      // For recurring assignments, check if today's instance is completed
+      // For recurring assignments
       if (assignment.is_recurring) {
+        // Check if today is a recurring day
+        if (!AssignmentService.isTodayRecurringDay(assignment)) {
+          return false
+        }
+
+        // Check if today's instance is completed
         const todayInstanceCompleted =
           assignment.instance_completions?.[todayString]?.completed || false
         return !todayInstanceCompleted
+      }
+
+      // For non-recurring assignments, compare due date directly with today
+      if (assignment.due_date !== todayString) {
+        return false
       }
 
       // For non-recurring assignments, check if the assignment is completed
@@ -75,45 +188,11 @@ export class AssignmentService {
     },
 
     isUpcoming: (assignment: Assignment): boolean => {
-      const today = new Date()
-      const todayString =
-        today.getFullYear() +
-        '-' +
-        String(today.getMonth() + 1).padStart(2, '0') +
-        '-' +
-        String(today.getDate()).padStart(2, '0')
-
-      // Compare date strings directly to avoid timezone issues
-      if (assignment.due_date <= todayString) {
-        console.log(
-          `❌ Assignment ${assignment.id} (${assignment.title}) filtered out: due_date ${assignment.due_date} <= today ${todayString}`,
-        )
+      // First check if this assignment should be overdue - if so, don't show in upcoming
+      if (AssignmentService.filters.isOverdue(assignment)) {
         return false
       }
 
-      // For recurring assignments, we need to check if there are any upcoming instances
-      // that haven't been completed. For now, we'll use a simpler approach.
-      if (assignment.is_recurring) {
-        // For recurring assignments, if the assignment itself is marked as completed,
-        // we might still want to show it if there are future instances.
-        // This is a complex case that might need more sophisticated logic.
-        // For now, let's show recurring assignments in upcoming regardless of completion
-        // since they have multiple instances.
-        console.log(
-          `✅ Recurring assignment ${assignment.id} (${assignment.title}) included in upcoming (completed: ${assignment.completed})`,
-        )
-        return true
-      }
-
-      // For non-recurring assignments, don't show if already completed
-      const isIncluded = !assignment.completed
-      console.log(
-        `${isIncluded ? '✅' : '❌'} Non-recurring assignment ${assignment.id} (${assignment.title}) ${isIncluded ? 'included' : 'excluded'} from upcoming (completed: ${assignment.completed})`,
-      )
-      return isIncluded
-    },
-
-    isPast: (assignment: Assignment): boolean => {
       const today = new Date()
       const todayString =
         today.getFullYear() +
@@ -122,8 +201,100 @@ export class AssignmentService {
         '-' +
         String(today.getDate()).padStart(2, '0')
 
-      // Compare date strings directly to avoid timezone issues
-      return assignment.due_date <= todayString
+      // For recurring assignments
+      if (assignment.is_recurring) {
+        // If today is a recurring day and not completed, it should be in "today" not "upcoming"
+        if (AssignmentService.isTodayRecurringDay(assignment)) {
+          const todayInstanceCompleted =
+            assignment.instance_completions?.[todayString]?.completed || false
+          if (!todayInstanceCompleted) {
+            return false // Should show in "today" instead
+          }
+        }
+
+        // Check if there are any future recurring days that haven't been completed
+        let checkDate = new Date(today)
+        checkDate.setDate(checkDate.getDate() + 1) // Start from tomorrow
+
+        for (let i = 0; i < 30; i++) { // Check next 30 days
+          const dateString =
+            checkDate.getFullYear() +
+            '-' +
+            String(checkDate.getMonth() + 1).padStart(2, '0') +
+            '-' +
+            String(checkDate.getDate()).padStart(2, '0')
+
+          if (AssignmentService.isDateRecurringDay(assignment, checkDate)) {
+            const instanceCompleted =
+              assignment.instance_completions?.[dateString]?.completed || false
+            if (!instanceCompleted) {
+              return true // Found an upcoming incomplete recurring instance
+            }
+          }
+
+          checkDate.setDate(checkDate.getDate() + 1)
+        }
+
+        return false // No upcoming incomplete recurring instances
+      }
+
+      // For non-recurring assignments, compare due date directly with today
+      if (assignment.due_date <= todayString) {
+        return false
+      }
+
+      // For non-recurring assignments, don't show if already completed
+      return !assignment.completed
+    },
+
+    isPast: (assignment: Assignment): boolean => {
+      // isPast should only include tasks that are truly in the past but not overdue
+      // Overdue tasks are handled by isOverdue filter
+      if (AssignmentService.filters.isOverdue(assignment)) {
+        return false
+      }
+
+      const today = new Date()
+      const todayString =
+        today.getFullYear() +
+        '-' +
+        String(today.getMonth() + 1).padStart(2, '0') +
+        '-' +
+        String(today.getDate()).padStart(2, '0')
+
+      // For recurring assignments, check if all past recurring instances are completed
+      if (assignment.is_recurring) {
+        let hasIncompletePastInstance = false
+
+        // Check all past recurring days
+        let checkDate = new Date(today)
+        checkDate.setDate(checkDate.getDate() - 1) // Start from yesterday
+
+        for (let i = 0; i < 30; i++) { // Check last 30 days
+          const dateString =
+            checkDate.getFullYear() +
+            '-' +
+            String(checkDate.getMonth() + 1).padStart(2, '0') +
+            '-' +
+            String(checkDate.getDate()).padStart(2, '0')
+
+          if (AssignmentService.isDateRecurringDay(assignment, checkDate)) {
+            const instanceCompleted =
+              assignment.instance_completions?.[dateString]?.completed || false
+            if (!instanceCompleted) {
+              hasIncompletePastInstance = true
+              break
+            }
+          }
+
+          checkDate.setDate(checkDate.getDate() - 1)
+        }
+
+        return hasIncompletePastInstance
+      }
+
+      // For non-recurring assignments, compare due date directly with today
+      return assignment.due_date < todayString && !assignment.completed
     },
   }
 
@@ -367,7 +538,6 @@ export class AssignmentService {
   }
 
   static getDateLabel(assignment: Assignment): string {
-    const dueDate = parseISO(assignment.due_date)
     const today = new Date()
     const tomorrow = new Date(today)
     tomorrow.setDate(today.getDate() + 1)
@@ -377,18 +547,28 @@ export class AssignmentService {
       return 'Overdue'
     }
 
-    // For recurring assignments that show next instance, show contextual labels
-    if (assignment.is_recurring && assignment.next_due_date) {
+    // For recurring assignments
+    if (assignment.is_recurring) {
       if (this.filters.isToday(assignment)) {
         return 'Due Today'
-      } else if (dueDate.toDateString() === tomorrow.toDateString()) {
-        return 'Due Tomorrow'
-      } else {
-        return `Due ${dueDate.toLocaleDateString()}`
       }
+
+      // Find the next upcoming recurring instance
+      const nextInstance = this.findNextUpcomingInstance(assignment)
+      if (nextInstance) {
+        const nextDueDate = parseISO(nextInstance.date)
+        if (nextDueDate.toDateString() === tomorrow.toDateString()) {
+          return 'Due Tomorrow'
+        } else {
+          return `Due ${nextDueDate.toLocaleDateString()}`
+        }
+      }
+
+      return 'No upcoming instances'
     }
 
-    // For non-recurring assignments or recurring without next_due_date
+    // For non-recurring assignments
+    const dueDate = parseISO(assignment.due_date)
     if (this.filters.isToday(assignment)) {
       return 'Due Today'
     } else if (dueDate.toDateString() === tomorrow.toDateString()) {

@@ -8,8 +8,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 const font = Inclusive_Sans({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'MySchool - Homeschool Assignment Manager',
-  description: 'Manage assignments for homeschooling families',
+  title: 'MySchool',
+  description: 'Daily Assignment Tracker',
 }
 
 export default function LoginLayout({

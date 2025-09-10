@@ -40,14 +40,19 @@ export async function GET() {
     }
 
     // Get children profiles
-    const { data: children, error: childrenError } = await supabase
+    let query = supabase
       .from('profiles')
       .select('id, name, email, created_at, role, parent_id')
-      .eq('parent_id', user.id)
       .eq('role', 'student')
       .order('created_at', { ascending: true })
 
-    // Debug logging
+    // For parents, only show their children. For admins, show all children.
+    if (userProfile?.role === 'parent') {
+      query = query.eq('parent_id', user.id)
+    }
+    // For admins, no additional filter - show all students
+
+    const { data: children, error: childrenError } = await query
 
     if (childrenError) {
       return NextResponse.json({ children: [], error: childrenError.message })

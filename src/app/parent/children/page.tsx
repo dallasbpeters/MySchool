@@ -443,7 +443,7 @@ export default function ChildrenManagement() {
   return (
     <>
       <Suspense>
-        <div className="z-5 relative container mx-auto p-6">
+        <div className="z-2 relative container mx-auto p-6">
           <div className="mb-6">
             <h1 className="text-3xl font-bold">Students</h1>
             <p className="text-muted-foreground">

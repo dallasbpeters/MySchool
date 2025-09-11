@@ -8,10 +8,11 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { AgendaDayGroup } from '@/calendar/components/agenda-view/agenda-day-group'
 
 import type { IEvent } from '@/calendar/interfaces'
+import type { CalendarItem } from '@/types/calendar-integration'
 
 interface IProps {
-  singleDayEvents: IEvent[]
-  multiDayEvents: IEvent[]
+  singleDayEvents: (IEvent | CalendarItem)[]
+  multiDayEvents: (IEvent | CalendarItem)[]
 }
 
 export function CalendarAgendaView({
@@ -23,7 +24,7 @@ export function CalendarAgendaView({
   const eventsByDay = useMemo(() => {
     const allDates = new Map<
       string,
-      { date: Date; events: IEvent[]; multiDayEvents: IEvent[] }
+      { date: Date; events: (IEvent | CalendarItem)[]; multiDayEvents: (IEvent | CalendarItem)[] }
     >()
 
     singleDayEvents.forEach((event) => {

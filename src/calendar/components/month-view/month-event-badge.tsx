@@ -5,10 +5,12 @@ import { useCalendar } from '@/calendar/contexts/calendar-context'
 
 import { DraggableEvent } from '@/calendar/components/dnd/draggable-event'
 import { EventDetailsDialog } from '@/calendar/components/dialogs/event-details-dialog'
+import { StudentInitialsDisplay } from '@/components/student-initials-display'
 
 import { cn } from '@/lib/utils'
 
 import type { IEvent } from '@/calendar/interfaces'
+import type { CalendarItem } from '@/types/calendar-integration'
 import type { VariantProps } from 'class-variance-authority'
 
 const eventBadgeVariants = cva(
@@ -65,7 +67,7 @@ interface IProps
     VariantProps<typeof eventBadgeVariants>,
     'color' | 'multiDayPosition'
   > {
-  event: IEvent
+  event: IEvent | CalendarItem
   cellDate: Date
   eventCurrentDay?: number
   eventTotalDays?: number
@@ -156,7 +158,18 @@ export function MonthEventBadge({
           </div>
 
           {renderBadgeText && (
-            <span>{format(new Date(event.startDate), 'h:mm a')}</span>
+            <div className="flex items-center">
+              {event.type === 'assignment' && 'assignedStudents' in event && event.assignedStudents ? (
+                <StudentInitialsDisplay 
+                  students={event.assignedStudents} 
+                  maxDisplay={2} 
+                  size="small"
+                  showTooltip={true}
+                />
+              ) : (
+                <span>{format(new Date(event.startDate), 'h:mm a')}</span>
+              )}
+            </div>
           )}
         </div>
       </EventDetailsDialog>

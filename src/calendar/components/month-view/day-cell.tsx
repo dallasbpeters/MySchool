@@ -9,10 +9,11 @@ import { cn } from '@/lib/utils'
 import { getMonthCellEvents } from '@/calendar/helpers'
 
 import type { ICalendarCell, IEvent } from '@/calendar/interfaces'
+import type { CalendarItem } from '@/types/calendar-integration'
 
 interface IProps {
   cell: ICalendarCell
-  events: IEvent[]
+  events: (IEvent | CalendarItem)[]
   eventPositions: Record<string, number>
 }
 

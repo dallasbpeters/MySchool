@@ -7,13 +7,14 @@ import { getEmptyImage } from 'react-dnd-html5-backend'
 import { cn } from '@/lib/utils'
 
 import type { IEvent } from '@/calendar/interfaces'
+import type { CalendarItem } from '@/types/calendar-integration'
 
 export const ItemTypes = {
   EVENT: 'event',
 }
 
 interface DraggableEventProps {
-  event: IEvent
+  event: IEvent | CalendarItem
   children: React.ReactNode
 }
 

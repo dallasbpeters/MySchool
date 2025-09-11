@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useCallback } from 'react'
-import { useDrop } from 'react-dnd'
+import { useDrop, DropTargetMonitor } from 'react-dnd'
 import { parseISO, differenceInMilliseconds } from 'date-fns'
 
 import { useUpdateEvent } from '@/calendar/hooks/use-update-event'
@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { ItemTypes } from '@/calendar/components/dnd/draggable-event'
 
 import type { IEvent, ICalendarCell } from '@/calendar/interfaces'
+import type { CalendarItem } from '@/types/calendar-integration'
 
 interface DroppableDayCellProps {
   cell: ICalendarCell
@@ -20,9 +21,33 @@ export function DroppableDayCell({ cell, children }: DroppableDayCellProps) {
   const { updateEvent } = useUpdateEvent()
 
   // 🔧 Stabilize drop handler to prevent React DND target errors
-  const handleDrop = useCallback(async (item: { event: IEvent }) => {
+  const handleDrop = useCallback(async (item: { event: IEvent | CalendarItem }) => {
     const droppedEvent = item.event
 
+    // Check if this is an assignment - assignments have different update logic
+    if (droppedEvent.type === 'assignment') {
+      // For assignments, we update the due_date, not start/end dates
+      const newDueDate = new Date(cell.date)
+      // Keep the same time as the original due date
+      const originalDate = parseISO(droppedEvent.startDate)
+      newDueDate.setHours(
+        originalDate.getHours(),
+        originalDate.getMinutes(),
+        originalDate.getSeconds(),
+        originalDate.getMilliseconds(),
+      )
+
+      try {
+        // TODO: We need an updateAssignment function for this
+        // For now, just show a message that assignments can't be moved via drag/drop
+        return { moved: false, error: 'Assignment drag and drop not yet implemented' }
+      } catch (error) {
+        console.error('Failed to move assignment:', error)
+        return { moved: false, error: error }
+      }
+    }
+
+    // Handle regular events
     const eventStartDate = parseISO(droppedEvent.startDate)
     const eventEndDate = parseISO(droppedEvent.endDate)
 
@@ -43,6 +68,8 @@ export function DroppableDayCell({ cell, children }: DroppableDayCellProps) {
     try {
       await updateEvent({
         ...droppedEvent,
+        description: droppedEvent.description || '',
+        user: droppedEvent.user || { id: '', name: '' },
         startDate: newStartDate.toISOString(),
         endDate: newEndDate.toISOString(),
       })
@@ -57,7 +84,7 @@ export function DroppableDayCell({ cell, children }: DroppableDayCellProps) {
   const dropConfig = useMemo(() => ({
     accept: ItemTypes.EVENT,
     drop: handleDrop,
-    collect: (monitor: any) => ({
+    collect: (monitor: DropTargetMonitor) => ({
       isOver: monitor.isOver(),
       canDrop: monitor.canDrop(),
     }),

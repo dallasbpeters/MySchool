@@ -6,9 +6,10 @@ import { useCalendar } from '@/calendar/contexts/calendar-context'
 import { YearViewMonth } from '@/calendar/components/year-view/year-view-month'
 
 import type { IEvent } from '@/calendar/interfaces'
+import type { CalendarItem } from '@/types/calendar-integration'
 
 interface IProps {
-  allEvents: IEvent[]
+  allEvents: (IEvent | CalendarItem)[]
 }
 
 export function CalendarYearView({ allEvents }: IProps) {

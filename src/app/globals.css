@@ -252,9 +252,12 @@
   /* Card List Container */
   #expanding-card .expanding-card-list {
     display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: stretch;
     flex-wrap: wrap;
-    align-content: flex-start;
-    gap: 20px;
+    align-content: stretch;
+    gap: 1rem;
   }
 
   /* Individual Cards */
@@ -262,7 +265,7 @@
     position: relative;
     padding: 0px;
     height: 300px;
-    flex: 0 0 28%;
+    flex: 0 0 25%;
     box-sizing: border-box;
     border-radius: calc(var(--radius) * 2);
     overflow: hidden;
@@ -272,15 +275,15 @@
   }
   /* Alternating card sizes for visual interest */
 
-  #expanding-card .card:nth-child(3n + 1) {
-    flex: 0 1 calc(40% - 20px);
+  #expanding-card .card:nth-child(1) {
+    flex: 0 1 30%;
   }
-  #expanding-card .card:nth-child(3n) {
-    flex: 0 1 calc(32% - 20px);
+  #expanding-card .card:nth-child(2) {
+    flex: 0 1 30%;
   }
-  /* #expanding-card .card:nth-child(4n) {
-    flex: 0 1 calc(42% - 20px);
-  } */
+  #expanding-card .card:nth-child(3) {
+    flex: 0 1 40%;
+  }
 
   #expanding-card .card.card__small {
     height: 250px;
@@ -535,4 +538,121 @@
   50% {
     opacity: 0.7;
   }
+}
+
+/* 📅 Assignment vs Event Visual Differentiation */
+.calendar-assignment {
+  position: relative;
+}
+
+.calendar-assignment::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 0 2px 2px 0;
+}
+
+/* Assignment status color coding */
+.calendar-assignment[data-completion-status='complete'] {
+  opacity: 0.8;
+}
+
+.calendar-assignment[data-completion-status='complete']::after {
+  content: '✓';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  color: #22c55e;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+/* Student initials display */
+.student-initials-display {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.student-initials-display .student-initial {
+  --current-color: currentColor;
+  --current-background: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 0.9;
+  color: var(--current-color);
+  background: var(--current-background);
+  border-color: inherit;
+  transition: all 0.2s ease;
+}
+
+.student-initials-display .student-initial:nth-child(even) {
+  color: var(--current-color);
+}
+
+.student-initials-display .student-initial:nth-child(3n) {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
+.student-initials-display .student-initial:hover {
+  transform: scale(1.1);
+}
+
+.student-initials-display .overflow-indicator {
+  color: var(--current-color);
+}
+
+/* Calendar event vs assignment typography */
+.calendar-event .event-time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.calendar-assignment .assignment-initials {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* High contrast mode improvements */
+@media (prefers-contrast: high) {
+  .student-initials-display .student-initial {
+    border: 1px solid var(--foreground);
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  .calendar-assignment::before {
+    background: var(--foreground);
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .student-initials-display .student-initial {
+    transition: none;
+  }
+
+  .student-initials-display .student-initial:hover {
+    transform: none;
+  }
+}
+
+/* Dark mode adjustments */
+.dark .student-initials-display .student-initial {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark .calendar-assignment[data-completion-status='complete']::after {
+  color: #10b981;
 }

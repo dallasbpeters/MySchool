@@ -27,6 +27,7 @@ import {
 } from 'date-fns'
 
 import type { ICalendarCell, IEvent } from '@/calendar/interfaces'
+import type { CalendarItem } from '@/types/calendar-integration'
 import type {
   TCalendarView,
   TVisibleHours,
@@ -102,7 +103,7 @@ export function getEventsCount(
 
 // ================ Week and day view helper functions ================ //
 
-export function getCurrentEvents(events: IEvent[]) {
+export function getCurrentEvents(events: (IEvent | CalendarItem)[]) {
   const now = new Date()
   return (
     events.filter((event) =>
@@ -291,8 +292,8 @@ export function getCalendarCells(selectedDate: Date): ICalendarCell[] {
 }
 
 export function calculateMonthEventPositions(
-  multiDayEvents: IEvent[],
-  singleDayEvents: IEvent[],
+  multiDayEvents: (IEvent | CalendarItem)[],
+  singleDayEvents: (IEvent | CalendarItem)[],
   selectedDate: Date,
 ) {
   const monthStart = startOfMonth(selectedDate)
@@ -362,7 +363,7 @@ export function calculateMonthEventPositions(
 
 export function getMonthCellEvents(
   date: Date,
-  events: IEvent[],
+  events: (IEvent | CalendarItem)[],
   eventPositions: Record<string, number>,
 ) {
   const eventsForDate = events.filter((event) => {

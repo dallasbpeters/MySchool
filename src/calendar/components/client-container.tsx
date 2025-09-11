@@ -21,13 +21,89 @@ interface IProps {
 }
 
 export function ClientContainer({ view }: IProps) {
-  const { selectedDate, selectedUserId, events, users } = useCalendar()
+  const { selectedDate, selectedUserId, events, users, visibleCalendarItems } = useCalendar()
 
   const filteredEvents = useMemo(() => {
-    // Get the selected user's name for assignment filtering
-    const selectedUser = users.find((user) => user.id === selectedUserId)
-    const selectedUserName = selectedUser?.name
+    // Use the enhanced calendar items that include both events and assignments
+    // The filtering is already handled by the calendar context based on permissions
+    if (visibleCalendarItems && visibleCalendarItems.length > 0) {
+      const filtered = visibleCalendarItems.filter((item) => {
+        const itemStartDate = parseISO(item.startDate)
+        const itemEndDate = parseISO(item.endDate)
 
+        if (view === 'year') {
+          const yearStart = new Date(selectedDate.getFullYear(), 0, 1)
+          const yearEnd = new Date(
+            selectedDate.getFullYear(),
+            11,
+            31,
+            23,
+            59,
+            59,
+            999,
+          )
+          return itemStartDate <= yearEnd && itemEndDate >= yearStart
+        }
+
+        if (view === 'month' || view === 'agenda') {
+          const monthStart = new Date(
+            selectedDate.getFullYear(),
+            selectedDate.getMonth(),
+            1,
+          )
+          const monthEnd = new Date(
+            selectedDate.getFullYear(),
+            selectedDate.getMonth() + 1,
+            0,
+            23,
+            59,
+            59,
+            999,
+          )
+          return itemStartDate <= monthEnd && itemEndDate >= monthStart
+        }
+
+        if (view === 'week') {
+          const dayOfWeek = selectedDate.getDay()
+
+          const weekStart = new Date(selectedDate)
+          weekStart.setDate(selectedDate.getDate() - dayOfWeek)
+          weekStart.setHours(0, 0, 0, 0)
+
+          const weekEnd = new Date(weekStart)
+          weekEnd.setDate(weekStart.getDate() + 6)
+          weekEnd.setHours(23, 59, 59, 999)
+
+          return itemStartDate <= weekEnd && itemEndDate >= weekStart
+        }
+
+        if (view === 'day') {
+          const dayStart = new Date(
+            selectedDate.getFullYear(),
+            selectedDate.getMonth(),
+            selectedDate.getDate(),
+            0,
+            0,
+            0,
+          )
+          const dayEnd = new Date(
+            selectedDate.getFullYear(),
+            selectedDate.getMonth(),
+            selectedDate.getDate(),
+            23,
+            59,
+            59,
+          )
+          return itemStartDate <= dayEnd && itemEndDate >= dayStart
+        }
+
+        return false
+      })
+      
+      return filtered
+    }
+
+    // Fallback to original events if enhanced calendar items aren't available
     return events.filter((event) => {
       const eventStartDate = parseISO(event.startDate)
       const eventEndDate = parseISO(event.endDate)
@@ -43,15 +119,7 @@ export function ClientContainer({ view }: IProps) {
           59,
           999,
         )
-        const isInSelectedYear =
-          eventStartDate <= yearEnd && eventEndDate >= yearStart
-        const isUserMatch =
-          selectedUserId === 'all' ||
-          event.user.id === selectedUserId ||
-          (event.isAssignment &&
-            selectedUserName &&
-            event.assignedStudents?.includes(selectedUserName))
-        return isInSelectedYear && isUserMatch
+        return eventStartDate <= yearEnd && eventEndDate >= yearStart
       }
 
       if (view === 'month' || view === 'agenda') {
@@ -69,15 +137,7 @@ export function ClientContainer({ view }: IProps) {
           59,
           999,
         )
-        const isInSelectedMonth =
-          eventStartDate <= monthEnd && eventEndDate >= monthStart
-        const isUserMatch =
-          selectedUserId === 'all' ||
-          event.user.id === selectedUserId ||
-          (event.isAssignment &&
-            selectedUserName &&
-            event.assignedStudents?.includes(selectedUserName))
-        return isInSelectedMonth && isUserMatch
+        return eventStartDate <= monthEnd && eventEndDate >= monthStart
       }
 
       if (view === 'week') {
@@ -91,15 +151,7 @@ export function ClientContainer({ view }: IProps) {
         weekEnd.setDate(weekStart.getDate() + 6)
         weekEnd.setHours(23, 59, 59, 999)
 
-        const isInSelectedWeek =
-          eventStartDate <= weekEnd && eventEndDate >= weekStart
-        const isUserMatch =
-          selectedUserId === 'all' ||
-          event.user.id === selectedUserId ||
-          (event.isAssignment &&
-            selectedUserName &&
-            event.assignedStudents?.includes(selectedUserName))
-        return isInSelectedWeek && isUserMatch
+        return eventStartDate <= weekEnd && eventEndDate >= weekStart
       }
 
       if (view === 'day') {
@@ -119,18 +171,12 @@ export function ClientContainer({ view }: IProps) {
           59,
           59,
         )
-        const isInSelectedDay =
-          eventStartDate <= dayEnd && eventEndDate >= dayStart
-        const isUserMatch =
-          selectedUserId === 'all' ||
-          event.user.id === selectedUserId ||
-          (event.isAssignment &&
-            selectedUserName &&
-            event.assignedStudents?.includes(selectedUserName))
-        return isInSelectedDay && isUserMatch
+        return eventStartDate <= dayEnd && eventEndDate >= dayStart
       }
+
+      return false
     })
-  }, [selectedDate, selectedUserId, events, view, users])
+  }, [selectedDate, selectedUserId, events, view, users, visibleCalendarItems])
 
   const singleDayEvents = filteredEvents.filter((event) => {
     // All-day events are always single day for display purposes

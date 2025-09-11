@@ -23,10 +23,11 @@ import {
 } from '@/calendar/helpers'
 
 import type { IEvent } from '@/calendar/interfaces'
+import type { CalendarItem } from '@/types/calendar-integration'
 
 interface IProps {
-  singleDayEvents: IEvent[]
-  multiDayEvents: IEvent[]
+  singleDayEvents: (IEvent | CalendarItem)[]
+  multiDayEvents: (IEvent | CalendarItem)[]
 }
 
 export function CalendarDayView({ singleDayEvents, multiDayEvents }: IProps) {

@@ -8,6 +8,8 @@ import { AssignmentService } from '@/services/assignment-service'
 import AssignmentCardContainer from '../expanding-card'
 import { Assignment } from '@/types'
 import ColourfulText from '../ui/colourful-text'
+import EmptyState from '@/components/EmptyState'
+import { Card } from '../ui/card'
 
 interface Note {
   id: string
@@ -46,9 +48,18 @@ const AssignmentListComponent: React.FC<AssignmentListProps> = ({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
+      <div className="fixed inset-0 h-screen w-screen flex items-center justify-center py-8 text-4xl">
         <ColourfulText text="Loading assignments..." />
       </div>
+    )
+  }
+
+  // Check if all sections are empty
+  const hasNoAssignments = overdue.length === 0 && today.length === 0 && upcoming.length === 0
+
+  if (hasNoAssignments) {
+    return (
+      <EmptyState title="No assignments." description="You're all caught up! New assignments will appear here when they're created." />
     )
   }
 

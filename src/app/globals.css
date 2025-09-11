@@ -5,6 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @layer utilities {
+  body ::selection {
+    color: #002333;
+    background: #00ff84;
+  }
   body:has(.card-overlay) header {
     @apply opacity-0 transition-opacity duration-300;
   }
@@ -45,13 +49,17 @@
     );
   }
 }
+
 :root {
-  --background: oklch(98.511% 0.00011 271.152);
-  --foreground: oklch(0.173 0.0772 264.7353);
+  --font-optical-sizing: auto;
+  --font-weight-bold: 800;
+  --font-style: normal;
+  --background: oklch(97.511% 0.00011 271.152);
+  --foreground: oklab(24.091% -0.03 -0.03959);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.173 0.0772 264.7353);
+  --card-foreground: oklab(24.091% -0.03 -0.03959);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.173 0.0772 264.7353);
+  --popover-foreground: oklab(24.091% -0.03 -0.03959);
   --primary: oklch(0.5301 0.2613 263.7999);
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.6677 0.2758 346.7653);
@@ -59,10 +67,10 @@
   --muted: oklch(0.9475 0.0067 286.2717);
   --muted-foreground: oklch(0.4447 0.0267 274.2147);
   --accent: oklch(0.9412 0.1617 103.3689);
-  --accent-foreground: oklch(0 0 0);
+  --accent-foreground: oklab(24.091% -0.03 -0.03959);
   --destructive: oklch(0.6449 0.2416 30.9955);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.9461 0 0);
+  --destructive-foreground: oklch(1 90 0);
+  --border: oklch(90.06% 0.0001 271.152);
   --input: oklch(0.9217 0.0029 264.5414);
   --ring: oklch(0.5301 0.2613 263.7999);
   --chart-1: oklch(0.5301 0.2613 263.7999);
@@ -71,11 +79,11 @@
   --chart-4: oklch(0.7754 0.1593 83.5516);
   --chart-5: oklch(0.5595 0.2734 294.5448);
   --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.173 0.0772 264.7353);
+  --sidebar-foreground: oklab(24.091% -0.03 -0.03959);
   --sidebar-primary: oklch(0.5301 0.2613 263.7999);
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.9412 0.1617 103.3689);
-  --sidebar-accent-foreground: oklch(0.2918 0.0649 66.1982);
+  --sidebar-accent-foreground: oklab(24.091% -0.03 -0.03959);
   --sidebar-border: oklch(0.8337 0.0363 269.8586);
   --sidebar-ring: oklch(0.5301 0.2613 263.7999);
   --font-sans: Inclusive Sans, ui-sans-serif, sans-serif, system-ui;
@@ -112,7 +120,7 @@
   --popover: oklch(0.2178 0 0);
   --popover-foreground: oklch(1 0 0);
   --primary: oklch(0.6021 0.2089 262.0118);
-  --primary-foreground: oklch(0.2178 0 0);
+  --primary-foreground: oklch(100% 0.00011 271.152);
   --secondary: oklch(0.6682 0.2288 0.7299);
   --secondary-foreground: oklch(0.0969 0 0);
   --muted: oklch(0.3523 0 0);
@@ -253,13 +261,12 @@
   #expanding-card .expanding-card-list {
     display: flex;
     flex-direction: row;
-    justify-content: flex-start;
-    align-items: stretch;
     flex-wrap: wrap;
+    justify-content: flex-start;
     align-content: stretch;
+    align-items: stretch;
     gap: 1rem;
   }
-
   /* Individual Cards */
   #expanding-card .card {
     position: relative;
@@ -273,16 +280,30 @@
     border: 1px solid var(--border);
     @apply shadow-sm;
   }
-  /* Alternating card sizes for visual interest */
 
   #expanding-card .card:nth-child(1) {
     flex: 0 1 30%;
+    align-self: auto;
   }
   #expanding-card .card:nth-child(2) {
-    flex: 0 1 30%;
+    flex: 1 25%;
+    align-self: auto;
   }
   #expanding-card .card:nth-child(3) {
-    flex: 0 1 40%;
+    flex: 0 0 30%;
+    align-self: auto;
+  }
+  #expanding-card .card:nth-child(4) {
+    flex: 0 1 50%;
+    align-self: auto;
+  }
+  #expanding-card .card:nth-child(5) {
+    flex: 1 1 auto;
+    align-self: auto;
+  }
+  #expanding-card .card:nth-child(6) {
+    flex: 0 1 auto;
+    align-self: auto;
   }
 
   #expanding-card .card.card__small {
@@ -363,6 +384,7 @@
     border-radius: calc(var(--radius) * 2);
     background: var(--card);
     overflow-y: auto;
+    scrollbar-width: none;
     width: 100%;
     height: 100%;
     margin: 0 auto;
@@ -426,7 +448,6 @@
     position: absolute;
     top: 15px;
     left: 15px;
-    max-width: 70%;
   }
 
   #expanding-card .open .title-container {
@@ -441,10 +462,15 @@
     color: var(--foreground);
     margin: 8px 0;
     text-wrap: balance;
-    font-weight: 700;
+    font-weight: 800;
     font-size: 1.78rem;
     line-height: 1.2;
     text-wrap: balance;
+    mix-blend-mode: hard-light;
+  }
+
+  #expanding-card .open .title-container h2 {
+    font-size: 2.7rem;
   }
 
   .dark #expanding-card .title-container h2 {
@@ -499,13 +525,16 @@
       gap: 10px;
     }
 
-    #expanding-card .card {
-      flex: 0 1 calc(100% - 0px);
-      height: 280px;
+    #expanding-card .card.card__small {
+      flex: 0 1 100%;
+      height: 200px;
     }
 
-    #expanding-card .card:nth-child(4n + 1),
-    #expanding-card .card:nth-child(4n + 4) {
+    #expanding-card .card:nth-child(1),
+    #expanding-card .card:nth-child(2),
+    #expanding-card .card:nth-child(3),
+    #expanding-card .card:nth-child(4),
+    #expanding-card .card:nth-child(5) {
       flex: 0 1 100%;
       max-width: 100%;
     }
@@ -655,4 +684,20 @@
 
 .dark .calendar-assignment[data-completion-status='complete']::after {
   color: #10b981;
+}
+
+@layer components {
+  .prose-md h2 {
+    @apply mb-[0.5lh] text-2xl font-bold;
+  }
+  .prose-md h3 {
+    @apply mb-[0.5lh] text-xl font-bold;
+  }
+  .prose-md h4 {
+    @apply mb-[0.5lh] text-lg font-bold;
+  }
+  .prose-md p {
+    font-size: 1.1rem;
+    @apply mb-[0.5lh];
+  }
 }

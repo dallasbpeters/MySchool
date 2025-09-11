@@ -1,11 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react'
-import {
-  fetchAssignmentsCached,
-  fetchChildrenCached,
-  fetchRecommendationsCached,
-} from '@/lib/cache-utils'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { LocalDock, type TabValue } from '@/components/local-dock'
 import PageGrid from '@/components/page-grid'
@@ -19,7 +14,6 @@ import { NotesTab } from '@/components/student/notes-tab'
 import { AssignmentService } from '@/services/assignment-service'
 import { NoteService } from '@/services/note-service'
 import ExpandingCardContainer from '@/components/expanding-card'
-import { AnimatePresence } from 'motion/react'
 
 interface Assignment {
   id: string
@@ -33,7 +27,7 @@ interface Assignment {
   is_recurring?: boolean
   recurrence_pattern?: {
     days: string[]
-    frequency?: 'weekly' | 'daily'
+    frequency: 'weekly' | 'daily'
   }
   recurrence_end_date?: string
   next_due_date?: string
@@ -94,17 +88,6 @@ export default function StudentDashboard() {
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(true)
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)
 
-  // Debug: Watch for assignment changes
-  useEffect(() => {
-    console.log(
-      '🔄 StudentDashboard: assignments state changed:',
-      assignments.map((a) => ({
-        id: a.id,
-        title: a.title,
-        completed: a.completed,
-      })),
-    )
-  }, [assignments])
 
   const { toast } = useToast()
 
@@ -125,52 +108,14 @@ export default function StudentDashboard() {
         if (isInitialLoad || !initialLoadComplete) {
           setIsLoadingAssignments(true)
         }
-        const data = await fetchAssignmentsCached(childId)
+        const url = childId
+          ? `/api/assignments?childId=${childId}`
+          : '/api/assignments'
+        const response = await fetch(url)
+        const data = await response.json()
 
         if (data.assignments) {
-          console.log(
-            '📦 Setting assignments after fetch:',
-            data.assignments.map((a) => ({
-              id: a.id,
-              title: a.title,
-              completed: a.completed,
-            })),
-          )
-          console.log(
-            '📋 BEFORE setting state, current assignments:',
-            assignments.map((a) => ({
-              id: a.id,
-              title: a.title,
-              completed: a.completed,
-            })),
-          )
-
-          // Check if the target assignment was actually updated
-          if (toggledAssignmentId) {
-            const targetAssignment = data.assignments.find(
-              (a) => a.id === toggledAssignmentId,
-            )
-            console.log(
-              '🎯 Target assignment after update:',
-              targetAssignment
-                ? {
-                  id: targetAssignment.id,
-                  title: targetAssignment.title,
-                  completed: targetAssignment.completed,
-                }
-                : 'NOT FOUND',
-            )
-          }
-
-          console.log(
-            '🔄 About to call setAssignments with updated assignments',
-          )
-          // Create a new array reference to force React re-render detection
-          const newAssignments = [...data.assignments]
-          setAssignments(newAssignments)
-          console.log(
-            '✅ setAssignments called with new array reference, state should update',
-          )
+          setAssignments(data.assignments)
           if (data.profile?.role) {
             setUserRole(data.profile.role)
           }
@@ -185,7 +130,7 @@ export default function StudentDashboard() {
         }
       }
     },
-    [initialLoadComplete, assignments],
+    [initialLoadComplete],
   )
 
   const fetchNotes = useCallback(
@@ -225,6 +170,7 @@ export default function StudentDashboard() {
     async (roleOverride?: string) => {
       try {
         const currentRole = roleOverride || userRole
+
         let response: Response
         let data: {
           students?: Array<{
@@ -239,8 +185,8 @@ export default function StudentDashboard() {
         if (currentRole === 'admin') {
           response = await fetch('/api/admin/students')
           data = await response.json()
+
           if (data.students && data.students.length > 0) {
-            // Add default email if missing to match Child interface
             const studentsWithEmail = data.students.map((student) => ({
               ...student,
               email:
@@ -256,14 +202,14 @@ export default function StudentDashboard() {
               fetchNotes(firstStudent.id)
             }
           } else {
-            // No students found, complete initial load but keep assignments empty
             setIsLoadingAssignments(false)
             setInitialLoadComplete(true)
           }
         } else {
-          data = await fetchChildrenCached()
+          response = await fetch('/api/children')
+          data = await response.json()
+
           if (data.children && data.children.length > 0) {
-            // Add default email if missing to match Child interface
             const childrenWithEmail = data.children.map((child) => ({
               ...child,
               email:
@@ -279,13 +225,11 @@ export default function StudentDashboard() {
               fetchNotes(firstChild.id)
             }
           } else {
-            // No children found, complete initial load but keep assignments empty
             setIsLoadingAssignments(false)
             setInitialLoadComplete(true)
           }
         }
       } catch (error) {
-        console.error('Error fetching children:', error)
         setIsLoadingAssignments(false)
         setInitialLoadComplete(true)
       }
@@ -296,7 +240,9 @@ export default function StudentDashboard() {
   const checkUserRole = useCallback(async () => {
     try {
       setIsLoadingAssignments(true)
+
       const response = await fetch('/api/assignments')
+
       const data = await response.json()
 
       if (!response.ok) {
@@ -308,23 +254,22 @@ export default function StudentDashboard() {
 
         if (data.profile.role === 'parent') {
           setAssignments([])
-          fetchChildren()
-          // Don't set loading to false yet - wait for child selection
+          await fetchChildren()
         } else if (data.profile.role === 'admin') {
           setAssignments([])
-          fetchChildren('admin')
-          // Don't set loading to false yet - wait for child selection
+          await fetchChildren('admin')
         } else {
-          // For student role, we can load assignments directly
           if (data.assignments) {
             setAssignments(data.assignments)
           }
           setIsLoadingAssignments(false)
           setInitialLoadComplete(true)
         }
+      } else {
+        setIsLoadingAssignments(false)
+        setInitialLoadComplete(true)
       }
     } catch (error) {
-      console.error('Error checking user role:', error)
       toast({
         title: 'Assignment Loading Error',
         description:
@@ -337,25 +282,25 @@ export default function StudentDashboard() {
     }
   }, [toast]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Initialize data
+  // Initialize data - simplified for debugging
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        // Load data in parallel for better performance
-        const [_notesData, recommendationsData] = await Promise.all([
-          fetchNotes(),
-          fetchRecommendationsCached(),
-        ])
+        // First, test authentication
+        const authResponse = await fetch('/api/auth-test')
+        const authData = await authResponse.json()
 
-        // Process recommendations data
-        if (recommendationsData.recommendations) {
-          setRecommendations(recommendationsData.recommendations)
+        if (!authData.success) {
+          setIsLoadingAssignments(false)
+          setInitialLoadComplete(true)
+          return
         }
 
-        // Check user role and load children if needed
+        // Simple user role check
         await checkUserRole()
       } catch (error) {
-        console.error('Error loading initial data:', error)
+        setIsLoadingAssignments(false)
+        setInitialLoadComplete(true)
       }
     }
 
@@ -366,38 +311,22 @@ export default function StudentDashboard() {
     setSelectedChildId(childId)
     setSelectedChildName(childName)
     setIsLoadingAssignments(true)
-    fetchAssignments(childId)
+    fetchAssignments(childId, true) // Pass true to force loading state and fresh fetch
     fetchNotes(childId)
   }
 
   const _handleToggle = async (assignmentId: string, instanceDate?: string) => {
-    console.log(
-      '🔄 _handleToggle called:',
-      assignmentId,
-      'with instanceDate:',
-      instanceDate,
-    )
-    console.log(
-      '📋 Current assignments before toggle:',
-      assignments.map((a) => ({
-        id: a.id,
-        title: a.title,
-        completed: a.completed,
-      })),
-    )
-
     // Find the assignment to determine current completion state
     const assignment = assignments.find((a) => a.id === assignmentId)
-    if (!assignment) {
-      console.log('❌ Assignment not found:', assignmentId)
-      return
-    }
+    if (!assignment) return
 
-    console.log('📝 Found assignment:', {
+    console.log('BEFORE TOGGLE - Assignment state:', {
       id: assignment.id,
       title: assignment.title,
       completed: assignment.completed,
       is_recurring: assignment.is_recurring,
+      instance_completions: assignment.instance_completions,
+      due_date: assignment.due_date
     })
 
     // Determine current completion state
@@ -405,20 +334,20 @@ export default function StudentDashboard() {
     if (assignment.is_recurring && instanceDate) {
       currentlyCompleted =
         assignment.instance_completions?.[instanceDate]?.completed || false
-      console.log('🔄 Recurring assignment current state:', currentlyCompleted)
     } else {
       currentlyCompleted = assignment.completed || false
-      console.log('🔄 Regular assignment current state:', currentlyCompleted)
     }
 
     // Toggle the state
     const newCompletedState = !currentlyCompleted
-    console.log(
-      '🎯 Will toggle from',
+
+    console.log('TOGGLE OPERATION:', {
+      assignmentId,
+      instanceDate,
       currentlyCompleted,
-      'to',
       newCompletedState,
-    )
+      selectedChildId: selectedChildId || 'none'
+    })
 
     const result = await AssignmentService.toggleAssignment(
       assignmentId,
@@ -427,18 +356,32 @@ export default function StudentDashboard() {
       newCompletedState,
     )
 
-    console.log('📡 API result:', result)
+    console.log('TOGGLE RESULT:', result)
 
     if (result.success) {
-      console.log('✅ API success, about to fetch assignments...')
       // Use await to ensure we wait for the fetch to complete
-      await fetchAssignments(selectedChildId || undefined, false, assignmentId)
-      console.log('✅ Assignments fetched after toggle')
+      await fetchAssignments(selectedChildId || undefined, false)
+      await fetchNotes(selectedChildId || undefined)
+
+      // Log assignment state after refetch
+      const updatedAssignment = assignments.find((a) => a.id === assignmentId)
+      console.log('AFTER REFETCH - Assignment state:', {
+        id: updatedAssignment?.id,
+        title: updatedAssignment?.title,
+        completed: updatedAssignment?.completed,
+        is_recurring: updatedAssignment?.is_recurring,
+        instance_completions: updatedAssignment?.instance_completions,
+        due_date: updatedAssignment?.due_date
+      })
+
       toast({
         title: 'Success',
         description: result.message,
       })
     } else {
+      // Still refetch to ensure UI stays in sync even if there was an error
+      await fetchAssignments(selectedChildId || undefined, false)
+
       toast({
         title: 'Error',
         description: result.message,
@@ -523,62 +466,55 @@ export default function StudentDashboard() {
           onValueChange={(value) => setActiveTab(value as TabValue)}
           className="w-full"
         >
-          <AnimatePresence mode="wait">
+          <TabsContent value="assignments" className="relative">
             <Suspense>
-              <TabsContent value="assignments" className="relative">
-                <AssignmentList
-                  assignments={assignments}
-                  selectedChildName={selectedChildName}
-                  onInstanceClick={handleInstanceClick}
-                  isLoading={isLoadingAssignments || !initialLoadComplete}
-                  notes={notes}
-                  onNoteCreated={fetchNotes}
-                  onToggle={_handleToggle}
-                  selectedChildId={selectedChildId}
-                />
-              </TabsContent>
+              <AssignmentList
+                assignments={assignments}
+                selectedChildName={selectedChildName}
+                onInstanceClick={handleInstanceClick}
+                isLoading={isLoadingAssignments || !initialLoadComplete}
+                notes={notes}
+                onNoteCreated={fetchNotes}
+                onToggle={_handleToggle}
+                selectedChildId={selectedChildId}
+              />
             </Suspense>
-          </AnimatePresence>
-          <AnimatePresence mode="wait">
+          </TabsContent>
+
+          <TabsContent value="timeline" className="relative">
+            <AssignmentTimeline
+              assignments={assignments}
+              onToggle={_handleToggle}
+              selectedChildId={selectedChildId}
+            />
+          </TabsContent>
+
+          <TabsContent value="notes" className="relative">
             <Suspense>
-              <TabsContent value="timeline" className="relative">
-                <AssignmentTimeline
-                  assignments={assignments}
-                  onToggle={_handleToggle}
-                  selectedChildId={selectedChildId}
-                />
-              </TabsContent>
+              <NotesTab
+                notes={notes}
+                assignments={assignments}
+                editingNote={editingNote}
+                editNoteData={editNoteData}
+                setEditNoteData={setEditNoteData}
+                onStartEdit={handleStartEdit}
+                onCancelEdit={handleCancelEdit}
+                onUpdateNote={handleUpdateNote}
+                onDeleteNote={handleDeleteNote}
+              />
             </Suspense>
-          </AnimatePresence>
-          <AnimatePresence mode="wait">
+          </TabsContent>
+
+          <TabsContent value="recommendations" className="relative">
             <Suspense>
-              <TabsContent value="notes" className="relative">
-                <NotesTab
-                  notes={notes}
-                  assignments={assignments}
-                  editingNote={editingNote}
-                  editNoteData={editNoteData}
-                  setEditNoteData={setEditNoteData}
-                  onStartEdit={handleStartEdit}
-                  onCancelEdit={handleCancelEdit}
-                  onUpdateNote={handleUpdateNote}
-                  onDeleteNote={handleDeleteNote}
-                />
-              </TabsContent>
+              <ExpandingCardContainer
+                assignments={[]}
+                recommendations={_recommendations}
+                image={true}
+                selectedChildId={selectedChildId}
+              />
             </Suspense>
-          </AnimatePresence>
-          <AnimatePresence mode="wait">
-            <Suspense>
-              <TabsContent value="recommendations" className="relative">
-                <ExpandingCardContainer
-                  assignments={[]}
-                  recommendations={_recommendations}
-                  image={true}
-                  selectedChildId={selectedChildId}
-                />
-              </TabsContent>
-            </Suspense>
-          </AnimatePresence>
+          </TabsContent>
         </Tabs>
         <LocalDock activeTab={activeTab} onTabChange={handleTabChange} />
       </div>

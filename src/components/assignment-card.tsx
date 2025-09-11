@@ -22,6 +22,7 @@ import { AnimatePresence } from 'motion/react'
 import { Toggle } from '@/components/ui/toggle'
 import { AssignmentService } from '@/services/assignment-service'
 import './ui/shared-card-styles.css'
+import { images } from '@/components/images'
 
 interface Assignment {
   id: string
@@ -35,7 +36,7 @@ interface Assignment {
   is_recurring?: boolean
   recurrence_pattern?: {
     days: string[]
-    frequency?: 'weekly' | 'daily'
+    frequency: 'weekly' | 'daily'
   }
   recurrence_end_date?: string
   next_due_date?: string
@@ -84,30 +85,13 @@ function NoteContent({ content }: { content: string | null }) {
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none',
+        class: 'prose prose-md max-w-none',
       },
     },
   })
 
   return <EditorContent editor={editor} />
 }
-
-export const images = [
-  '/gemma-evans-swmWhdbcb6M-unsplash.svg',
-  '/wildan-kurniawan-fKdoeUJBh_o-unsplash.svg',
-  '/getty-images-F1sG0MZT_Ro-unsplash.svg',
-  '/melanie-villette-Somqo53jwzE-unsplash.svg',
-  '/eva-corbisier-6QxDZxUaScw-unsplash.svg',
-  '/risky-ming-fFa5xAoT8ms-unsplash.svg',
-  '/gemma-evans-qVzRlSDe8OU-unsplash.svg',
-  '/risky-ming--AsW_zqKQ9E-unsplash.svg',
-  '/getty-images-pnkJbt9HVBA-unsplash.svg',
-  '/lorenzo-mercanti-aKdXUkOY5ek-unsplash.svg',
-  '/amanda-sala-oHHc3UsNrqs-unsplash.svg',
-  '/melanie-villette-lQDNr81EW0w-unsplash.svg',
-  '/evelina-mitev-jV_8Fn1l1ec-unsplash.svg',
-  '/melanie-villette-wI97g9u9XVM-unsplash.svg',
-]
 
 // Global image index counter to ensure images cycle once across all instances
 let globalImageIndex = 0
@@ -248,7 +232,7 @@ function AssignmentCardExpanded({
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none',
+        class: 'prose prose-md max-w-none',
       },
     },
   })
@@ -654,7 +638,7 @@ export function AssignmentCardList({
             size={size}
             key={assignment.id}
             assignment={assignment}
-            onToggle={() => {}}
+            onToggle={() => { }}
             getDateLabel={(_date, _completed) =>
               AssignmentService.getDateLabel(assignment)
             }
@@ -664,10 +648,10 @@ export function AssignmentCardList({
             imageIndex={currentImageIndex}
             image={image}
             showDate={true}
-            onNoteCreated={() => {}}
+            onNoteCreated={() => { }}
             assignmentNotes={[]}
             expandedCardId={null}
-            setExpandedCardId={() => {}}
+            setExpandedCardId={() => { }}
             selectedInstanceDate={undefined}
             groupId={groupId}
             onClick={() => onCardClick(assignment.id)}
@@ -708,7 +692,7 @@ function AssignmentCardGroup({
             id={openId}
             key="card-item"
             assignment={assignments.find((a) => a.id === openId)!}
-            onToggle={() => {}}
+            onToggle={() => { }}
             getDateLabel={(_date, _completed) =>
               AssignmentService.getDateLabel(
                 assignments.find((a) => a.id === openId)!,
@@ -722,7 +706,7 @@ function AssignmentCardGroup({
             imageIndex={globalAssignmentImageMap.get(openId) || 0}
             image={image}
             showDate={true}
-            onNoteCreated={() => {}}
+            onNoteCreated={() => { }}
             assignmentNotes={[]}
             groupId={groupId}
             onClose={closeCard}

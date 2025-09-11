@@ -1,5 +1,16 @@
+# Claude Code Context: MySchool Performance Optimization
+
+## Project Guidelines
 - dont run npm run dev. I most likely have a server already running.
 - use the mcp tool to interact with Supabase
+
+## Tech Stack (Updated for Feature 003)
+- **Frontend**: Next.js 15.5.2, React 19.1.1, TypeScript 5.9
+- **Backend**: Next.js API routes, Supabase (PostgreSQL)
+- **Caching**: React Query v5 (NEW), Browser Cache, Local Storage
+- **UI**: Tailwind CSS, Radix UI, Framer Motion
+- **Performance**: Custom metrics collection, loading state system
+- **Testing**: Jest + React Testing Library (in implementation)
 
 ## Calendar and Assignment Integration Context
 
@@ -32,3 +43,36 @@
 - Implemented role-based kanban access (parents/admins only)
 - Added visual differentiation between events and assignments
 - Created unified CalendarItem interface for display consistency
+
+## Performance Optimization (Feature 003) - IN PROGRESS
+
+### Cache Strategy
+- **User Profiles**: 30 minutes TTL (rarely changes)
+- **Calendar Events**: 5 minutes TTL (moderate updates)
+- **Assignment Data**: 10 minutes TTL (occasional updates)
+- **Real-time Data**: 30 seconds TTL (frequent updates)
+
+### Performance Targets
+- Initial page load: <2 seconds (75th percentile)
+- Cached navigation: <500ms (95th percentile)
+- Cache hit rate: >70% for repeated visits
+- API responses: <200ms (95th percentile)
+
+### Implementation Status
+- ✅ Phase 0: Research complete (React Query chosen, testing strategy defined)
+- 🔄 Phase 1: Design & Contracts (data model, API contracts, quickstart scenarios)
+- ⏳ Phase 2: Task planning approach
+- ⏳ Phase 3: Implementation tasks
+- ⏳ Phase 4: Testing and validation
+
+### Key Files Being Added/Modified
+- `/src/lib/cache/` - Cache utilities and configuration
+- `/src/components/loading/` - Loading state components
+- `/src/hooks/use-performance.ts` - Performance monitoring hook
+- `/api/cache/` - Cache management API endpoints
+
+### Loading State System
+- ColourfulText component for animated loading indicators
+- Progress indicators for longer operations  
+- Error states with retry functionality
+- ARIA live regions for accessibility

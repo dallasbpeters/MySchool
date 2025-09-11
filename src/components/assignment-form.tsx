@@ -47,7 +47,7 @@ interface Assignment {
   is_recurring?: boolean
   recurrence_pattern?: {
     days: string[]
-    frequency?: 'weekly' | 'daily'
+    frequency: 'weekly' | 'daily'
   }
   recurrence_end_date?: string
   next_due_date?: string

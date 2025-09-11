@@ -11,15 +11,50 @@ import {
   TEventColor 
 } from '@/types/calendar-integration'
 import { Assignment } from '@/types'
-import { generateInitialsWithOverflow } from './student-initials'
 
 /**
  * Convert assignment to calendar item for display
  */
+// Helper function to extract text from structured content (like ProseMirror JSON)
+function extractTextContent(content?: string | null): string {
+  if (!content) return ''
+  
+  // If it's already a string, check if it might be JSON
+  if (typeof content === 'string') {
+    try {
+      const parsedContent = JSON.parse(content)
+      if (parsedContent?.type === 'doc' && parsedContent?.content) {
+        // Extract text from ProseMirror JSON
+        const extractText = (node: {
+          type?: string
+          text?: string
+          content?: Array<{ type?: string; text?: string; content?: unknown[] }>
+        }): string => {
+          if (node.type === 'text') {
+            return node.text || ''
+          }
+          if (node.content && Array.isArray(node.content)) {
+            return node.content.map(extractText).join('')
+          }
+          return ''
+        }
+        
+        return parsedContent.content.map(extractText).join('\n').trim()
+      }
+    } catch {
+      // If parsing fails, return the content as-is (it's probably plain text)
+    }
+  }
+  
+  // Ensure we always return a string
+  return typeof content === 'string' ? content : String(content)
+}
+
 export function assignmentToCalendarItem(
   assignment: Assignment,
   assignedStudents: StudentInitial[],
-  completionStatus: AssignmentStatus
+  completionStatus: AssignmentStatus,
+  responsibleParty?: { id: string; name: string }
 ): CalendarItem {
   const isOverdue = isAssignmentOverdue(assignment.due_date)
   const color = getAssignmentColor(completionStatus, isOverdue)
@@ -27,17 +62,23 @@ export function assignmentToCalendarItem(
   return {
     id: `assignment-${assignment.id}`,
     type: 'assignment',
-    title: assignment.title,
+    title: extractTextContent(assignment.title),
     startDate: assignment.due_date,
     endDate: assignment.due_date,
     isAllDay: true, // Assignments are always all-day (no specific time)
     color,
-    description: assignment.content || undefined,
+    description: extractTextContent(assignment.content),
     isAssignment: true,
     assignedStudents,
     completionStatus,
     assignmentId: assignment.id,
-    dueDate: assignment.due_date
+    dueDate: assignment.due_date,
+    // Add responsible party information for event compatibility
+    user: responsibleParty ? {
+      id: responsibleParty.id,
+      name: responsibleParty.name,
+      picturePath: null
+    } : undefined
   }
 }
 

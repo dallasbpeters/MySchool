@@ -1,10 +1,9 @@
 import { Assignment } from '@/types'
 import { parseISO } from 'date-fns'
-import { 
-  CalendarItem, 
-  StudentInitial, 
+import {
+  CalendarItem,
   AssignmentToggleResponse,
-  EventsApiResponse 
+  EventsApiResponse
 } from '@/types/calendar-integration'
 import { assignmentToCalendarItem, calculateAssignmentStatus } from '@/utils/assignment-display'
 import { generateStudentInitials } from '@/utils/student-initials'
@@ -34,12 +33,6 @@ export class AssignmentService {
     }
 
     const today = new Date()
-    const todayString =
-      today.getFullYear() +
-      '-' +
-      String(today.getMonth() + 1).padStart(2, '0') +
-      '-' +
-      String(today.getDate()).padStart(2, '0')
 
     const { days, frequency = 'weekly' } = assignment.recurrence_pattern
 
@@ -105,46 +98,28 @@ export class AssignmentService {
 
       // For recurring assignments
       if (assignment.is_recurring) {
-        // Check if any past due instances are incomplete
-        if (assignment.instance_completions) {
-          for (const [instanceDate, completion] of Object.entries(
-            assignment.instance_completions,
-          )) {
-            if (instanceDate < todayString && !completion.completed) {
-              return true
-            }
-          }
+        // For recurring assignments, if the main assignment is completed, 
+        // it's not overdue (it should be in timeline)
+        if (assignment.completed) {
+          return false
         }
 
-        // Check if today is a recurring day and if today's instance is incomplete
+        // Check if today is a recurring day and if so, it's not overdue (it should be in today)
         if (AssignmentService.isTodayRecurringDay(assignment)) {
-          const todayInstanceCompleted =
-            assignment.instance_completions?.[todayString]?.completed || false
-          if (!todayInstanceCompleted) {
-            return false // Today is a recurring day and it's not completed, so it's not overdue
-          }
+          return false
         }
 
-        // Check if there are any past recurring days that weren't completed
+        // For recurring assignments, check if there are any past recurring days that should be overdue
+        // Since we don't have instance_completions, we'll consider recurring assignments overdue
+        // if they have a due date in the past and are not completed
         const checkDate = new Date(today)
         checkDate.setDate(checkDate.getDate() - 1)
 
-        for (let i = 0; i < 30; i++) { // Check last 30 days
-          const dateString =
-            checkDate.getFullYear() +
-            '-' +
-            String(checkDate.getMonth() + 1).padStart(2, '0') +
-            '-' +
-            String(checkDate.getDate()).padStart(2, '0')
-
+        for (let i = 0; i < 7; i++) { // Check last 7 days
           if (AssignmentService.isDateRecurringDay(assignment, checkDate)) {
-            const instanceCompleted =
-              assignment.instance_completions?.[dateString]?.completed || false
-            if (!instanceCompleted) {
-              return true
-            }
+            // If there was a recurring day in the past week and assignment is not completed, it's overdue
+            return !assignment.completed
           }
-
           checkDate.setDate(checkDate.getDate() - 1)
         }
 
@@ -180,10 +155,10 @@ export class AssignmentService {
           return false
         }
 
-        // Check if today's instance is completed
-        const todayInstanceCompleted =
-          assignment.instance_completions?.[todayString]?.completed || false
-        return !todayInstanceCompleted
+        // For recurring assignments, if the main assignment is completed, 
+        // don't show it in today (the completion should move it to timeline)
+        // Note: instance_completions column doesn't exist in current schema
+        return !assignment.completed
       }
 
       // For non-recurring assignments, compare due date directly with today
@@ -213,31 +188,24 @@ export class AssignmentService {
       if (assignment.is_recurring) {
         // If today is a recurring day and not completed, it should be in "today" not "upcoming"
         if (AssignmentService.isTodayRecurringDay(assignment)) {
-          const todayInstanceCompleted =
-            assignment.instance_completions?.[todayString]?.completed || false
-          if (!todayInstanceCompleted) {
+          if (!assignment.completed) {
             return false // Should show in "today" instead
           }
         }
 
-        // Check if there are any future recurring days that haven't been completed
+        // If the recurring assignment is completed, don't show in upcoming
+        if (assignment.completed) {
+          return false
+        }
+
+        // Check if there are any future recurring days
         const checkDate = new Date(today)
         checkDate.setDate(checkDate.getDate() + 1) // Start from tomorrow
 
         for (let i = 0; i < 30; i++) { // Check next 30 days
-          const dateString =
-            checkDate.getFullYear() +
-            '-' +
-            String(checkDate.getMonth() + 1).padStart(2, '0') +
-            '-' +
-            String(checkDate.getDate()).padStart(2, '0')
-
           if (AssignmentService.isDateRecurringDay(assignment, checkDate)) {
-            const instanceCompleted =
-              assignment.instance_completions?.[dateString]?.completed || false
-            if (!instanceCompleted) {
-              return true // Found an upcoming incomplete recurring instance
-            }
+            // Found a future recurring day and assignment is not completed, so show in upcoming
+            return true
           }
 
           checkDate.setDate(checkDate.getDate() + 1)
@@ -531,9 +499,9 @@ export class AssignmentService {
 
   static getDateColor(assignment: Assignment): string {
     if (this.filters.isOverdue(assignment)) {
-      return 'text-red-600'
+      return 'text-red-600 dark:text-red-400'
     } else if (this.filters.isToday(assignment)) {
-      return 'text-blue-600'
+      return 'text-blue-600 dark:text-blue-200'
     } else {
       return 'text-foreground'
     }
@@ -543,11 +511,13 @@ export class AssignmentService {
     assignmentId: string,
     completed: boolean,
     instanceDate?: string,
+    studentId?: string,
   ): Promise<AssignmentToggleResponse> {
     try {
       const payload = {
         completed,
         instanceDate,
+        studentId,
       }
 
       const response = await fetch(`/api/assignments/${assignmentId}/toggle`, {
@@ -556,13 +526,14 @@ export class AssignmentService {
         body: JSON.stringify(payload),
       })
 
-      const data: AssignmentToggleResponse = await response.json()
+      const data = await response.json()
 
+      // Check if the HTTP response was successful
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to update assignment')
+        throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`)
       }
 
-      return data
+      return data as AssignmentToggleResponse
     } catch (error) {
       throw new Error(
         error instanceof Error
@@ -587,7 +558,7 @@ export class AssignmentService {
       if (userId) params.append('userId', userId)
 
       const response = await fetch(`/api/events?${params.toString()}`)
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch calendar data')
       }
@@ -626,7 +597,7 @@ export class AssignmentService {
     studentProfiles.forEach(student => {
       const firstName = student.first_name || student.name.split(' ')[0] || 'Student'
       const lastName = student.last_name || student.name.split(' ').slice(1).join(' ') || 'User'
-      
+
       studentInfoMap.set(student.id, {
         id: student.id,
         firstName,
@@ -649,13 +620,13 @@ export class AssignmentService {
 
     // Convert each assignment to calendar item
     const calendarItems: CalendarItem[] = []
-    
+
     for (const assignment of assignments) {
       const completions = assignmentCompletionMap.get(assignment.id) || []
       const completionStatus = calculateAssignmentStatus(completions)
 
       // Get student info for this assignment
-      const assignmentStudentInfo = completions.map(completion => 
+      const assignmentStudentInfo = completions.map(completion =>
         studentInfoMap.get(completion.studentId)
       ).filter(Boolean)
 
@@ -689,9 +660,10 @@ export class AssignmentService {
       const response = await this.toggleAssignmentCompletion(
         assignmentId,
         completed ?? true,
-        instanceDate
+        instanceDate,
+        studentId
       )
-      
+
       return {
         success: response.success,
         message: 'Assignment updated successfully'

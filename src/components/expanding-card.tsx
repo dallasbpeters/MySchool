@@ -2,13 +2,13 @@
 
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
+import SplitTextComponent from '@/components/ui/motion/splittext'
 import { Button } from '@/components/ui/button'
 import {
   Calendar,
   CheckCircle2,
   BookOpen,
   Plus,
-  Repeat,
   Check,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
@@ -22,14 +22,14 @@ import { AnimatePresence } from 'motion/react'
 import { Toggle } from '@/components/ui/toggle'
 import { AssignmentService } from '@/services/assignment-service'
 import { Assignment } from '@/types'
-import SplitText from '@/components/ui/motion/splittext'
+import { images } from '@/components/images'
 
 // Union type to handle both assignments and recommendations
 type AssignmentOrRecommendation =
   | (ExtendedAssignment & { type: 'assignment' })
   | (Recommendation & { type: 'recommendation' })
 
-// Extend Assignment with additional properties for the ExpandingCard component
+// Extend Assignment with additional properties for the ExpandingCard component  
 interface ExtendedAssignment extends Assignment {
   type?: 'assignment'
   image?: string
@@ -80,23 +80,6 @@ function NoteContent({ content }: { content: string | null }) {
 
   return <EditorContent editor={editor} />
 }
-
-export const images = [
-  '/gemma-evans-swmWhdbcb6M-unsplash.svg',
-  '/wildan-kurniawan-fKdoeUJBh_o-unsplash.svg',
-  '/getty-images-F1sG0MZT_Ro-unsplash.svg',
-  '/melanie-villette-Somqo53jwzE-unsplash.svg',
-  '/eva-corbisier-6QxDZxUaScw-unsplash.svg',
-  '/risky-ming-fFa5xAoT8ms-unsplash.svg',
-  '/gemma-evans-qVzRlSDe8OU-unsplash.svg',
-  '/risky-ming--AsW_zqKQ9E-unsplash.svg',
-  '/getty-images-pnkJbt9HVBA-unsplash.svg',
-  '/lorenzo-mercanti-aKdXUkOY5ek-unsplash.svg',
-  '/amanda-sala-oHHc3UsNrqs-unsplash.svg',
-  '/melanie-villette-lQDNr81EW0w-unsplash.svg',
-  '/evelina-mitev-jV_8Fn1l1ec-unsplash.svg',
-  '/melanie-villette-wI97g9u9XVM-unsplash.svg',
-]
 
 // Global image index counter to ensure images cycle once across all instances
 let globalImageIndex = 0
@@ -257,7 +240,7 @@ function AssignmentCardExpanded({
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none',
+        class: 'prose prose-md max-w-none',
       },
     },
   })
@@ -405,7 +388,8 @@ function AssignmentCardExpanded({
             {assignment.category && (
               <span className="category">{assignment.category}</span>
             )}
-            <motion.h2>{assignment.title}</motion.h2>
+            <SplitTextComponent text={assignment.title} as="h2" />
+
           </motion.div>
           <AnimatePresence>
             {!isCreatingNote && (
@@ -430,8 +414,8 @@ function AssignmentCardExpanded({
                     </ul>
                   </div>
                 )}
-                {/* Display related notes */}
-                {!isCreatingNote && relatedNotes.length > 0 && (
+                {/* Display related notes - only for assignments */}
+                {assignment.type === 'assignment' && !isCreatingNote && relatedNotes.length > 0 && (
                   <div className="my-4 pt-4 border-t border-border">
                     <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                       <BookOpen className="h-4 w-4" />
@@ -468,202 +452,162 @@ function AssignmentCardExpanded({
             )}
           </AnimatePresence>
 
-          {/* Footer with Add Note and Completion Toggle */}
-          <motion.div className="flex flex-col gap-4 p-6 border-t border-border">
-            <div className="flex gap-4">
-              <AnimatePresence>
-                {!isCreatingNote && (
-                  <motion.button
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.2 }}
-                    onClick={() => setIsCreatingNote(true)}
-                    className="cursor-pointer gap-2 flex justify-self-start items-center justify-center w-full border border-border rounded-md h-12"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Note
-                  </motion.button>
-                )}
-              </AnimatePresence>
-
-              {!isCreatingNote && (
-                <Toggle
-                  disabled={isToggling}
-                  className={(() => {
-                    'w-full h-12 transition-colors cursor-pointer'
-                    if (assignment.type !== 'assignment') {
-                      return 'ring-inset ring-1 ring-offset-green-600 text-gray-700 w-full h-12'
-                    }
-                    if (!assignment.is_recurring) {
-                      return assignment.completed
-                        ? 'bg-green-500 text-white w-full h-12'
-                        : 'ring-inset ring-1 ring-green-500 text-foreground hover:bg-green-500 hover:text-white w-full h-12'
-                    }
-
-                    let dateToCheck = selectedInstanceDate
-                    if (!dateToCheck) {
-                      const todayStr = format(new Date(), 'yyyy-MM-dd')
-                      dateToCheck = todayStr
-                    }
-
-                    const isCompleted =
-                      assignment.instance_completions?.[dateToCheck]
-                        ?.completed || false
-                    return isCompleted
-                      ? 'bg-green-500 text-white w-full h-12'
-                      : 'ring-1 ring-green-500 text-gray-700 w-full h-12'
-                  })()}
-                  data-state={(() => {
-                    if (assignment.type !== 'assignment') {
-                      return 'unchecked'
-                    }
-                    if (!assignment.is_recurring) {
-                      return assignment.completed ? 'checked' : 'unchecked'
-                    }
-
-                    let dateToCheck = selectedInstanceDate
-                    if (!dateToCheck) {
-                      const todayStr = format(new Date(), 'yyyy-MM-dd')
-                      dateToCheck = todayStr
-                    }
-
-                    const isCompleted =
-                      assignment.instance_completions?.[dateToCheck]
-                        ?.completed || false
-                    return isCompleted ? 'checked' : 'unchecked'
-                  })()}
-                  pressed={(() => {
-                    if (assignment.type !== 'assignment') {
-                      return false
-                    }
-                    if (!assignment.is_recurring) {
-                      return assignment.completed || false
-                    }
-
-                    let dateToCheck = selectedInstanceDate
-                    if (!dateToCheck) {
-                      const todayStr = format(new Date(), 'yyyy-MM-dd')
-                      dateToCheck = todayStr
-                    }
-
-                    return (
-                      assignment.instance_completions?.[dateToCheck]
-                        ?.completed || false
-                    )
-                  })()}
-                  onPressedChange={async () => {
-                    if (assignment.type !== 'assignment' || isToggling) return
-
-
-                    setIsToggling(true)
-
-                    let instanceDate: string | undefined = undefined
-
-                    if (assignment.is_recurring) {
-                      instanceDate = selectedInstanceDate
-
-                      // If no instance date is selected, use today's date for today's assignments
-                      if (!instanceDate) {
-                        instanceDate = format(new Date(), 'yyyy-MM-dd')
-                      }
-                    }
-
-                    try {
-                      // Toggle the assignment
-                      await _onToggle(assignment.id, instanceDate)
-
-                      // Close the modal after the toggle completes and any animations finish
-                      if (onClose) {
-                        // Delay to allow the card to animate back to its position before closing
-                        setTimeout(() => {
-                          onClose()
-                        }, 600) // Increased delay for smoother UX
-                      }
-                    } finally {
-                      setIsToggling(false)
-                    }
-                  }}
-                >
-                  {isToggling ? (
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                  ) : (
-                    <Check className="h-4 w-4" />
+          {/* Footer - only show for assignments */}
+          {assignment.type === 'assignment' && (
+            <motion.div className="flex flex-col gap-4 p-6 border-t border-border">
+              <div className="flex gap-4">
+                <AnimatePresence>
+                  {!isCreatingNote && (
+                    <motion.button
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => setIsCreatingNote(true)}
+                      className="cursor-pointer gap-2 flex justify-self-start items-center justify-center w-full border border-border rounded-md h-12"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Note
+                    </motion.button>
                   )}
-                  {(() => {
-                    if (assignment.type !== 'assignment') {
-                      return 'View'
-                    }
-                    if (isToggling) {
-                      return 'Updating...'
-                    }
-                    if (!assignment.is_recurring) {
-                      return assignment.completed ? 'Done' : "I'm Done"
-                    }
+                </AnimatePresence>
 
-                    let dateToCheck = selectedInstanceDate
-                    if (!dateToCheck) {
-                      const todayStr = format(new Date(), 'yyyy-MM-dd')
-                      dateToCheck = todayStr
-                    }
-
-                    const isCompleted =
-                      assignment.instance_completions?.[dateToCheck]
-                        ?.completed || false
-                    return isCompleted ? 'Done' : "I'm Done"
-                  })()}
-                </Toggle>
-              )}
-            </div>
-
-            {isCreatingNote && (
-              <motion.div
-                className="w-full justify-end space-y-3"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div>
-                  <Label htmlFor={`note-title-${assignment.id}`}>
-                    Note Title
-                  </Label>
-                  <Input
-                    id={`note-title-${assignment.id}`}
-                    placeholder="Enter note title..."
-                    value={newNote.title}
-                    onChange={(e) =>
-                      setNewNote({ ...newNote, title: e.target.value })
-                    }
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`note-content-${assignment.id}`}>
-                    Content
-                  </Label>
-                  <div className="mt-1">
-                    <WysiwygEditor
-                      content={newNote.content}
-                      onChange={(content) =>
-                        setNewNote({ ...newNote, content })
+                {!isCreatingNote && (
+                  <Toggle
+                    disabled={isToggling}
+                    className={(() => {
+                      if (!assignment.is_recurring) {
+                        return assignment.completed
+                          ? 'bg-green-500 text-white w-full h-12 transition-colors cursor-pointer'
+                          : 'ring-inset ring-1 ring-green-500 text-foreground hover:bg-green-500 hover:text-white w-full h-12 transition-colors cursor-pointer'
                       }
-                      placeholder="Write your note here..."
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setNewNote({ title: '', content: null })
-                      setIsCreatingNote(false)
+
+                      let dateToCheck = selectedInstanceDate
+                      if (!dateToCheck) {
+                        const todayStr = format(new Date(), 'yyyy-MM-dd')
+                        dateToCheck = todayStr
+                      }
+
+                      const isCompleted = assignment.completed || false
+                      return isCompleted
+                        ? 'bg-green-500 text-white w-full h-12 transition-colors cursor-pointer'
+                        : 'ring-1 ring-green-500 hover:bg-green-500 hover:text-white text-muted-foreground w-full h-12 transition-colors cursor-pointer'
+                    })()}
+                    data-state={(() => {
+                      if (!assignment.is_recurring) {
+                        return assignment.completed ? 'checked' : 'unchecked'
+                      }
+
+                      return assignment.completed ? 'checked' : 'unchecked'
+                    })()}
+                    pressed={(() => {
+                      if (!assignment.is_recurring) {
+                        return assignment.completed || false
+                      }
+
+                      return assignment.completed || false
+                    })()}
+                    onPressedChange={async () => {
+                      if (isToggling) return
+
+
+                      setIsToggling(true)
+
+                      let instanceDate: string | undefined = undefined
+
+                      if (assignment.is_recurring) {
+                        instanceDate = selectedInstanceDate
+
+                        // If no instance date is selected, use today's date for today's assignments
+                        if (!instanceDate) {
+                          instanceDate = format(new Date(), 'yyyy-MM-dd')
+                        }
+                      }
+
+                      try {
+                        // Toggle the assignment
+                        _onToggle(assignment.id, instanceDate)
+
+                        // Close the modal after the toggle completes and any animations finish
+                        if (onClose) {
+                          // Delay to allow the card to animate back to its position before closing
+                          setTimeout(() => {
+                            onClose()
+                          }, 600) // Increased delay for smoother UX
+                        }
+                      } finally {
+                        setIsToggling(false)
+                      }
                     }}
                   >
-                    Cancel
-                  </Button>
-                  <Button onClick={createNote}>Save Note</Button>
-                </div>
-              </motion.div>
-            )}
-          </motion.div>
+                    {isToggling ? (
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
+                    {(() => {
+                      if (isToggling) {
+                        return 'Updating...'
+                      }
+                      if (!assignment.is_recurring) {
+                        return assignment.completed ? 'Done' : "I'm Done"
+                      }
+
+                      return assignment.completed ? 'Done' : "I'm Done"
+                    })()}
+                  </Toggle>
+                )}
+              </div>
+
+              {isCreatingNote && (
+                <motion.div
+                  className="w-full justify-end space-y-3"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div>
+                    <Label htmlFor={`note-title-${assignment.id}`}>
+                      Note Title
+                    </Label>
+                    <Input
+                      id={`note-title-${assignment.id}`}
+                      placeholder="Enter note title..."
+                      value={newNote.title}
+                      onChange={(e) =>
+                        setNewNote({ ...newNote, title: e.target.value })
+                      }
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`note-content-${assignment.id}`}>
+                      Content
+                    </Label>
+                    <div className="mt-1">
+                      <WysiwygEditor
+                        content={newNote.content}
+                        onChange={(content) =>
+                          setNewNote({ ...newNote, content })
+                        }
+                        placeholder="Write your note here..."
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setNewNote({ title: '', content: null })
+                        setIsCreatingNote(false)
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button onClick={createNote}>Save Note</Button>
+                  </div>
+                </motion.div>
+              )}
+            </motion.div>
+          )}
         </motion.div>
       </div>
     </>

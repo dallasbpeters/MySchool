@@ -65,7 +65,7 @@ interface Assignment {
   is_recurring?: boolean
   recurrence_pattern?: {
     days: string[] // ['monday', 'wednesday', 'friday']
-    frequency?: 'weekly' | 'daily'
+    frequency: 'weekly' | 'daily'
   }
   recurrence_end_date?: string
   next_due_date?: string
@@ -147,8 +147,8 @@ export default function ParentDashboard() {
     () =>
       userRole === 'admin' && selectedParent !== 'all'
         ? assignments.filter(
-            (assignment) => assignment.parent_name === selectedParent,
-          )
+          (assignment) => assignment.parent_name === selectedParent,
+        )
         : assignments,
     [userRole, selectedParent, assignments],
   )
@@ -314,7 +314,7 @@ export default function ParentDashboard() {
       if (!response.ok) {
         throw new Error(
           data.error ||
-            `Assignment ${isEditing ? 'update' : 'creation'} failed`,
+          `Assignment ${isEditing ? 'update' : 'creation'} failed`,
         )
       }
 
@@ -413,7 +413,8 @@ export default function ParentDashboard() {
   }
 
   // Kanban board handlers
-  const handleKanbanAssignmentUpdate = async (assignment: Assignment) => {
+  const handleKanbanAssignmentDragUpdate = async (assignment: Assignment) => {
+    // This handler is for drag-and-drop category updates only
     try {
       const response = await fetch(`/api/assignments?id=${assignment.id}`, {
         method: 'PUT',
@@ -444,11 +445,7 @@ export default function ParentDashboard() {
         throw new Error(data.error || 'Update failed')
       }
 
-      toast({
-        title: 'Success',
-        description: data.message || 'Assignment updated successfully',
-      })
-
+      // Silent success for drag updates (no toast)
       const refreshedData = await refreshAssignments()
       if (refreshedData.assignments) {
         setAssignments(refreshedData.assignments)
@@ -462,6 +459,46 @@ export default function ParentDashboard() {
         variant: 'destructive',
       })
     }
+  }
+
+  const handleKanbanAssignmentEdit = (assignment: Assignment) => {
+    // This handler opens the edit dialog
+    setEditingAssignment(assignment)
+    
+    // Convert assignment data to form format
+    const categoryOptions = assignment.category
+      ? [{ label: assignment.category, value: assignment.category }]
+      : []
+    
+    const childOptions = assignment.assigned_children
+      ? assignment.assigned_children.map(childName => {
+          const child = children.find(c => c.name === childName)
+          return child 
+            ? { label: `${child.name} (${child.email})`, value: child.id }
+            : { label: childName, value: childName }
+        })
+      : []
+
+    setNewAssignment({
+      title: assignment.title,
+      content: assignment.content,
+      links: assignment.links || [],
+      due_date: assignment.due_date,
+      category: categoryOptions,
+      selectedChildren: childOptions,
+      is_recurring: assignment.is_recurring || false,
+      recurrence_pattern: assignment.recurrence_pattern || {
+        days: [],
+        frequency: 'weekly',
+      },
+      recurrence_end_date: assignment.recurrence_end_date || '',
+    })
+    
+    // Set the selected date for the calendar
+    setSelectedCalendarDate(new Date(assignment.due_date))
+    
+    // Open the edit dialog
+    setIsCreating(true)
   }
 
   const handleKanbanCreateAssignment = (category: string) => {
@@ -537,7 +574,7 @@ export default function ParentDashboard() {
       if (!response.ok) {
         throw new Error(
           data.error ||
-            `Recommendation ${isEditing ? 'update' : 'creation'} failed`,
+          `Recommendation ${isEditing ? 'update' : 'creation'} failed`,
         )
       }
 
@@ -736,13 +773,12 @@ export default function ParentDashboard() {
                           />
                         </div>
 
-                        <div className="space-y-2 mt-4">
-                          <Label>Links & Resources</Label>
-                          <div className="space-y-2">
+                        <div className="space-y-4 mt-4">
+                          <div className="space-y-4">
                             {newRecommendation.links.map((link, index) => (
                               <div
                                 key={index}
-                                className="flex items-center gap-2 p-2 bg-muted rounded"
+                                className="flex items-center gap-2 py-2 px-4 bg-muted rounded"
                               >
                                 {link.type === 'video' ? (
                                   <Video className="h-4 w-4 text-red-500" />
@@ -759,7 +795,7 @@ export default function ParentDashboard() {
                                   rel="noopener noreferrer"
                                   className="text-primary text-sm underline"
                                 >
-                                  {link.url}
+                                  {link.title}
                                 </a>
                                 <Button
                                   type="button"
@@ -931,11 +967,10 @@ export default function ParentDashboard() {
                             </Label>
                             <div className="grid grid-cols-2 gap-3">
                               <div
-                                className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                                  !newAssignment.is_recurring
-                                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                                    : 'border-border hover:border-primary/50'
-                                }`}
+                                className={`p-3 border rounded-lg cursor-pointer transition-all ${!newAssignment.is_recurring
+                                  ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                  : 'border-border hover:border-primary/50'
+                                  }`}
                                 onClick={() =>
                                   setNewAssignment({
                                     ...newAssignment,
@@ -955,11 +990,10 @@ export default function ParentDashboard() {
                               </div>
 
                               <div
-                                className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                                  newAssignment.is_recurring
-                                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                                    : 'border-border hover:border-primary/50'
-                                }`}
+                                className={`p-3 border rounded-lg cursor-pointer transition-all ${newAssignment.is_recurring
+                                  ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                  : 'border-border hover:border-primary/50'
+                                  }`}
                                 onClick={() =>
                                   setNewAssignment({
                                     ...newAssignment,
@@ -1061,13 +1095,13 @@ export default function ParentDashboard() {
                                               day,
                                             )
                                               ? newAssignment.recurrence_pattern.days.filter(
-                                                  (d) => d !== day,
-                                                )
+                                                (d) => d !== day,
+                                              )
                                               : [
-                                                  ...newAssignment
-                                                    .recurrence_pattern.days,
-                                                  day,
-                                                ]
+                                                ...newAssignment
+                                                  .recurrence_pattern.days,
+                                                day,
+                                              ]
 
                                           setNewAssignment({
                                             ...newAssignment,
@@ -1306,7 +1340,8 @@ export default function ParentDashboard() {
                     () => categories.map((cat) => cat.label),
                     [categories],
                   )}
-                  onAssignmentUpdate={handleKanbanAssignmentUpdate}
+                  onAssignmentUpdate={handleKanbanAssignmentEdit}
+                  onAssignmentDragUpdate={handleKanbanAssignmentDragUpdate}
                   onAssignmentDelete={deleteAssignment}
                   onCreateAssignment={handleKanbanCreateAssignment}
                   onRecommendationUpdate={startEditRecommendation}

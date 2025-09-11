@@ -1,63 +1,69 @@
 "use client"
 
-import { animate, stagger } from 'motion/react'
+import { animate, keyframes, stagger } from 'motion/react'
 import { splitText } from 'motion-plus'
 import { useEffect, useRef } from "react"
+import { cn } from "@/lib/utils"
 
-export default function SplitText() {
+interface SplitTextProps {
+  text?: string
+  className?: string
+  as?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'span'
+}
+
+export default function SplitText({
+  text = "Level up your animations with the all-in membership",
+  className,
+  as: Component = 'h1'
+}: SplitTextProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     document.fonts.ready.then(() => {
       if (!containerRef.current) return
 
-      // Hide the container until the fonts are loaded
+      // Show the container when fonts are loaded
       containerRef.current.style.visibility = "visible"
 
-      const { words } = splitText(
-        containerRef.current.querySelector("h1")!
-      )
+      const textElement = containerRef.current.querySelector('[data-split-text]')
+      if (!textElement) return
 
-      // Animate the words in the h1
+      const { chars } = splitText(textElement as HTMLElement)
+
+      // Animate the characters
       animate(
-        words,
-        { opacity: [0, 1], y: [10, 0] },
+        chars,
+        {
+          opacity: [0, 1], y: [10, 0],
+          filter: ['blur(10px)', 'blur(0px)'],
+        },
         {
           type: "spring",
-          duration: 2,
+          duration: 0.3,
           bounce: 0,
-          delay: stagger(0.05),
-        }
+          delay: stagger(0.02), // Much faster stagger - 0.02s between each character
+        },
+
       )
     })
   }, [])
 
   return (
-    <div className="container" ref={containerRef}>
-      <h1 className="h1">
-        Level up your animations with the all-in membership
-      </h1>
-      <Stylesheet />
+    <div
+      ref={containerRef}
+      className={cn(
+        "flex justify-center items-center w-full max-w-md text-left invisible",
+        className
+      )}
+      style={{ willChange: 'visibility' }}
+    >
+      <Component
+        data-split-text
+        className="split-text-element font-bold"
+        style={{ willChange: 'transform, opacity' }}
+      >
+        {text}
+      </Component>
     </div>
-  )
-}
-
-function Stylesheet() {
-  return (
-    <style>{`
-            .container {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                width: 100%;
-                max-width: 420px;
-                text-align: left;
-                visibility: hidden;
-            }
-
-            .split-word {
-                will-change: transform, opacity;
-            }
-        `}</style>
   )
 }

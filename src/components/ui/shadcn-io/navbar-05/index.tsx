@@ -228,6 +228,7 @@ export interface Navbar05Props extends React.HTMLAttributes<HTMLElement> {
     href: string
     created_at: string
   }>
+  activeHref?: string // Current active route
   onNavItemClick?: (href: string) => void
   onNotificationItemClick?: (item: string) => void
   onUserItemClick?: (item: string) => void
@@ -252,6 +253,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
       userAvatar,
       notificationCount = 3,
       notifications = [],
+      activeHref,
       onNavItemClick,
       onNotificationItemClick,
       onUserItemClick,
@@ -322,20 +324,27 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
                 <PopoverContent align="start" className="w-64 p-1">
                   <NavigationMenu className="max-w-none">
                     <NavigationMenuList className="flex-col items-start gap-0">
-                      {navigationLinks.map((link, index) => (
-                        <NavigationMenuItem key={index} className="w-full">
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault()
-                              if (onNavItemClick && link.href)
-                                onNavItemClick(link.href)
-                            }}
-                            className="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-primary hover:text-primary active:text-primary cursor-pointer no-underline"
-                          >
-                            {link.label}
-                          </button>
-                        </NavigationMenuItem>
-                      ))}
+                      {navigationLinks.map((link, index) => {
+                        const isActive = activeHref === link.href
+                        return (
+                          <NavigationMenuItem key={index} className="w-full">
+                            <button
+                              data-active={isActive}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                if (onNavItemClick && link.href)
+                                  onNavItemClick(link.href)
+                              }}
+                              className={cn(
+                                "flex w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-primary hover:text-primary cursor-pointer no-underline",
+                                "data-[active=true]:text-primary data-[active=true]:bg-primary/10"
+                              )}
+                            >
+                              {link.label}
+                            </button>
+                          </NavigationMenuItem>
+                        )
+                      })}
                     </NavigationMenuList>
                   </NavigationMenu>
                 </PopoverContent>
@@ -353,21 +362,28 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
               {!isMobile && (
                 <NavigationMenu className="flex">
                   <NavigationMenuList className="gap-1">
-                    {navigationLinks.map((link, index) => (
-                      <NavigationMenuItem key={index}>
-                        <NavigationMenuLink
-                          href={link.href}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            if (onNavItemClick && link.href)
-                              onNavItemClick(link.href)
-                          }}
-                          className="text-muted-foreground hover:text-primary py-1.5 font-medium transition-colors cursor-pointer group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 text-sm active:text-primary focus:outline-none disabled:pointer-events-none disabled:opacity-50"
-                        >
-                          {link.label}
-                        </NavigationMenuLink>
-                      </NavigationMenuItem>
-                    ))}
+                    {navigationLinks.map((link, index) => {
+                      const isActive = activeHref === link.href
+                      return (
+                        <NavigationMenuItem key={index}>
+                          <NavigationMenuLink
+                            href={link.href}
+                            data-active={isActive}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              if (onNavItemClick && link.href)
+                                onNavItemClick(link.href)
+                            }}
+                            className={cn(
+                              "py-1.5 font-medium transition-colors cursor-pointer group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 text-sm focus:outline-none disabled:pointer-events-none disabled:opacity-50",
+                              "text-foreground hover:text-primary data-[active=true]:text-primary"
+                            )}
+                          >
+                            {link.label}
+                          </NavigationMenuLink>
+                        </NavigationMenuItem>
+                      )
+                    })}
                   </NavigationMenuList>
                 </NavigationMenu>
               )}

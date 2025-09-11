@@ -1,8 +1,27 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { validateAuth } from '@/lib/auth/session-middleware'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Use session-based authentication
+    const { user, error: authError } = await validateAuth(request)
+    
+    if (authError || !user) {
+      return NextResponse.json({ families: [], error: 'Authentication failed' })
+    }
+
+    // Verify admin role
+    if (user.role !== 'admin') {
+      return NextResponse.json(
+        {
+          families: [],
+          error: 'Admin access required',
+        },
+        { status: 403 },
+      )
+    }
+
     let supabase
     try {
       supabase = await createClient()
@@ -11,33 +30,6 @@ export async function GET() {
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 },
-      )
-    }
-
-    // Get the current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
-      return NextResponse.json({ families: [], error: 'No user found' })
-    }
-
-    // Get user profile to verify admin role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile || profile.role !== 'admin') {
-      return NextResponse.json(
-        {
-          families: [],
-          error: 'Admin access required',
-        },
-        { status: 403 },
       )
     }
 

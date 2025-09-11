@@ -3,7 +3,7 @@
  * Tests the API contract for calendar events with assignment integration
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals'
+import { describe, it, expect, beforeEach, jest } from '@jest/globals'
 
 // Mock the API response structure we expect
 interface MockEventsApiResponse {

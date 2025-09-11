@@ -48,6 +48,8 @@ export function WysiwygEditor({
         heading: {
           levels: [1, 2, 3],
         },
+        // Disable these from StarterKit since we'll configure them separately
+        link: false,
       }),
       Link.configure({
         openOnClick: false,

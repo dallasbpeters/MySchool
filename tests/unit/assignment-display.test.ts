@@ -3,7 +3,7 @@
  * Tests assignment formatting and display logic
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals'
+import { describe, it, expect, beforeEach, jest } from '@jest/globals'
 import {
   assignmentToCalendarItem,
   getAssignmentColor,

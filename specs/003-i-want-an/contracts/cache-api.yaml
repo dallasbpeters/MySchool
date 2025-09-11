@@ -1,0 +1,345 @@
+openapi: 3.0.3
+info:
+  title: Cache Management API
+  description: API for managing application cache operations and performance monitoring
+  version: 0.2.0
+  
+servers:
+  - url: /api/cache
+    description: Cache management endpoints
+
+paths:
+  /entries:
+    get:
+      summary: Get cache entries with optional filtering
+      parameters:
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filter by cache tags
+        - name: dataType
+          in: query
+          schema:
+            type: string
+          description: Filter by data type
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: List of cache entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CacheEntry'
+                  total:
+                    type: integer
+                  hasMore:
+                    type: boolean
+
+    delete:
+      summary: Invalidate cache entries by tags or keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tags:
+                  type: array
+                  items:
+                    type: string
+                keys:
+                  type: array
+                  items:
+                    type: string
+                invalidateAll:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Cache invalidation completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invalidatedCount:
+                    type: integer
+                  message:
+                    type: string
+
+  /metrics:
+    get:
+      summary: Get performance metrics
+      parameters:
+        - name: metricType
+          in: query
+          schema:
+            type: string
+            enum: [page_load, navigation, api_response, cache_hit, cache_miss]
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: route
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Performance metrics data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metrics:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PerformanceMetric'
+                  summary:
+                    type: object
+                    properties:
+                      averageValue:
+                        type: number
+                      medianValue:
+                        type: number
+                      p95Value:
+                        type: number
+                      totalCount:
+                        type: integer
+
+    post:
+      summary: Record performance metric
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PerformanceMetricInput'
+      responses:
+        '201':
+          description: Metric recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformanceMetric'
+
+  /config:
+    get:
+      summary: Get cache configuration
+      responses:
+        '200':
+          description: Cache configuration settings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CacheConfig'
+
+    put:
+      summary: Update cache configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CacheConfig'
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheConfig'
+
+  /health:
+    get:
+      summary: Get cache system health status
+      responses:
+        '200':
+          description: Cache system status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, critical]
+                  cacheHitRate:
+                    type: number
+                    minimum: 0
+                    maximum: 100
+                  memoryUsage:
+                    type: object
+                    properties:
+                      used:
+                        type: integer
+                      total:
+                        type: integer
+                      percentage:
+                        type: number
+                  activeOperations:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: string
+
+components:
+  schemas:
+    CacheEntry:
+      type: object
+      required:
+        - key
+        - data
+        - timestamp
+        - expiresAt
+        - source
+      properties:
+        key:
+          type: string
+          minLength: 1
+        data:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+        source:
+          type: string
+          enum: [api, user, computed]
+        hitCount:
+          type: integer
+          minimum: 0
+
+    PerformanceMetric:
+      type: object
+      required:
+        - id
+        - metricType
+        - value
+        - timestamp
+      properties:
+        id:
+          type: string
+        metricType:
+          type: string
+          enum: [page_load, navigation, api_response, cache_hit, cache_miss]
+        value:
+          type: number
+          minimum: 0
+        timestamp:
+          type: string
+          format: date-time
+        route:
+          type: string
+        userId:
+          type: string
+        metadata:
+          type: object
+
+    PerformanceMetricInput:
+      type: object
+      required:
+        - metricType
+        - value
+      properties:
+        metricType:
+          type: string
+          enum: [page_load, navigation, api_response, cache_hit, cache_miss]
+        value:
+          type: number
+          minimum: 0
+        route:
+          type: string
+        metadata:
+          type: object
+
+    CacheConfig:
+      type: object
+      required:
+        - dataType
+        - defaultTTL
+        - maxAge
+        - priority
+      properties:
+        dataType:
+          type: string
+          minLength: 1
+        defaultTTL:
+          type: integer
+          minimum: 1
+        maxAge:
+          type: integer
+          minimum: 1
+        tags:
+          type: array
+          items:
+            type: string
+        priority:
+          type: string
+          enum: [low, medium, high]
+        prefetch:
+          type: boolean
+          default: false
+        backgroundRefresh:
+          type: boolean
+          default: false
+
+    LoadingState:
+      type: object
+      required:
+        - id
+        - status
+        - startTime
+        - retryCount
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [idle, loading, success, error]
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        errorMessage:
+          type: string
+        retryCount:
+          type: integer
+          minimum: 0

@@ -9,11 +9,11 @@ import { AssignmentToggleRequest, AssignmentToggleResponse } from '@/types/calen
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const assignmentId = params.id
-    
+    const { id: assignmentId } = await params
+
     if (!assignmentId) {
       return NextResponse.json(
         { error: 'Assignment ID is required' },
@@ -22,7 +22,7 @@ export async function POST(
     }
 
     const body: AssignmentToggleRequest = await request.json()
-    
+
     if (typeof body.completed !== 'boolean') {
       return NextResponse.json(
         { error: 'completed field is required and must be a boolean' },
@@ -54,22 +54,77 @@ export async function POST(
       )
     }
 
-    // Verify the assignment exists and user is assigned to it
+    // Get user profile to determine role
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, parent_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile) {
+      return NextResponse.json(
+        { error: 'User profile not found' },
+        { status: 403 }
+      )
+    }
+
+    // Determine the target student ID for the assignment
+    let targetStudentId = body.studentId
+
+    // If no studentId provided in body, use current user if they're a student
+    if (!targetStudentId) {
+      if (profile.role === 'student') {
+        targetStudentId = user.id
+      } else {
+        return NextResponse.json(
+          { error: 'Student ID is required for parent/admin users' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Verify access permissions
+    if (profile.role === 'student') {
+      // Students can only toggle their own assignments
+      if (targetStudentId !== user.id) {
+        return NextResponse.json(
+          { error: 'Students can only toggle their own assignments' },
+          { status: 403 }
+        )
+      }
+    } else if (profile.role === 'parent') {
+      // Parents can only toggle assignments for their children
+      const { data: childProfile } = await supabase
+        .from('profiles')
+        .select('parent_id')
+        .eq('id', targetStudentId)
+        .single()
+
+      if (!childProfile || childProfile.parent_id !== user.id) {
+        return NextResponse.json(
+          { error: 'You can only toggle assignments for your children' },
+          { status: 403 }
+        )
+      }
+    }
+    // Admins can toggle assignments for any student (no additional check needed)
+
+    // Verify the assignment exists and the target student is assigned to it
     const { data: _studentAssignment, error: checkError } = await supabase
       .from('student_assignments')
       .select('*')
       .eq('assignment_id', assignmentId)
-      .eq('student_id', user.id)
+      .eq('student_id', targetStudentId)
       .single()
 
     if (checkError) {
       if (checkError.code === 'PGRST116') {
         return NextResponse.json(
-          { error: 'Assignment not found or you are not assigned to this assignment' },
+          { error: 'Assignment not found or student is not assigned to this assignment' },
           { status: 403 }
         )
       }
-      
+
       console.error('Error checking assignment:', checkError)
       return NextResponse.json(
         { error: 'Failed to verify assignment access' },
@@ -79,50 +134,37 @@ export async function POST(
 
     // For recurring assignments, handle instance dates
     if (body.instanceDate) {
+      console.log('TOGGLE API - Processing recurring assignment with instanceDate:', body.instanceDate)
+
       // Get the assignment to check if it's recurring
-      const { data: assignment } = await supabase
+      const { data: assignment, error: assignmentError } = await supabase
         .from('assignments')
-        .select('is_recurring, instance_completions')
+        .select('is_recurring')
         .eq('id', assignmentId)
         .single()
 
+      console.log('TOGGLE API - Assignment query result:', {
+        assignmentId,
+        assignment,
+        assignmentError,
+        is_recurring: assignment?.is_recurring
+      })
+
+      if (assignmentError) {
+        console.error('TOGGLE API - Error fetching assignment:', assignmentError)
+        return NextResponse.json(
+          { error: 'Assignment not found' },
+          { status: 404 }
+        )
+      }
+
       if (assignment?.is_recurring) {
-        // Update instance completions JSON
-        const instanceCompletions = assignment.instance_completions || {}
-        const instanceKey = body.instanceDate
-
-        if (body.completed) {
-          instanceCompletions[instanceKey] = {
-            completed: true,
-            completed_at: new Date().toISOString(),
-            instance_date: body.instanceDate
-          }
-        } else {
-          delete instanceCompletions[instanceKey]
-        }
-
-        // Update the assignment's instance completions
-        const { error: updateError } = await supabase
-          .from('assignments')
-          .update({ instance_completions: instanceCompletions })
-          .eq('id', assignmentId)
-
-        if (updateError) {
-          console.error('Error updating recurring assignment:', updateError)
-          return NextResponse.json(
-            { error: 'Failed to update assignment completion' },
-            { status: 500 }
-          )
-        }
-
-        const response: AssignmentToggleResponse = {
-          success: true,
-          assignmentId,
-          completed: body.completed,
-          completedAt: body.completed ? new Date().toISOString() : undefined
-        }
-
-        return NextResponse.json(response)
+        console.log('TOGGLE API - Confirmed recurring assignment, treating as regular assignment for now')
+        // Note: instance_completions column doesn't exist in current schema
+        // For now, treat recurring assignments the same as regular assignments
+        // using the student_assignments table
+      } else {
+        console.log('TOGGLE API - Assignment is not recurring')
       }
     }
 
@@ -144,7 +186,7 @@ export async function POST(
       .from('student_assignments')
       .update(updateData)
       .eq('assignment_id', assignmentId)
-      .eq('student_id', user.id)
+      .eq('student_id', targetStudentId)
 
     if (updateError) {
       console.error('Error updating assignment completion:', updateError)

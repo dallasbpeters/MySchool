@@ -35,7 +35,7 @@ export default function CalendarViewPage({ params }: CalendarViewPageProps) {
     | 'agenda'
 
   return (
-    <div className="relative z-5 mx-auto flex max-w-screen-2xl flex-col gap-4 p-4">
+    <div className="relative z-2 mx-auto flex max-w-screen-2xl flex-col gap-4 p-4">
       <ClientContainer view={viewType} />
     </div>
   )

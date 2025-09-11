@@ -3,7 +3,7 @@
  * Tests the API contract for student initials generation
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals'
+import { describe, it, expect, beforeEach, jest } from '@jest/globals'
 
 interface MockStudentInitialsRequest {
   students: Array<{

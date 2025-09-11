@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { Inclusive_Sans } from 'next/font/google'
+import { SUSE } from 'next/font/google'
 import '../globals.css'
 import { Toaster } from '@/components/ui/toaster'
 import { ConnectedNavbar } from '@/components/connected-navbar'
 import { ThemeProvider } from '@/components/theme-provider'
 
-const font = Inclusive_Sans({ subsets: ['latin'] })
+const font = SUSE({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'MySchool',

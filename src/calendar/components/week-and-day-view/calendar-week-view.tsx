@@ -6,7 +6,7 @@ import {
   isSameDay,
   areIntervalsOverlapping,
 } from 'date-fns'
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, Suspense } from 'react'
 
 import { useCalendar } from '@/calendar/contexts/calendar-context'
 
@@ -79,8 +79,8 @@ export function CalendarWeekView({ singleDayEvents, multiDayEvents }: IProps) {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
   return (
-    <>
-      <div className="flex flex-col items-center justify-center border-b py-4 text-sm text-muted-foreground sm:hidden">
+    <Suspense fallback={<div>Loading...</div>}>
+      <div className="bg-card flex flex-col items-center justify-center border-b py-4 text-sm text-muted-foreground sm:hidden">
         <p>Weekly view is not available on smaller devices.</p>
         <p>Please switch to daily or monthly view.</p>
       </div>
@@ -111,7 +111,7 @@ export function CalendarWeekView({ singleDayEvents, multiDayEvents }: IProps) {
           </div>
         </div>
 
-        <ScrollArea className="h-[736px]" type="always" ref={scrollAreaRef}>
+        <ScrollArea className="bg-card h-[736px]" type="always" ref={scrollAreaRef}>
           <div className="flex overflow-hidden">
             {/* Hours column */}
             <div className="relative w-18">
@@ -272,6 +272,6 @@ export function CalendarWeekView({ singleDayEvents, multiDayEvents }: IProps) {
           </div>
         </ScrollArea>
       </div>
-    </>
+    </Suspense>
   )
 }

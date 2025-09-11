@@ -9,10 +9,42 @@ import { useCalendar } from '@/calendar/contexts/calendar-context'
 import { EventDetailsDialog } from '@/calendar/components/dialogs/event-details-dialog'
 
 import type { IEvent } from '@/calendar/interfaces'
+import type { CalendarItem } from '@/types/calendar-integration'
 import type { VariantProps } from 'class-variance-authority'
 
+// Helper function to extract text from structured content (like ProseMirror JSON)
+function getEventDescription(description?: string): string {
+  if (!description) return ''
+
+  try {
+    const parsedContent = JSON.parse(description)
+    if (parsedContent?.type === 'doc' && parsedContent?.content) {
+      // Extract text from ProseMirror JSON
+      const extractText = (node: {
+        type?: string
+        text?: string
+        content?: Array<{ type?: string; text?: string; content?: unknown[] }>
+      }): string => {
+        if (node.type === 'text') {
+          return node.text || ''
+        }
+        if (node.content && Array.isArray(node.content)) {
+          return node.content.map(extractText).join('')
+        }
+        return ''
+      }
+
+      return parsedContent.content.map(extractText).join('\n').trim()
+    }
+  } catch {
+    // If parsing fails, return the description as-is (it's probably plain text)
+  }
+
+  return description
+}
+
 const agendaEventCardVariants = cva(
-  'flex select-none items-center justify-between gap-3 rounded-md border p-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+  'bg-card flex select-none items-center justify-between gap-3 rounded-md border p-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
   {
     variants: {
       color: {
@@ -53,7 +85,7 @@ const agendaEventCardVariants = cva(
 )
 
 interface IProps {
-  event: IEvent
+  event: IEvent | CalendarItem
   eventCurrentDay?: number
   eventTotalDays?: number
 }
@@ -108,13 +140,13 @@ export function AgendaEventCard({
                   Day {eventCurrentDay} of {eventTotalDays} •{' '}
                 </span>
               )}
-              {event.title}
+              {getEventDescription(event.title)}
             </p>
           </div>
 
           <div className="mt-1 flex items-center gap-1">
             <User className="size-3 shrink-0" />
-            <p className="text-xs text-foreground">{event.user.name}</p>
+            <p className="text-xs text-foreground">{event.user?.name || 'Unknown User'}</p>
           </div>
 
           <div className="flex items-center gap-1">
@@ -128,7 +160,9 @@ export function AgendaEventCard({
 
           <div className="flex items-center gap-1">
             <Text className="size-3 shrink-0" />
-            <p className="text-xs text-foreground">{event.description}</p>
+            <p className="text-xs text-foreground">
+              {getEventDescription(event.description) || 'No description'}
+            </p>
           </div>
         </div>
       </div>

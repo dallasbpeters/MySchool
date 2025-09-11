@@ -4,8 +4,7 @@ import type React from 'react'
 
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
-import { images } from '@/components/expanding-card'
-import '../ui/shared-card-styles.css'
+import { images } from '@/components/images'
 import { MotionButton } from '../ui/button'
 
 interface Assignment {
@@ -243,7 +242,7 @@ function transformDataToItems(
     title: assignment.title,
     imageIndex: index % images.length,
     content: assignment.content ? (
-      <div className="prose prose-sm max-w-none">
+      <div className="prose prose-md max-w-none">
         <p className="big">{assignment.title}</p>
         <div dangerouslySetInnerHTML={{ __html: assignment.content }} />
         {assignment.links && assignment.links.length > 0 && (
@@ -267,7 +266,7 @@ function transformDataToItems(
         )}
       </div>
     ) : (
-      <div className="prose prose-sm max-w-none">
+      <div className="prose prose-md max-w-none">
         <p className="big">{assignment.title}</p>
         <p className="text-muted-foreground">{getDateLabel(assignment)}</p>
         {assignment.links && assignment.links.length > 0 && (

@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import {
-  Columns,
   Grid3x3,
   List,
   Plus,
   Grid2x2,
   CalendarRange,
+  Columns2,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,7 @@ interface IProps {
 
 export function CalendarHeader({ view, events }: IProps) {
   return (
-    <div className="flex flex-col gap-4 border-b p-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="bg-card flex flex-col gap-4 border-b p-4 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex items-center gap-3">
         <TodayButton />
         <DateNavigator view={view} events={events} />
@@ -42,7 +42,7 @@ export function CalendarHeader({ view, events }: IProps) {
               className="rounded-r-none [&_svg]:size-5"
             >
               <Link href="/calendar/day-view">
-                <List strokeWidth={1.8} />
+                <List strokeWidth={2.1} />
               </Link>
             </Button>
 
@@ -51,10 +51,10 @@ export function CalendarHeader({ view, events }: IProps) {
               aria-label="View by week"
               size="icon"
               variant={view === 'week' ? 'default' : 'outline'}
-              className="rounded-none [&_svg]:size-5"
+              className="rounded-none [&_svg]:size-6"
             >
               <Link href="/calendar/week-view">
-                <Columns strokeWidth={1.8} />
+                <Columns2 strokeWidth={2.1} />
               </Link>
             </Button>
 
@@ -63,10 +63,10 @@ export function CalendarHeader({ view, events }: IProps) {
               aria-label="View by month"
               size="icon"
               variant={view === 'month' ? 'default' : 'outline'}
-              className="rounded-none [&_svg]:size-5"
+              className="rounded-none [&_svg]:size-6"
             >
               <Link href="/calendar/month-view">
-                <Grid2x2 strokeWidth={1.8} />
+                <Grid2x2 strokeWidth={2.1} />
               </Link>
             </Button>
 
@@ -75,10 +75,10 @@ export function CalendarHeader({ view, events }: IProps) {
               aria-label="View by year"
               size="icon"
               variant={view === 'year' ? 'default' : 'outline'}
-              className="rounded-none [&_svg]:size-5"
+              className="rounded-none [&_svg]:size-6"
             >
               <Link href="/calendar/year-view">
-                <Grid3x3 strokeWidth={1.8} />
+                <Grid3x3 strokeWidth={2.1} />
               </Link>
             </Button>
 
@@ -87,10 +87,10 @@ export function CalendarHeader({ view, events }: IProps) {
               aria-label="View by agenda"
               size="icon"
               variant={view === 'agenda' ? 'default' : 'outline'}
-              className="rounded-l-none [&_svg]:size-5"
+              className="rounded-l-none [&_svg]:size-6"
             >
               <Link href="/calendar/agenda-view">
-                <CalendarRange strokeWidth={1.8} />
+                <CalendarRange strokeWidth={2.1} />
               </Link>
             </Button>
           </div>

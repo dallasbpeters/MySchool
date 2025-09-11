@@ -314,7 +314,7 @@ export function CalendarProvider({
       })
       window.dispatchEvent(event)
 
-    } catch (error) {
+    } catch {
       // Revert optimistic update on error
       setCalendarItems(currentItems => 
         currentItems.map(item => {
@@ -374,7 +374,7 @@ export function CalendarProvider({
         
         setCalendarItems(mergedItems)
       }
-    } catch (error) {
+    } catch {
       // Silent error handling for sync
     }
   }

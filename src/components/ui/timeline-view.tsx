@@ -48,7 +48,7 @@ export const TimelineItem = ({
 }: TimelineItemProps) => {
   const dotColors = {
     default:
-      'bg-gray-200 border-gray-200 dark:border-gray-900 dark:bg-gray-700',
+      'bg-gray-400 border-gray-400 dark:border-gray-900 dark:bg-gray-700',
     red: 'bg-red-500 border-red-500 dark:border-red-500 dark:bg-red-500',
     blue: 'bg-blue-500 border-blue-500 dark:border-blue-500 dark:bg-blue-500',
     green:
@@ -59,7 +59,7 @@ export const TimelineItem = ({
     <li className={cn('mb-10 md:ml-4', className)}>
       <div
         className={cn(
-          'hidden md:block absolute w-3 h-3 rounded-full mt-0.5 -left-1.5 border-none md:border',
+          'hidden md:block absolute size-4 rounded-full mt-0.5 -left-2 border-none md:border',
           dotColors[dotColor],
         )}
       ></div>

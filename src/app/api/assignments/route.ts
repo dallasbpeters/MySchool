@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { validateAuth } from '@/lib/auth/session-middleware'
 import type { Assignment } from '@/types'
 
 export async function GET(request: NextRequest) {
@@ -7,49 +8,35 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url)
     const childId = url.searchParams.get('childId')
 
+    // Use session-based authentication
+    const { user, error: authError } = await validateAuth(request)
+    
+    if (authError || !user) {
+      return NextResponse.json({ assignments: [], error: 'Authentication failed' })
+    }
+
     let supabase
     try {
       supabase = await createClient()
-    } catch (clientError) {
+    } catch {
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 },
       )
     }
 
-    // Get the current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
-      return NextResponse.json({ assignments: [], error: 'No user found' })
-    }
-
-    // Get user profile to determine parent_id
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('parent_id, role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile) {
-      return NextResponse.json({ assignments: [], profile: null })
-    }
-
     // Determine which parent's assignments to fetch and which student to view as
     // For admins, we use the user.id as parentId but won't filter by it later
     const parentId =
-      profile.role === 'parent'
+      user.role === 'parent'
         ? user.id
-        : profile.role === 'admin'
+        : user.role === 'admin'
           ? user.id
-          : profile.parent_id
+          : user.parent_id
     const studentId = childId || user.id
 
     // If parent is requesting child view, verify the child belongs to them
-    if (childId && profile.role === 'parent') {
+    if (childId && user.role === 'parent') {
       const { data: childProfile } = await supabase
         .from('profiles')
         .select('parent_id')
@@ -70,14 +57,14 @@ export async function GET(request: NextRequest) {
     // - Student view (childId provided or student user): Get only assigned assignments
     let assignmentsData, assignmentsError
 
-    if (profile.role === 'admin' && !childId) {
+    if (user.role === 'admin' && !childId) {
       // Admin dashboard - show all assignments from all parents
       const { data, error } = await supabase.rpc(
         'get_all_assignments_with_parents',
       )
       assignmentsData = data
       assignmentsError = error
-    } else if (profile.role === 'parent' && !childId) {
+    } else if (user.role === 'parent' && !childId) {
       // Parent dashboard - show all assignments they created
       const result = await supabase
         .from('assignments')
@@ -226,7 +213,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         assignments: assignmentsWithCompletion,
-        profile: profile,
+        profile: { role: user.role }, // Return minimal profile data for compatibility
       },
       {
         headers: {
@@ -236,7 +223,7 @@ export async function GET(request: NextRequest) {
         },
       },
     )
-  } catch (error: unknown) {
+  } catch {
     return NextResponse.json({
       assignments: [],
       error: 'Internal server error',
@@ -275,20 +262,17 @@ export async function POST(request: NextRequest) {
     let supabase
     try {
       supabase = await createClient()
-    } catch (clientError) {
+    } catch {
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 },
       )
     }
 
-    // Get the current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
+    // Use session-based authentication
+    const { user, error: authError } = await validateAuth(request)
+    
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'You must be logged in to create assignments' },
         { status: 401 },
@@ -360,7 +344,7 @@ export async function POST(request: NextRequest) {
       assignment: assignmentData,
       message: `Assignment "${title.trim()}" created successfully`,
     })
-  } catch (error: unknown) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 },
@@ -402,20 +386,17 @@ export async function PUT(request: NextRequest) {
     let supabase
     try {
       supabase = await createClient()
-    } catch (clientError) {
+    } catch {
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 },
       )
     }
 
-    // Get the current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
+    // Use session-based authentication
+    const { user, error: authError } = await validateAuth(request)
+    
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'You must be logged in to update assignments' },
         { status: 401 },
@@ -445,7 +426,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Check permissions
-    if (profile?.role !== 'admin' && existingAssignment.parent_id !== user.id) {
+    if (user.role !== 'admin' && existingAssignment.parent_id !== user.id) {
       return NextResponse.json(
         { error: 'You do not have permission to update this assignment' },
         { status: 403 },
@@ -480,7 +461,7 @@ export async function PUT(request: NextRequest) {
       .eq('id', assignmentId)
 
     // Only filter by parent_id for non-admin users
-    if (profile?.role !== 'admin') {
+    if (user.role !== 'admin') {
       updateQuery = updateQuery.eq('parent_id', user.id)
     }
 
@@ -544,7 +525,7 @@ export async function PUT(request: NextRequest) {
       assignment: updatedAssignment,
       message: `Assignment "${title.trim()}" updated successfully`,
     })
-  } catch (error: unknown) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 },
@@ -567,32 +548,22 @@ export async function DELETE(request: NextRequest) {
     let supabase
     try {
       supabase = await createClient()
-    } catch (clientError) {
+    } catch {
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 },
       )
     }
 
-    // Get the current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
+    // Use session-based authentication
+    const { user, error: authError } = await validateAuth(request)
+    
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'You must be logged in to delete assignments' },
         { status: 401 },
       )
     }
-
-    // Get user profile to check if admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
 
     // Delete the assignment (this will cascade to student_assignments due to foreign key)
     let deleteQuery = supabase
@@ -601,7 +572,7 @@ export async function DELETE(request: NextRequest) {
       .eq('id', assignmentId)
 
     // Only filter by parent_id for non-admin users
-    if (profile?.role !== 'admin') {
+    if (user.role !== 'admin') {
       deleteQuery = deleteQuery.eq('parent_id', user.id)
     }
 
@@ -618,7 +589,7 @@ export async function DELETE(request: NextRequest) {
       success: true,
       message: 'Assignment deleted successfully',
     })
-  } catch (error: unknown) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 },

@@ -1,8 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { validateAuth } from '@/lib/auth/session-middleware'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Use session-based authentication
+    const { user, error: authError } = await validateAuth(request)
+    
+    if (authError || !user) {
+      return NextResponse.json({ recommendations: [], error: 'Authentication failed' })
+    }
+
     let supabase
     try {
       supabase = await createClient()
@@ -14,26 +22,9 @@ export async function GET() {
       )
     }
 
-    // Get the current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
-      return NextResponse.json({ recommendations: [], error: 'No user found' })
-    }
-
-    // Get user profile to determine role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('parent_id, role')
-      .eq('id', user.id)
-      .single()
-
     let recommendations = []
 
-    if (profile?.role === 'admin') {
+    if (user.role === 'admin') {
       // Admin: fetch all recommendations with parent names
       const { data, error } = await supabase
         .from('recommendations')
@@ -72,8 +63,8 @@ export async function GET() {
       {
         recommendations,
         profile: {
-          role: profile?.role,
-          parent_id: profile?.parent_id,
+          role: user.role,
+          parent_id: user.parent_id,
         },
       },
       {
@@ -93,6 +84,16 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Use session-based authentication
+    const { user, error: authError } = await validateAuth(request)
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 },
+      )
+    }
+
     let supabase
     try {
       supabase = await createClient()
@@ -103,26 +104,6 @@ export async function POST(request: NextRequest) {
         { status: 503 },
       )
     }
-
-    // Get the current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 },
-      )
-    }
-
-    // Get user profile for parent name (for admin view)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('parent_name, role')
-      .eq('id', user.id)
-      .single()
 
     const body = await request.json()
     const { title, content, category, links } = body
@@ -141,7 +122,7 @@ export async function POST(request: NextRequest) {
         category: category?.trim() || null,
         links: links || [],
         created_by: user.id,
-        parent_name: profile?.parent_name || null,
+        parent_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || null,
       })
       .select()
       .single()
@@ -169,6 +150,16 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    // Use session-based authentication
+    const { user, error: authError } = await validateAuth(request)
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 },
+      )
+    }
+
     let supabase
     try {
       supabase = await createClient()
@@ -177,19 +168,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 },
-      )
-    }
-
-    // Get the current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 },
       )
     }
 
@@ -247,6 +225,16 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    // Use session-based authentication
+    const { user, error: authError } = await validateAuth(request)
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 },
+      )
+    }
+
     let supabase
     try {
       supabase = await createClient()
@@ -255,19 +243,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 },
-      )
-    }
-
-    // Get the current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 },
       )
     }
 

@@ -29,15 +29,6 @@ export function AssignmentTimeline({
   selectedChildId,
 }: AssignmentTimelineProps) {
   // Include completed assignments and assignments due before today
-  console.log(
-    '🔄 Timeline: filtering assignments:',
-    assignments.map((a) => ({
-      id: a.id,
-      title: a.title,
-      completed: a.completed,
-      due_date: a.due_date,
-    })),
-  )
 
   const timelineAssignments = assignments.filter((assignment) => {
     const today = new Date()
@@ -71,16 +62,6 @@ export function AssignmentTimeline({
 
     return shouldInclude
   })
-
-  console.log(
-    '📊 Timeline: final assignments:',
-    timelineAssignments.map((a) => ({
-      id: a.id,
-      title: a.title,
-      completed: a.completed,
-      due_date: a.due_date,
-    })),
-  )
 
   if (timelineAssignments.length === 0) {
     return (

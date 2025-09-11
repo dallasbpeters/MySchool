@@ -78,6 +78,36 @@ type RecommendationKanbanItem = KanbanItemProps & {
 
 type KanbanItem = AssignmentKanbanItem | RecommendationKanbanItem
 
+// Role-based access control component
+function KanbanAccessGuard({ 
+  userRole, 
+  children 
+}: { 
+  userRole: string
+  children: React.ReactNode 
+}) {
+  if (userRole === 'student') {
+    return (
+      <div 
+        className="flex flex-col items-center justify-center p-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300"
+        data-testid="kanban-access-denied"
+      >
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            Assignment creation requires parent or administrator access.
+          </p>
+          <p className="text-sm text-gray-500">
+            Students can view and complete assignments in the calendar view.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return <>{children}</>
+}
+
 export function KanbanAssignmentBoard({
   assignments,
   recommendations = [],
@@ -379,14 +409,19 @@ export function KanbanAssignmentBoard({
   )
 
   return (
-    <div className="w-full bg-card border-1 border-border rounded-md shadow-sm p-3 overflow-x-auto">
-      <KanbanProvider
-        columns={kanbanColumns}
-        data={kanbanData}
-        onDataChange={handleDataChange}
+    <KanbanAccessGuard userRole={userRole}>
+      <div 
+        className="w-full bg-card border-1 border-border rounded-md shadow-sm p-3 overflow-x-auto"
+        data-testid="kanban-board"
       >
-        {kanbanProviderChildren}
-      </KanbanProvider>
-    </div>
+        <KanbanProvider
+          columns={kanbanColumns}
+          data={kanbanData}
+          onDataChange={handleDataChange}
+        >
+          {kanbanProviderChildren}
+        </KanbanProvider>
+      </div>
+    </KanbanAccessGuard>
   )
 }

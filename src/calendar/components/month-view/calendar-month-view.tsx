@@ -10,10 +10,11 @@ import {
 } from '@/calendar/helpers'
 
 import type { IEvent } from '@/calendar/interfaces'
+import type { CalendarItem } from '@/types/calendar-integration'
 
 interface IProps {
-  singleDayEvents: IEvent[]
-  multiDayEvents: IEvent[]
+  singleDayEvents: (IEvent | CalendarItem)[]
+  multiDayEvents: (IEvent | CalendarItem)[]
 }
 
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']

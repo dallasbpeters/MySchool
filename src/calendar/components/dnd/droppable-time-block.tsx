@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useCallback } from 'react'
-import { useDrop } from 'react-dnd'
+import { useDrop, DropTargetMonitor } from 'react-dnd'
 import { parseISO, differenceInMilliseconds } from 'date-fns'
 
 import { useUpdateEvent } from '@/calendar/hooks/use-update-event'
@@ -59,7 +59,7 @@ export function DroppableTimeBlock({
   const dropConfig = useMemo(() => ({
     accept: ItemTypes.EVENT,
     drop: handleDrop,
-    collect: (monitor: any) => ({
+    collect: (monitor: DropTargetMonitor) => ({
       isOver: monitor.isOver(),
       canDrop: monitor.canDrop(),
     }),

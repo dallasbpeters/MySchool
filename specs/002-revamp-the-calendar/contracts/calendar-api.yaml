@@ -1,0 +1,372 @@
+openapi: 3.0.3
+info:
+  title: Calendar and Assignment API
+  description: Enhanced API for calendar display with assignment integration
+  version: 2.1.0
+
+components:
+  schemas:
+    CalendarItem:
+      type: object
+      required:
+        - id
+        - type
+        - title
+        - startDate
+        - endDate
+        - isAllDay
+        - color
+      properties:
+        id:
+          type: string
+          description: Unique identifier (event-{id} or assignment-{id})
+        type:
+          type: string
+          enum: [event, assignment]
+        title:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        isAllDay:
+          type: boolean
+        color:
+          type: string
+          enum: [red, yellow, green, gray, blue]
+        description:
+          type: string
+          nullable: true
+        # Event-specific fields
+        user:
+          $ref: '#/components/schemas/User'
+          nullable: true
+        # Assignment-specific fields
+        isAssignment:
+          type: boolean
+          default: false
+        assignedStudents:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudentInitial'
+          nullable: true
+        completionStatus:
+          $ref: '#/components/schemas/AssignmentStatus'
+          nullable: true
+        assignmentId:
+          type: string
+          nullable: true
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+
+    StudentInitial:
+      type: object
+      required:
+        - studentId
+        - fullName
+        - initials
+        - displayName
+      properties:
+        studentId:
+          type: string
+        fullName:
+          type: string
+        initials:
+          type: string
+          pattern: '^[A-Z]{2,3}[0-9]*$'
+          description: 2-3 uppercase letters, optional number suffix
+        displayName:
+          type: string
+
+    AssignmentStatus:
+      type: object
+      required:
+        - allCompleted
+        - completedCount
+        - totalCount
+        - completions
+      properties:
+        allCompleted:
+          type: boolean
+        completedCount:
+          type: integer
+          minimum: 0
+        totalCount:
+          type: integer
+          minimum: 1
+        completions:
+          type: array
+          items:
+            type: object
+            required:
+              - studentId
+              - completed
+            properties:
+              studentId:
+                type: string
+              completed:
+                type: boolean
+              completedAt:
+                type: string
+                format: date-time
+                nullable: true
+
+    User:
+      type: object
+      required:
+        - id
+        - name
+        - role
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [student, parent, admin]
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+
+paths:
+  /api/events:
+    get:
+      summary: Get calendar events and assignments
+      description: Returns unified calendar items with proper role-based filtering
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: Start of date range
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: End of date range
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by specific user (parent can filter by child)
+        - name: includeCompleted
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+          description: Include completed assignments
+      responses:
+        '200':
+          description: Calendar items successfully retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - events
+                  - assignments
+                  - permissions
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CalendarItem'
+                    description: Calendar events (with times)
+                  assignments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CalendarItem'
+                    description: Assignments (formatted as all-day items)
+                  permissions:
+                    type: object
+                    required:
+                      - canCreateEvents
+                      - canViewKanban
+                      - canEditAssignments
+                    properties:
+                      canCreateEvents:
+                        type: boolean
+                      canViewKanban:
+                        type: boolean
+                      canEditAssignments:
+                        type: boolean
+                      visibleStudentIds:
+                        type: array
+                        items:
+                          type: string
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/assignments/{assignmentId}/toggle:
+    post:
+      summary: Toggle assignment completion for student
+      description: Student can toggle their own completion status
+      parameters:
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - completed
+              properties:
+                completed:
+                  type: boolean
+                instanceDate:
+                  type: string
+                  format: date-time
+                  description: For recurring assignments
+      responses:
+        '200':
+          description: Assignment completion status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - assignmentId
+                  - completed
+                properties:
+                  success:
+                    type: boolean
+                  assignmentId:
+                    type: string
+                  completed:
+                    type: boolean
+                  completedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+        '403':
+          description: Student not assigned to this assignment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Assignment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/student-initials:
+    post:
+      summary: Generate student initials for assignment display
+      description: Internal API for generating unique initials from student names
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - students
+              properties:
+                students:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - id
+                      - firstName
+                      - lastName
+                    properties:
+                      id:
+                        type: string
+                      firstName:
+                        type: string
+                      lastName:
+                        type: string
+                      middleName:
+                        type: string
+                        nullable: true
+      responses:
+        '200':
+          description: Student initials generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - initials
+                  - hasConflicts
+                properties:
+                  initials:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StudentInitial'
+                  hasConflicts:
+                    type: boolean
+                  conflictResolutions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        studentId:
+                          type: string
+                        originalAttempt:
+                          type: string
+                        finalInitials:
+                          type: string
+        '400':
+          description: Invalid student data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+security:
+  - supabaseAuth: []
+
+components:
+  securitySchemes:
+    supabaseAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

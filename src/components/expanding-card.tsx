@@ -555,11 +555,6 @@ function AssignmentCardExpanded({
                   onPressedChange={async () => {
                     if (assignment.type !== 'assignment' || isToggling) return
 
-                    console.log('🎯 Toggle pressed for assignment:', {
-                      id: assignment.id,
-                      title: assignment.title,
-                      completed: assignment.completed,
-                    })
 
                     setIsToggling(true)
 
@@ -783,12 +778,7 @@ function AssignmentCardGroup({
   recommendations?: Recommendation[]
   selectedChildId?: string | null
 }) {
-  // Debug: Track group re-renders
-  console.log(
-    '🔄 AssignmentCardGroup rendered with',
-    assignments.length,
-    'assignments',
-  )
+  // Track group re-renders
 
   const [openId, setOpenId] = useState<string | null>(null)
   const openCard = (id: string) => setOpenId(id)
@@ -894,12 +884,7 @@ export default function AssignmentCardContainer({
   recommendations?: Recommendation[]
   selectedChildId?: string | null
 }) {
-  // Debug: Track container re-renders
-  console.log(
-    '🔄 AssignmentCardContainer rendered with',
-    assignments.length,
-    'assignments',
-  )
+  // Track container re-renders
 
   return (
     <div id="expanding-card">

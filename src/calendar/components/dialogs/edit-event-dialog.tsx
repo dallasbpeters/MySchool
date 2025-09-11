@@ -66,7 +66,7 @@ export function EditEventDialog({ children, event }: IProps) {
   const form = useForm<TEventFormData>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
-      user: event.user.id,
+      user: event.user?.id || '',
       title: event.title,
       description: event.description,
       startDate: parseISO(event.startDate),

@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { generateStudentInitials } from '@/utils/student-initials'
+import { assignmentToCalendarItem, calculateAssignmentStatus } from '@/utils/assignment-display'
+import { CalendarItem, StudentInfo, RolePermissions } from '@/types/calendar-integration'
 
 interface Assignment {
   id: string
@@ -137,7 +140,13 @@ export async function GET() {
         )
         .eq('student_assignments.profiles.parent_id', user.id)
 
-      // Group by assignment and collect student names
+      // Also get assignments created by the parent (their own assignments)
+      const { data: parentAssignments } = await supabase
+        .from('assignments')
+        .select('*')
+        .eq('parent_id', user.id)
+
+      // Group assignments with student relationships
       const assignmentMap = new Map()
       childrenAssignments?.forEach(
         (assignment: Assignment & { profiles?: { name: string } }) => {
@@ -164,9 +173,20 @@ export async function GET() {
         },
       )
 
+      // Add parent's own assignments (assignments they created)
+      parentAssignments?.forEach((assignment: Assignment) => {
+        if (!assignmentMap.has(assignment.id)) {
+          assignmentMap.set(assignment.id, {
+            ...assignment,
+            assigned_students: ['Me'], // Parent sees their own created assignments
+          })
+        }
+      })
+
       assignmentsData = Array.from(assignmentMap.values())
     } else {
       // Student: get their assigned assignments with their own name
+      // First try to get assignments through student_assignments table
       const { data: studentAssignments } = await supabase
         .from('assignments')
         .select(
@@ -177,11 +197,28 @@ export async function GET() {
         )
         .eq('student_assignments.student_id', user.id)
 
-      assignmentsData =
-        studentAssignments?.map((assignment: Assignment) => ({
-          ...assignment,
-          assigned_students: [profile.name || 'Me'],
-        })) || []
+      // Also get assignments where the student is the parent_id (for student-created assignments)
+      const { data: ownAssignments } = await supabase
+        .from('assignments')
+        .select('*')
+        .eq('parent_id', user.id)
+
+      // Combine both sets of assignments
+      const allStudentAssignments = [
+        ...(studentAssignments || []),
+        ...(ownAssignments || [])
+      ]
+
+      // Remove duplicates by ID
+      const uniqueAssignments = allStudentAssignments.filter(
+        (assignment, index, self) => 
+          index === self.findIndex(a => a.id === assignment.id)
+      )
+
+      assignmentsData = uniqueAssignments.map((assignment: Assignment) => ({
+        ...assignment,
+        assigned_students: [profile.name || 'Me'],
+      }))
     }
 
     if (eventsError) {
@@ -206,6 +243,7 @@ export async function GET() {
           profiles?: { name: string }
         }) => ({
           id: event.id, // Keep as string UUID
+          type: 'event',
           title: event.title,
           description: event.description || '',
           startDate: event.start_date,
@@ -227,6 +265,7 @@ export async function GET() {
         .from('student_assignments')
         .select('assignment_id, completed, student_id')
         .in('assignment_id', assignmentIds)
+        
 
       // Create a map of assignment completion status
       completionData?.forEach(
@@ -252,8 +291,51 @@ export async function GET() {
       )
     }
 
-    // Format assignments as calendar events
-    const assignmentEvents =
+    // Get student profile data for initial generation
+    const allStudentIds = new Set<string>()
+    assignmentsData?.forEach(assignment => {
+      const completionData = assignmentCompletionMap.get(assignment.id)
+      if (completionData) {
+        completionData.completed.forEach((id: string) => allStudentIds.add(id))
+        completionData.incomplete.forEach((id: string) => allStudentIds.add(id))
+      } else {
+        // If no student assignments found, add the assignment creator for fallback
+        if (assignment.parent_id) {
+          allStudentIds.add(assignment.parent_id)
+        }
+      }
+    })
+
+    // Fetch student profile data for initial generation
+    // Get all student profiles since many assignments don't have student_assignments records
+    const { data: studentProfiles } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .eq('role', 'student')
+
+    // Create student info map for initial generation
+    const studentInfoMap = new Map<string, StudentInfo>()
+    studentProfiles?.forEach(student => {
+      // Split the name into first and last name
+      const nameParts = (student.name || '').split(' ')
+      let firstName = nameParts[0] || 'Student'
+      let lastName = nameParts.slice(1).join(' ')
+
+      // For single names, keep lastName empty so initials generator can handle it
+      if (!lastName) {
+        lastName = '' // Empty lastName - initials generator will use single letter
+      }
+
+      studentInfoMap.set(student.id, {
+        id: student.id,
+        firstName,
+        lastName
+      })
+    })
+
+
+    // Format assignments as calendar events with student initials
+    const assignmentEvents: CalendarItem[] =
       assignmentsData?.map(
         (
           assignment: Assignment & {
@@ -263,58 +345,42 @@ export async function GET() {
           },
         ) => {
           const completionData = assignmentCompletionMap.get(assignment.id)
-          const now = new Date()
-          now.setHours(0, 0, 0, 0) // Reset to start of today for date-only comparison
-
-          // Parse due date as end of day for comparison
-          const dueDate = new Date(assignment.due_date + 'T23:59:59')
-
-          // Determine color based on completion status and due date
-          let color:
-            | 'blue'
-            | 'green'
-            | 'red'
-            | 'yellow'
-            | 'purple'
-            | 'orange'
-            | 'gray'
-          if (
-            completionData &&
-            completionData.completed.length > 0 &&
-            completionData.incomplete.length === 0
-          ) {
-            // All assigned students completed
-            color = 'gray'
-          } else if (dueDate < now) {
-            // Overdue (due date is before today)
-            color = 'red'
-          } else {
-            // Default (upcoming/due today or future)
-            color = 'yellow'
+          
+          // Calculate completion status
+          const completions = []
+          if (completionData) {
+            completionData.completed.forEach((studentId: string) => {
+              completions.push({ student_id: studentId, completed: true })
+            })
+            completionData.incomplete.forEach((studentId: string) => {
+              completions.push({ student_id: studentId, completed: false })
+            })
           }
 
-          return {
-            id: `assignment-${assignment.id}`, // String ID with prefix to avoid conflicts
-            title: assignment.title,
-            description: assignment.content
-              ? 'Assignment details available'
-              : 'Assignment due',
-            startDate: assignment.due_date, // All-day event - just the date
-            endDate: assignment.due_date, // Same date for all-day
-            color: color,
-            isAllDay: true, // Mark as all-day event
-            user: {
-              id: assignment.parent_id,
-              name:
-                assignment.profiles?.name ||
-                assignment.parent_name ||
-                'Teacher',
-              picturePath: null,
-            },
-            // Add assignment-specific metadata
-            isAssignment: true,
-            assignedStudents: assignment.assigned_students || [],
-          }
+          // If no student assignments found, don't assign to anyone
+          // Assignments should only show students who are actually assigned
+
+          const completionStatus = calculateAssignmentStatus(completions)
+
+          // Get student info for this assignment
+          const assignmentStudentInfo: StudentInfo[] = []
+          completions.forEach(completion => {
+            const studentInfo = studentInfoMap.get(completion.student_id)
+            if (studentInfo) {
+              assignmentStudentInfo.push(studentInfo)
+            }
+          })
+
+          // Generate student initials
+          const studentInitials = generateStudentInitials(assignmentStudentInfo)
+
+
+          // Convert assignment to calendar item format
+          return assignmentToCalendarItem(
+            assignment,
+            studentInitials,
+            completionStatus
+          )
         },
       ) || []
 
@@ -366,9 +432,27 @@ export async function GET() {
       ]
     }
 
+    // Determine user permissions based on role
+    const permissions: RolePermissions = {
+      userId: user.id,
+      role: profile.role as 'student' | 'parent' | 'admin',
+      canViewKanban: profile.role === 'parent' || profile.role === 'admin',
+      canCreateAssignments: profile.role === 'parent' || profile.role === 'admin',
+      canEditAssignments: profile.role === 'parent' || profile.role === 'admin',
+      canEditOwnEvents: true,
+      canEditAllEvents: profile.role === 'admin',
+      studentIds: profile.role === 'parent' ? 
+        (usersData.filter(u => u.id !== user.id).map(u => u.id)) : 
+        (profile.role === 'student' ? [user.id] : []),
+      visibleAssignments: assignmentEvents.map(ae => ae.id),
+      visibleEvents: formattedEvents.map(fe => fe.id)
+    }
+
     return NextResponse.json({
-      events: allEvents,
+      events: formattedEvents,
+      assignments: assignmentEvents,
       users: usersData,
+      permissions: permissions
     })
   } catch (error: unknown) {
     console.error('Error in GET /api/events:', error)

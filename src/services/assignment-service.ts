@@ -1,5 +1,13 @@
 import { Assignment } from '@/types'
 import { parseISO } from 'date-fns'
+import { 
+  CalendarItem, 
+  StudentInitial, 
+  AssignmentToggleResponse,
+  EventsApiResponse 
+} from '@/types/calendar-integration'
+import { assignmentToCalendarItem, calculateAssignmentStatus } from '@/utils/assignment-display'
+import { generateStudentInitials } from '@/utils/student-initials'
 
 export interface AssignmentFilters {
   isOverdue: (assignment: Assignment) => boolean
@@ -118,7 +126,7 @@ export class AssignmentService {
         }
 
         // Check if there are any past recurring days that weren't completed
-        let checkDate = new Date(today)
+        const checkDate = new Date(today)
         checkDate.setDate(checkDate.getDate() - 1)
 
         for (let i = 0; i < 30; i++) { // Check last 30 days
@@ -213,7 +221,7 @@ export class AssignmentService {
         }
 
         // Check if there are any future recurring days that haven't been completed
-        let checkDate = new Date(today)
+        const checkDate = new Date(today)
         checkDate.setDate(checkDate.getDate() + 1) // Start from tomorrow
 
         for (let i = 0; i < 30; i++) { // Check next 30 days
@@ -267,7 +275,7 @@ export class AssignmentService {
         let hasIncompletePastInstance = false
 
         // Check all past recurring days
-        let checkDate = new Date(today)
+        const checkDate = new Date(today)
         checkDate.setDate(checkDate.getDate() - 1) // Start from yesterday
 
         for (let i = 0; i < 30; i++) { // Check last 30 days
@@ -299,73 +307,16 @@ export class AssignmentService {
   }
 
   static groupAssignments(assignments: Assignment[]): AssignmentGroups {
-    console.log(
-      '🔄 groupAssignments called with assignments:',
-      assignments.map((a) => ({
-        id: a.id,
-        title: a.title,
-        completed: a.completed,
-      })),
-    )
-
     // Filter upcoming assignments to only show next incomplete instance for recurring assignments
     const upcomingRaw = assignments.filter(this.filters.isUpcoming)
-    console.log(
-      '📅 Raw upcoming assignments:',
-      upcomingRaw.map((a) => ({
-        id: a.id,
-        title: a.title,
-        completed: a.completed,
-      })),
-    )
-
     const filteredUpcoming = this.filterUpcomingAssignments(upcomingRaw)
-    console.log(
-      '🎯 Filtered upcoming assignments:',
-      filteredUpcoming.map((a) => ({
-        id: a.id,
-        title: a.title,
-        completed: a.completed,
-      })),
-    )
 
     // Further filter to show only one assignment per category (the soonest due)
     const deduplicatedUpcoming = this.deduplicateByCategory(filteredUpcoming)
-    console.log(
-      '🔄 Deduplicated upcoming assignments:',
-      deduplicatedUpcoming.map((a) => ({
-        id: a.id,
-        title: a.title,
-        completed: a.completed,
-      })),
-    )
 
     const overdue = assignments.filter(this.filters.isOverdue)
     const today = assignments.filter(this.filters.isToday)
     const past = assignments.filter(this.filters.isPast)
-
-    console.log('📊 Final grouping:', {
-      overdue: overdue.map((a) => ({
-        id: a.id,
-        title: a.title,
-        completed: a.completed,
-      })),
-      today: today.map((a) => ({
-        id: a.id,
-        title: a.title,
-        completed: a.completed,
-      })),
-      upcoming: deduplicatedUpcoming.map((a) => ({
-        id: a.id,
-        title: a.title,
-        completed: a.completed,
-      })),
-      past: past.map((a) => ({
-        id: a.id,
-        title: a.title,
-        completed: a.completed,
-      })),
-    })
 
     return {
       overdue,
@@ -588,6 +539,146 @@ export class AssignmentService {
     }
   }
 
+  static async toggleAssignmentCompletion(
+    assignmentId: string,
+    completed: boolean,
+    instanceDate?: string,
+  ): Promise<AssignmentToggleResponse> {
+    try {
+      const payload = {
+        completed,
+        instanceDate,
+      }
+
+      const response = await fetch(`/api/assignments/${assignmentId}/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      const data: AssignmentToggleResponse = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update assignment')
+      }
+
+      return data
+    } catch (error) {
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to update assignment. Please try again.'
+      )
+    }
+  }
+
+  /**
+   * Fetch calendar events and assignments with enhanced display data
+   */
+  static async fetchCalendarData(
+    startDate?: string,
+    endDate?: string,
+    userId?: string
+  ): Promise<EventsApiResponse> {
+    try {
+      const params = new URLSearchParams()
+      if (startDate) params.append('startDate', startDate)
+      if (endDate) params.append('endDate', endDate)
+      if (userId) params.append('userId', userId)
+
+      const response = await fetch(`/api/events?${params.toString()}`)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch calendar data')
+      }
+
+      const data: EventsApiResponse = await response.json()
+      return data
+    } catch (error) {
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch calendar data'
+      )
+    }
+  }
+
+  /**
+   * Convert assignments to calendar items for display
+   */
+  static async convertAssignmentsToCalendarItems(
+    assignments: Assignment[],
+    studentAssignments: Array<{
+      assignment_id: string
+      student_id: string
+      completed: boolean
+      completed_at?: string
+    }>,
+    studentProfiles: Array<{
+      id: string
+      first_name?: string
+      last_name?: string
+      name: string
+    }>
+  ): Promise<CalendarItem[]> {
+    // Create student info map for initial generation
+    const studentInfoMap = new Map()
+    studentProfiles.forEach(student => {
+      const firstName = student.first_name || student.name.split(' ')[0] || 'Student'
+      const lastName = student.last_name || student.name.split(' ').slice(1).join(' ') || 'User'
+      
+      studentInfoMap.set(student.id, {
+        id: student.id,
+        firstName,
+        lastName
+      })
+    })
+
+    // Group student assignments by assignment ID
+    const assignmentCompletionMap = new Map()
+    studentAssignments.forEach(sa => {
+      if (!assignmentCompletionMap.has(sa.assignment_id)) {
+        assignmentCompletionMap.set(sa.assignment_id, [])
+      }
+      assignmentCompletionMap.get(sa.assignment_id).push({
+        studentId: sa.student_id,
+        completed: sa.completed,
+        completedAt: sa.completed_at
+      })
+    })
+
+    // Convert each assignment to calendar item
+    const calendarItems: CalendarItem[] = []
+    
+    for (const assignment of assignments) {
+      const completions = assignmentCompletionMap.get(assignment.id) || []
+      const completionStatus = calculateAssignmentStatus(completions)
+
+      // Get student info for this assignment
+      const assignmentStudentInfo = completions.map(completion => 
+        studentInfoMap.get(completion.studentId)
+      ).filter(Boolean)
+
+      // Generate student initials
+      const studentInitials = generateStudentInitials(assignmentStudentInfo)
+
+      // Convert to calendar item
+      const calendarItem = assignmentToCalendarItem(
+        assignment,
+        studentInitials,
+        completionStatus
+      )
+
+      calendarItems.push(calendarItem)
+    }
+
+    return calendarItems
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   * @deprecated Use toggleAssignmentCompletion instead
+   */
   static async toggleAssignment(
     assignmentId: string,
     studentId?: string,
@@ -595,38 +686,20 @@ export class AssignmentService {
     completed?: boolean,
   ): Promise<{ success: boolean; message: string }> {
     try {
-      const payload = {
+      const response = await this.toggleAssignmentCompletion(
         assignmentId,
-        studentId: studentId || undefined,
-        instanceDate,
-        completed,
-      }
-
-      console.log('🚀 toggleAssignment payload:', payload)
-
-      const response = await fetch('/api/assignments/toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update assignment')
-      }
-
+        completed ?? true,
+        instanceDate
+      )
+      
       return {
-        success: true,
-        message: data.message || 'Assignment updated successfully',
+        success: response.success,
+        message: 'Assignment updated successfully'
       }
     } catch (error) {
       return {
         success: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Failed to update assignment. Please try again.',
+        message: error instanceof Error ? error.message : 'Failed to update assignment'
       }
     }
   }

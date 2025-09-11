@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('📡 API /assignments/toggle received:', body)
 
     const { assignmentId, studentId, completed, instanceDate } = body
 
@@ -19,7 +18,6 @@ export async function POST(request: NextRequest) {
     try {
       supabase = await createClient()
     } catch (clientError) {
-      console.error('Failed to create Supabase client:', clientError)
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 },
@@ -172,10 +170,8 @@ export async function POST(request: NextRequest) {
         ? 'Assignment marked as complete'
         : 'Assignment marked as incomplete',
     }
-    console.log('📡 API /assignments/toggle returning:', responseData)
     return NextResponse.json(responseData)
   } catch (error: unknown) {
-    console.error('Error in PATCH /api/assignments/toggle:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: (error as Error).message },
       { status: 500 },

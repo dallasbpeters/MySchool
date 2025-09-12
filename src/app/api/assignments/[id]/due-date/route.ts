@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: assignmentId } = params
+    const { id: assignmentId } = await params
     const { due_date } = await request.json()
 
     if (!assignmentId) {
@@ -90,7 +90,7 @@ export async function PATCH(
 
       if (recurringAssignments && recurringAssignments.length > 0) {
         // Calculate the date difference between original due date and new due date
-        const originalDate = new Date(recurringAssignments.find(a => a.id === assignmentId)?.due_date || due_date)
+        const originalDate = new Date(recurringAssignments.find((a: { id: string }) => a.id === assignmentId)?.due_date || due_date)
         const newDate = new Date(due_date)
         const daysDifference = Math.round((newDate.getTime() - originalDate.getTime()) / (1000 * 60 * 60 * 24))
 
@@ -108,7 +108,7 @@ export async function PATCH(
         })
 
         const results = await Promise.all(updatePromises)
-        
+
         // Check for errors
         const errors = results.filter(result => result.error)
         if (errors.length > 0) {
@@ -147,7 +147,7 @@ export async function PATCH(
       )
     }
 
-    const message = originalAssignment.is_recurring 
+    const message = originalAssignment.is_recurring
       ? `Updated ${updatedAssignments.length} recurring assignment instances`
       : 'Assignment due date updated successfully'
 

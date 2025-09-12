@@ -7,7 +7,7 @@ export function useDisclosure({
 
   const onOpen = () => setIsOpen(true)
   const onClose = () => setIsOpen(false)
-  const onToggle = () => setIsOpen((currentValue) => !currentValue)
+  const onToggleAction = () => setIsOpen((currentValue) => !currentValue)
 
-  return { onOpen, onClose, isOpen, onToggle }
+  return { onOpen, onClose, isOpen, onToggleAction }
 }

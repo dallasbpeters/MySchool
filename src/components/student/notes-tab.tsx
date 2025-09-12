@@ -18,6 +18,7 @@ import { format } from 'date-fns'
 import { WysiwygEditor } from '@/components/editor/wysiwyg-editor'
 import { NoteService, Note } from '@/services/note-service'
 import { Assignment } from '@/types'
+import EmptyState from '../EmptyState'
 
 interface NotesTabProps {
   notes: Note[]
@@ -32,33 +33,59 @@ interface NotesTabProps {
 }
 
 // Note content component
-function NoteContent({ content }: { content: string }) {
-  try {
-    const parsedContent = JSON.parse(content)
-    if (parsedContent?.type === 'doc' && parsedContent?.content) {
+interface NoteNode {
+  type: string
+  text?: string
+  content?: NoteNode[]
+}
+
+interface ProseMirrorDoc {
+  type: 'doc'
+  content: NoteNode[]
+}
+
+function NoteContent({ content }: { content: string | ProseMirrorDoc | unknown }) {
+  // Handle case where content is already an object
+  let parsedContent = content
+
+  // If content is a string, try to parse it
+  if (typeof content === 'string') {
+    try {
+      parsedContent = JSON.parse(content)
+    } catch {
+      // If not valid JSON, treat as plain text
+      return <p className="whitespace-pre-wrap">{content}</p>
+    }
+  }
+
+  // If we have ProseMirror structure, extract text
+  if (typeof parsedContent === 'object' && parsedContent !== null && 'type' in parsedContent && 'content' in parsedContent) {
+    const doc = parsedContent as ProseMirrorDoc
+    if (doc.type === 'doc' && doc.content) {
       // Extract text from ProseMirror JSON
-      const extractText = (node: {
-        type?: string
-        text?: string
-        content?: Array<{ type?: string; text?: string; content?: unknown[] }>
-      }): string => {
-        if (node.type === 'text') {
-          return node.text || ''
+      const extractText = (node: NoteNode): string => {
+        if (!node || typeof node !== 'object') return ''
+
+        if (node.type === 'text' && typeof node.text === 'string') {
+          return node.text
         }
-        if (node.content && Array.isArray(node.content)) {
-          return node.content.map(extractText).join('')
+
+        if (Array.isArray(node.content)) {
+          return node.content.map((child: NoteNode) => extractText(child)).join('')
         }
+
         return ''
       }
 
-      const text = parsedContent.content.map(extractText).join('\n')
-      return <p className="whitespace-pre-wrap">{text}</p>
+      const text = Array.isArray(doc.content)
+        ? doc.content.map(extractText).join('\n').trim()
+        : ''
+      return <p className="whitespace-pre-wrap">{text || 'No content'}</p>
     }
-  } catch {
-    // If not valid JSON, treat as plain text
   }
 
-  return <p className="whitespace-pre-wrap">{content}</p>
+  // Fallback: convert to string
+  return <p className="whitespace-pre-wrap">{typeof content === 'string' ? content : String(content)}</p>
 }
 
 export function NotesTab({
@@ -77,14 +104,7 @@ export function NotesTab({
 
   if (categories.length === 0) {
     return (
-      <Card>
-        <CardContent className="text-center py-8">
-          <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">
-            No notes yet. Add notes to assignments to see them here!
-          </p>
-        </CardContent>
-      </Card>
+      <EmptyState title="You haven't created any notes yet!" description="You can create notes from any assignment and they will appear here." />
     )
   }
 
@@ -198,10 +218,10 @@ export function NotesTab({
                       {assignments.filter(
                         (assignment) => assignment.category === note.category,
                       ).length === 0 && (
-                        <span className="italic">
-                          No current assignments in this category
-                        </span>
-                      )}
+                          <span className="italic">
+                            No current assignments in this category
+                          </span>
+                        )}
                     </div>
                   </div>
                 </CardFooter>

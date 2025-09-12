@@ -1,0 +1,395 @@
+openapi: 3.0.3
+info:
+  title: Loading Components Contract
+  description: Component interfaces for loading states and performance-optimized UI
+  version: 0.2.0
+
+components:
+  schemas:
+    # Loading Component Props
+    ColourfulTextLoadingProps:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          description: Loading text to display with animation
+          default: "Loading..."
+        size:
+          type: string
+          enum: [small, medium, large]
+          default: medium
+        className:
+          type: string
+        animate:
+          type: boolean
+          default: true
+        testId:
+          type: string
+
+    LoadingSpinnerProps:
+      type: object
+      properties:
+        size:
+          type: string
+          enum: [small, medium, large]
+          default: medium
+        color:
+          type: string
+          enum: [primary, secondary, accent, muted]
+          default: primary
+        className:
+          type: string
+        label:
+          type: string
+          description: Accessible label for screen readers
+
+    ProgressBarProps:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: number
+          minimum: 0
+          maximum: 100
+        showPercentage:
+          type: boolean
+          default: true
+        label:
+          type: string
+        color:
+          type: string
+          enum: [primary, success, warning, error]
+          default: primary
+        size:
+          type: string
+          enum: [small, medium, large]
+          default: medium
+        className:
+          type: string
+
+    LoadingWrapperProps:
+      type: object
+      required:
+        - isLoading
+        - children
+      properties:
+        isLoading:
+          type: boolean
+        loadingComponent:
+          type: object
+          description: React component to show during loading
+        fallback:
+          type: object
+          description: Fallback content during loading
+        delay:
+          type: integer
+          minimum: 0
+          description: Delay in ms before showing loading state
+        timeout:
+          type: integer
+          minimum: 1000
+          description: Timeout in ms for loading operations
+        children:
+          type: object
+          description: Content to show when not loading
+
+    # Error Boundary Props
+    ErrorBoundaryProps:
+      type: object
+      required:
+        - children
+      properties:
+        fallback:
+          type: object
+          description: Component to render on error
+        onError:
+          type: object
+          description: Error handler function
+        resetKeys:
+          type: array
+          items:
+            type: string
+          description: Keys that trigger error boundary reset
+        children:
+          type: object
+
+    # Cache Status Indicator Props
+    CacheStatusProps:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [fresh, stale, updating, error]
+        showIcon:
+          type: boolean
+          default: true
+        showText:
+          type: boolean
+          default: false
+        size:
+          type: string
+          enum: [small, medium]
+          default: small
+        position:
+          type: string
+          enum: [top-left, top-right, bottom-left, bottom-right]
+          default: top-right
+
+    # Performance Monitor Props
+    PerformanceMonitorProps:
+      type: object
+      properties:
+        trackPageViews:
+          type: boolean
+          default: true
+        trackNavigation:
+          type: boolean
+          default: true
+        trackApiCalls:
+          type: boolean
+          default: true
+        debugMode:
+          type: boolean
+          default: false
+        reportInterval:
+          type: integer
+          minimum: 1000
+          default: 30000
+          description: Interval in ms for sending metrics
+
+  # Component Contracts (interfaces)
+  interfaces:
+    LoadingStateComponent:
+      description: Standard interface for all loading state components
+      required:
+        - isLoading
+        - accessibility
+      properties:
+        isLoading:
+          type: boolean
+          description: Whether component is in loading state
+        accessibility:
+          type: object
+          properties:
+            label:
+              type: string
+              description: Screen reader label
+            liveRegion:
+              type: boolean
+              default: true
+              description: Use ARIA live region for updates
+            announceStart:
+              type: string
+              description: Message when loading starts
+            announceEnd:
+              type: string
+              description: Message when loading completes
+
+    CacheableComponent:
+      description: Components that integrate with caching system
+      required:
+        - cacheKey
+        - onCacheUpdate
+      properties:
+        cacheKey:
+          type: string
+          description: Unique cache identifier
+        cacheConfig:
+          $ref: '#/components/schemas/CacheConfig'
+        onCacheUpdate:
+          type: object
+          description: Callback when cache updates
+        invalidateOn:
+          type: array
+          items:
+            type: string
+          description: Events that should invalidate cache
+
+    PerformanceOptimizedComponent:
+      description: Components optimized for performance
+      properties:
+        lazy:
+          type: boolean
+          default: false
+          description: Whether to lazy load component
+        prefetch:
+          type: boolean
+          default: false
+          description: Whether to prefetch component data
+        memoization:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+              default: true
+            dependencies:
+              type: array
+              items:
+                type: string
+        virtualizeList:
+          type: boolean
+          default: false
+          description: Whether to virtualize list rendering
+
+# Event Contracts
+events:
+  LoadingStateChanged:
+    description: Fired when loading state changes
+    payload:
+      type: object
+      required:
+        - componentId
+        - previousState
+        - currentState
+        - timestamp
+      properties:
+        componentId:
+          type: string
+        previousState:
+          type: string
+          enum: [idle, loading, success, error]
+        currentState:
+          type: string
+          enum: [idle, loading, success, error]
+        timestamp:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+  CacheInvalidated:
+    description: Fired when cache is invalidated
+    payload:
+      type: object
+      required:
+        - tags
+        - reason
+        - timestamp
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+        reason:
+          type: string
+          enum: [manual, automatic, dependency, expiration]
+        affectedComponents:
+          type: array
+          items:
+            type: string
+        timestamp:
+          type: string
+          format: date-time
+
+  PerformanceThresholdExceeded:
+    description: Fired when performance threshold is exceeded
+    payload:
+      type: object
+      required:
+        - metricType
+        - value
+        - threshold
+        - route
+      properties:
+        metricType:
+          type: string
+          enum: [page_load, navigation, api_response]
+        value:
+          type: number
+        threshold:
+          type: number
+        route:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+# Hook Contracts
+hooks:
+  useLoadingState:
+    description: Hook for managing loading states
+    input:
+      type: object
+      properties:
+        initialState:
+          type: string
+          enum: [idle, loading, success, error]
+          default: idle
+        delay:
+          type: integer
+          minimum: 0
+          default: 0
+    output:
+      type: object
+      properties:
+        state:
+          type: string
+          enum: [idle, loading, success, error]
+        isLoading:
+          type: boolean
+        isSuccess:
+          type: boolean
+        isError:
+          type: boolean
+        setLoading:
+          type: object
+          description: Function to set loading state
+        setSuccess:
+          type: object
+          description: Function to set success state
+        setError:
+          type: object
+          description: Function to set error state
+        reset:
+          type: object
+          description: Function to reset to idle state
+
+  usePerformanceMonitor:
+    description: Hook for tracking performance metrics
+    input:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          default: true
+        route:
+          type: string
+    output:
+      type: object
+      properties:
+        trackEvent:
+          type: object
+          description: Function to track custom events
+        getMetrics:
+          type: object
+          description: Function to get current metrics
+        isTracking:
+          type: boolean
+
+  useCacheStatus:
+    description: Hook for monitoring cache status
+    input:
+      type: object
+      required:
+        - cacheKey
+      properties:
+        cacheKey:
+          type: string
+    output:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [fresh, stale, updating, error]
+        lastUpdated:
+          type: string
+          format: date-time
+        invalidate:
+          type: object
+          description: Function to invalidate cache
+        refresh:
+          type: object
+          description: Function to refresh cache

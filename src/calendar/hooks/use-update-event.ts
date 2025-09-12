@@ -24,17 +24,17 @@ export function useUpdateEvent() {
     setCalendarItems((prev) => {
       const index = prev.findIndex((item) => item.id === event.id)
       if (index === -1) return prev
-      
-      // Convert IEvent to CalendarItem format
-      const updatedCalendarItem = {
+
+      // Convert IEvent to CalendarItem format with proper type casting
+      const updatedCalendarItem: typeof prev[0] = {
         ...prev[index],
         startDate: newEvent.startDate,
         endDate: newEvent.endDate,
         title: newEvent.title,
-        color: newEvent.color,
+        color: newEvent.color as typeof prev[0]['color'],
         description: newEvent.description || prev[index].description
       }
-      
+
       return [...prev.slice(0, index), updatedCalendarItem, ...prev.slice(index + 1)]
     })
 
@@ -68,7 +68,7 @@ export function useUpdateEvent() {
           throw new Error(errorData.error || 'Failed to update assignment due date')
         }
 
-        const data = await response.json()
+        const _data = await response.json()
 
         // 🎨 FORCE COLOR UPDATE: Always refresh for assignments to ensure colors are correct
         try {
@@ -92,12 +92,23 @@ export function useUpdateEvent() {
           if (index === -1) return prev
           return [...prev.slice(0, index), event, ...prev.slice(index + 1)]
         })
-        
+
         // Also revert calendar items
         setCalendarItems((prev) => {
           const index = prev.findIndex((item) => item.id === event.id)
           if (index === -1) return prev
-          return [...prev.slice(0, index), prev[index], ...prev.slice(index + 1)]
+
+          // Revert to original calendar item state
+          const originalCalendarItem: typeof prev[0] = {
+            ...prev[index],
+            startDate: event.startDate,
+            endDate: event.endDate,
+            title: event.title,
+            color: event.color as typeof prev[0]['color'],
+            description: event.description || prev[index].description
+          }
+
+          return [...prev.slice(0, index), originalCalendarItem, ...prev.slice(index + 1)]
         })
 
         throw error // Re-throw to show error to user
@@ -129,8 +140,8 @@ export function useUpdateEvent() {
           throw new Error(errorData.error || 'Failed to update event')
         }
 
-        const data = await response.json()
-        
+        const _data = await response.json()
+
       } catch (error) {
         console.error('Event update failed:', error)
 
@@ -140,12 +151,23 @@ export function useUpdateEvent() {
           if (index === -1) return prev
           return [...prev.slice(0, index), event, ...prev.slice(index + 1)]
         })
-        
+
         // Also revert calendar items
         setCalendarItems((prev) => {
           const index = prev.findIndex((item) => item.id === event.id)
           if (index === -1) return prev
-          return [...prev.slice(0, index), prev[index], ...prev.slice(index + 1)]
+
+          // Revert to original calendar item state
+          const originalCalendarItem: typeof prev[0] = {
+            ...prev[index],
+            startDate: event.startDate,
+            endDate: event.endDate,
+            title: event.title,
+            color: event.color as typeof prev[0]['color'],
+            description: event.description || prev[index].description
+          }
+
+          return [...prev.slice(0, index), originalCalendarItem, ...prev.slice(index + 1)]
         })
 
         throw error // Re-throw to show error to user

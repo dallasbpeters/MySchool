@@ -15,16 +15,16 @@ export function UserSelect() {
 
   return (
     <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-      <SelectTrigger className="flex-1 md:w-48">
+      <SelectTrigger className="flex-1 md:w-40">
         <SelectValue />
       </SelectTrigger>
 
-      <SelectContent align="end">
+      <SelectContent align="start">
         <SelectItem value="all">
           <div className="flex items-center gap-1">
             <AvatarGroup max={2}>
               {users.map((user) => (
-                <Avatar key={user.id} className="size-6 text-xxs">
+                <Avatar key={user.id} className="border-1 border-border size-7 text-xxs">
                   <AvatarImage
                     src={user.picturePath ?? undefined}
                     alt={user.name}
@@ -42,7 +42,7 @@ export function UserSelect() {
         {users.map((user) => (
           <SelectItem key={user.id} value={user.id} className="flex-1">
             <div className="flex items-center gap-2">
-              <Avatar key={user.id} className="size-6">
+              <Avatar key={user.id} className="size-7">
                 <AvatarImage
                   src={user.picturePath ?? undefined}
                   alt={user.name}

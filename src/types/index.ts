@@ -10,10 +10,11 @@ export interface Assignment {
   completed?: boolean
   completed_at?: string
   category?: string
+  parent_id?: string // ID of the parent/creator of the assignment
   is_recurring?: boolean
   recurrence_pattern?: {
     days: string[]
-    frequency?: 'weekly' | 'daily'
+    frequency: 'weekly' | 'daily'
   }
   recurrence_end_date?: string
   next_due_date?: string

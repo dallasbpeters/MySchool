@@ -22,6 +22,7 @@ import { AnimatePresence } from 'motion/react'
 import { Toggle } from '@/components/ui/toggle'
 import { AssignmentService } from '@/services/assignment-service'
 import './ui/shared-card-styles.css'
+import { images } from '@/components/images'
 
 interface Assignment {
   id: string
@@ -35,7 +36,7 @@ interface Assignment {
   is_recurring?: boolean
   recurrence_pattern?: {
     days: string[]
-    frequency?: 'weekly' | 'daily'
+    frequency: 'weekly' | 'daily'
   }
   recurrence_end_date?: string
   next_due_date?: string
@@ -64,13 +65,13 @@ interface AssignmentCardProps {
   showDate: boolean
   assignment: Assignment
   size: 'small' | 'xs'
-  onToggle: (id: string, instanceDate?: string) => void
+  onToggleAction: (id: string, instanceDate?: string) => void
   getDateLabel: (date: string, completed?: boolean) => string
   getDateColor: (date: string, completed?: boolean) => string
   imageIndex?: number
   expandedCardId: string | null
   setExpandedCardId: (id: string | null) => void
-  onNoteCreated?: () => void
+  onNoteCreatedAction?: () => void
   assignmentNotes?: Note[]
   selectedInstanceDate?: string
 }
@@ -84,30 +85,13 @@ function NoteContent({ content }: { content: string | null }) {
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none',
+        class: 'prose prose-md max-w-none',
       },
     },
   })
 
   return <EditorContent editor={editor} />
 }
-
-export const images = [
-  '/gemma-evans-swmWhdbcb6M-unsplash.svg',
-  '/wildan-kurniawan-fKdoeUJBh_o-unsplash.svg',
-  '/getty-images-F1sG0MZT_Ro-unsplash.svg',
-  '/melanie-villette-Somqo53jwzE-unsplash.svg',
-  '/eva-corbisier-6QxDZxUaScw-unsplash.svg',
-  '/risky-ming-fFa5xAoT8ms-unsplash.svg',
-  '/gemma-evans-qVzRlSDe8OU-unsplash.svg',
-  '/risky-ming--AsW_zqKQ9E-unsplash.svg',
-  '/getty-images-pnkJbt9HVBA-unsplash.svg',
-  '/lorenzo-mercanti-aKdXUkOY5ek-unsplash.svg',
-  '/amanda-sala-oHHc3UsNrqs-unsplash.svg',
-  '/melanie-villette-lQDNr81EW0w-unsplash.svg',
-  '/evelina-mitev-jV_8Fn1l1ec-unsplash.svg',
-  '/melanie-villette-wI97g9u9XVM-unsplash.svg',
-]
 
 // Global image index counter to ensure images cycle once across all instances
 let globalImageIndex = 0
@@ -118,13 +102,13 @@ const globalAssignmentImageMap = new Map<string, number>()
 function AssignmentCard({
   assignment,
   size,
-  onToggle: _onToggle,
+  onToggleAction: _onToggleAction,
   getDateLabel,
   getDateColor,
   imageIndex = 0,
   image: _image,
   showDate,
-  onNoteCreated: _onNoteCreated,
+  onNoteCreatedAction: _onNoteCreated,
   assignmentNotes: _assignmentNotes = [],
   selectedInstanceDate,
   expandedCardId: _expandedCardId,
@@ -195,13 +179,13 @@ function AssignmentCard({
 function AssignmentCardExpanded({
   id: _id,
   assignment,
-  onToggle: _onToggle,
+  onToggleAction: _onToggleAction,
   getDateLabel,
   getDateColor,
   imageIndex,
   image: _image,
   showDate,
-  onNoteCreated: _onNoteCreated,
+  onNoteCreatedAction: _onNoteCreated,
   assignmentNotes: _assignmentNotes = [],
   selectedInstanceDate,
   groupId,
@@ -209,13 +193,13 @@ function AssignmentCardExpanded({
 }: {
   id: string
   assignment: Assignment
-  onToggle: (id: string, instanceDate?: string) => void
+  onToggleAction: (id: string, instanceDate?: string) => void
   getDateLabel: (date: string, completed?: boolean) => string
   getDateColor: (date: string, completed?: boolean) => string
   imageIndex: number
   image: boolean
   showDate: boolean
-  onNoteCreated?: () => void
+  onNoteCreatedAction?: () => void
   assignmentNotes?: Note[]
   selectedInstanceDate?: string
   groupId?: string
@@ -248,7 +232,7 @@ function AssignmentCardExpanded({
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none',
+        class: 'prose prose-md max-w-none',
       },
     },
   })
@@ -590,7 +574,7 @@ function AssignmentCardExpanded({
                   }
                 }
 
-                _onToggle(assignment.id, instanceDate)
+                _onToggleAction(assignment.id, instanceDate)
               }}
             >
               <Check className="h-4 w-4" />
@@ -621,13 +605,13 @@ function AssignmentCardExpanded({
 export function AssignmentCardList({
   assignments,
   image,
-  onCardClick,
+  onCardClickAction,
   groupId,
   size = 'small',
 }: {
   assignments: Assignment[]
   image: boolean
-  onCardClick: (assignmentId: string) => void
+  onCardClickAction: (assignmentId: string) => void
   groupId?: string
   size?: 'small' | 'xs'
 }) {
@@ -654,7 +638,7 @@ export function AssignmentCardList({
             size={size}
             key={assignment.id}
             assignment={assignment}
-            onToggle={() => {}}
+            onToggleAction={() => {}}
             getDateLabel={(_date, _completed) =>
               AssignmentService.getDateLabel(assignment)
             }
@@ -664,13 +648,13 @@ export function AssignmentCardList({
             imageIndex={currentImageIndex}
             image={image}
             showDate={true}
-            onNoteCreated={() => {}}
+            onNoteCreatedAction={() => {}}
             assignmentNotes={[]}
             expandedCardId={null}
             setExpandedCardId={() => {}}
             selectedInstanceDate={undefined}
             groupId={groupId}
-            onClick={() => onCardClick(assignment.id)}
+            onClick={() => onCardClickAction(assignment.id)}
           />
         )
       })}
@@ -698,7 +682,7 @@ function AssignmentCardGroup({
       <AssignmentCardList
         assignments={assignments}
         image={image}
-        onCardClick={openCard}
+        onCardClickAction={openCard}
         groupId={groupId}
         size={size}
       />
@@ -708,7 +692,7 @@ function AssignmentCardGroup({
             id={openId}
             key="card-item"
             assignment={assignments.find((a) => a.id === openId)!}
-            onToggle={() => {}}
+            onToggleAction={() => {}}
             getDateLabel={(_date, _completed) =>
               AssignmentService.getDateLabel(
                 assignments.find((a) => a.id === openId)!,
@@ -722,7 +706,7 @@ function AssignmentCardGroup({
             imageIndex={globalAssignmentImageMap.get(openId) || 0}
             image={image}
             showDate={true}
-            onNoteCreated={() => {}}
+            onNoteCreatedAction={() => {}}
             assignmentNotes={[]}
             groupId={groupId}
             onClose={closeCard}

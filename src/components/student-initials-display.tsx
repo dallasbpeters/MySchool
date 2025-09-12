@@ -98,7 +98,7 @@ export function StudentInitialsDisplay({
       data-testid="student-initials-display"
     >
       {/* Individual student initials */}
-      {displayStudents.map((student, index) => (
+      {displayStudents.map((student) => (
         <span
           key={student.studentId}
           className={`student-initial inline-flex items-center justify-center ${sizeClasses.badge} bg-blue-100 text-blue-800 font-medium rounded-full hover:bg-blue-200 transition-colors ${onClick ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1' : ''}`}

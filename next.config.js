@@ -14,6 +14,68 @@ const nextConfig = {
     // Allow production builds to successfully complete even if TypeScript fails
     ignoreBuildErrors: false,
   },
+  webpack: (config, { isServer }) => {
+    // Optimize SVG handling to prevent large files from impacting webpack cache performance
+    config.module.rules.push({
+      test: /\.svg$/,
+      use: [
+        {
+          loader: '@svgr/webpack',
+          options: {
+            // Optimize SVGs during build
+            svgoConfig: {
+              plugins: [
+                {
+                  name: 'preset-default',
+                  params: {
+                    overrides: {
+                      // Remove viewBox to allow responsive scaling
+                      removeViewBox: false,
+                      // Keep dimensions for proper sizing
+                      removeDimensions: false,
+                    },
+                  },
+                },
+                // Remove unnecessary metadata and comments
+                'removeMetadata',
+                'removeComments',
+                'removeEditorsNSData',
+                'cleanupAttrs',
+                'cleanupNumericValues',
+                'convertColors',
+                'removeUnknownsAndDefaults',
+                'removeNonInheritableGroupAttrs',
+                'removeUselessStrokeAndFill',
+                'removeUnusedNS',
+                'cleanupIDs',
+                'collapseGroups',
+                'mergePaths',
+                'convertShapeToPath',
+                'sortAttrs',
+                'removeDimensions',
+              ],
+            },
+          },
+        },
+      ],
+    })
+
+    // Optimize webpack cache for better performance with large assets
+    if (!isServer) {
+      config.cache = {
+        ...config.cache,
+        // Use filesystem cache with compression for better performance
+        type: 'filesystem',
+        compression: 'gzip',
+        // Set cache size limits to prevent memory issues
+        maxMemoryGenerations: 1,
+        // Optimize cache for large string serialization
+        store: 'pack',
+      }
+    }
+
+    return config
+  },
 }
 
 module.exports = nextConfig

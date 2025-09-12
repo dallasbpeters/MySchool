@@ -190,9 +190,7 @@ export function validateStudentInfo(student: StudentInfo): boolean {
   return !!(
     student.id &&
     student.firstName &&
-    student.firstName.length > 0 &&
-    student.lastName &&
-    student.lastName.length > 0
+    student.firstName.length > 0
   )
 }
 

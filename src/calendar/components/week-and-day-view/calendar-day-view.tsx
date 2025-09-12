@@ -86,7 +86,7 @@ export function CalendarDayView({ singleDayEvents, multiDayEvents }: IProps) {
   const groupedEvents = groupEvents(dayEvents)
 
   return (
-    <div className="flex h-full max-h-[800px]">
+    <div className="bg-card flex h-full max-h-[800px]">
       <div className="flex flex-1 flex-col min-w-0">
         <div className="flex-shrink-0">
           <DayViewMultiDayEventsRow
@@ -106,7 +106,7 @@ export function CalendarDayView({ singleDayEvents, multiDayEvents }: IProps) {
           </div>
         </div>
 
-        <ScrollArea className="flex-1" type="always" ref={scrollAreaRef}>
+        <ScrollArea className="bg-card flex-1" type="always" ref={scrollAreaRef}>
           <div className="flex">
             {/* Hours column */}
             <div className="relative w-18">

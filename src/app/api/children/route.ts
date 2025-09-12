@@ -1,8 +1,24 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { validateAuth } from '@/lib/auth/session-middleware'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Use session-based authentication
+    const { user, error: authError } = await validateAuth(request)
+    
+    if (authError || !user) {
+      return NextResponse.json({ children: [], error: 'Authentication failed' })
+    }
+
+    // Only parents and admins can access children data
+    if (user.role !== 'parent' && user.role !== 'admin') {
+      return NextResponse.json({
+        children: [],
+        error: 'Only parents and admins can access children data',
+      })
+    }
+
     let supabase
     try {
       supabase = await createClient()
@@ -14,31 +30,6 @@ export async function GET() {
       )
     }
 
-    // Get the current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
-      return NextResponse.json({ children: [], error: 'No user found' })
-    }
-
-    // Get user profile to verify they are a parent
-    const { data: userProfile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    // Only parents and admins can access children data
-    if (userProfile?.role !== 'parent' && userProfile?.role !== 'admin') {
-      return NextResponse.json({
-        children: [],
-        error: 'Only parents and admins can access children data',
-      })
-    }
-
     // Get children profiles
     let query = supabase
       .from('profiles')
@@ -47,7 +38,7 @@ export async function GET() {
       .order('created_at', { ascending: true })
 
     // For parents, only show their children. For admins, show all children.
-    if (userProfile?.role === 'parent') {
+    if (user.role === 'parent') {
       query = query.eq('parent_id', user.id)
     }
     // For admins, no additional filter - show all students

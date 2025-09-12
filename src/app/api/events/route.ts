@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateStudentInitials } from '@/utils/student-initials'
 import { assignmentToCalendarItem, calculateAssignmentStatus } from '@/utils/assignment-display'
 import { CalendarItem, StudentInfo, RolePermissions } from '@/types/calendar-integration'
+import { Assignment } from '@/types'
 
-interface Assignment {
+interface DatabaseAssignment {
   id: string
   title: string
   content?: string
@@ -215,7 +216,7 @@ export async function GET() {
           index === self.findIndex(a => a.id === assignment.id)
       )
 
-      assignmentsData = uniqueAssignments.map((assignment: Assignment) => ({
+      assignmentsData = uniqueAssignments.map((assignment: DatabaseAssignment) => ({
         ...assignment,
         assigned_students: [profile.name || 'Me'],
       }))
@@ -318,7 +319,7 @@ export async function GET() {
     studentProfiles?.forEach(student => {
       // Split the name into first and last name
       const nameParts = (student.name || '').split(' ')
-      let firstName = nameParts[0] || 'Student'
+      const firstName = nameParts[0] || 'Student'
       let lastName = nameParts.slice(1).join(' ')
 
       // For single names, keep lastName empty so initials generator can handle it
@@ -333,6 +334,18 @@ export async function GET() {
       })
     })
 
+
+    // Get parent/creator information for assignments
+    const parentIds = [...new Set(assignmentsData.map(a => a.parent_id).filter(Boolean))]
+    const { data: parentProfiles } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .in('id', parentIds)
+
+    const parentInfoMap = new Map<string, { id: string; name: string }>()
+    parentProfiles?.forEach(parent => {
+      parentInfoMap.set(parent.id, parent)
+    })
 
     // Format assignments as calendar events with student initials
     const assignmentEvents: CalendarItem[] =
@@ -374,18 +387,36 @@ export async function GET() {
           // Generate student initials
           const studentInitials = generateStudentInitials(assignmentStudentInfo)
 
+          // Get responsible party (all assigned students) information
+          let responsibleParty = { id: '', name: 'No Students Assigned' }
+          if (assignmentStudentInfo.length > 0) {
+            const studentNames = assignmentStudentInfo.map(student => 
+              `${student.firstName} ${student.lastName}`
+            ).join(', ')
+            
+            responsibleParty = {
+              id: assignmentStudentInfo[0].id, // Use first student's ID for primary reference
+              name: studentNames
+            }
+          }
 
-          // Convert assignment to calendar item format
+          // Convert assignment to calendar item format with responsible party
+          const formattedAssignment: Assignment = {
+            ...assignment,
+            content: assignment.content || '',
+            links: assignment.links || []
+          }
           return assignmentToCalendarItem(
-            assignment,
+            formattedAssignment,
             studentInitials,
-            completionStatus
+            completionStatus,
+            responsibleParty
           )
         },
       ) || []
 
     // Combine events and assignments
-    const allEvents = [...formattedEvents, ...assignmentEvents]
+    const _allEvents = [...formattedEvents, ...assignmentEvents]
 
     // Get users based on role
     let usersData = []

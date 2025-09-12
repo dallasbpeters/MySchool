@@ -12,20 +12,19 @@ import {
 } from '@/components/ui/timeline-view'
 
 import AssignmentCardContainer from '../expanding-card'
+import EmptyState from '../EmptyState'
 
 interface AssignmentTimelineProps {
   assignments: Assignment[]
   dotColor?: 'default' | 'red' | 'blue' | 'green'
   textColor?: 'default' | 'red' | 'blue' | 'green'
-  onToggle?: (assignmentId: string, instanceDate?: string) => void
+  onToggleAction?: (assignmentId: string, instanceDate?: string) => void
   selectedChildId?: string | null
 }
 
 export function AssignmentTimeline({
   assignments,
-  dotColor = 'default',
-  textColor = 'default',
-  onToggle,
+  onToggleAction,
   selectedChildId,
 }: AssignmentTimelineProps) {
   // Include completed assignments and assignments due before today
@@ -47,30 +46,38 @@ export function AssignmentTimeline({
     const isAfterToday = assignment.due_date > todayString
 
     const shouldInclude =
-      // Show all assignments due before today (past assignments)
-      isBeforeToday ||
+      // Show completed non-recurring assignments (any date)
+      (!assignment.is_recurring && assignment.completed) ||
+      // Show completed assignments due before today
+      (isBeforeToday && assignment.completed) ||
       // Show completed assignments due today
       (assignment.completed && isDueToday) ||
       // Show completed assignments due after today (future assignments that were completed early)
       (assignment.completed && isAfterToday) ||
-      // Show recurring assignments with completed instances
-      (assignment.is_recurring &&
-        assignment.instance_completions &&
-        Object.values(assignment.instance_completions).some(
-          (completion) => completion.completed,
-        ))
+      // Show completed recurring assignments
+      (assignment.is_recurring && assignment.completed)
 
     return shouldInclude
   })
 
   if (timelineAssignments.length === 0) {
+    // Check if there are any assignments at all
+    const hasAnyAssignments = assignments.length > 0
+
     return (
-      <Card>
-        <CardContent className="text-center py-8">
-          <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">No completed assignments yet!</p>
-        </CardContent>
-      </Card>
+      <>
+        {hasAnyAssignments ? (
+          <EmptyState
+            title="No timeline activity yet!"
+            description="Complete assignments or view past work to see your timeline."
+          />
+        ) : (
+          <EmptyState
+            title="No assignments available"
+            description="Check back later or contact your teacher for new assignments."
+          />
+        )}
+      </>
     )
   }
 
@@ -95,21 +102,18 @@ export function AssignmentTimeline({
 
   return (
     <Suspense>
-      <Timeline>
-        {Object.entries(groupedByDate).map(([date, dateAssignments]) => (
-          <TimelineItem key={date} dotColor={dotColor}>
-            <TimelineHeader textColor={textColor}>{date}</TimelineHeader>
-
-            <AssignmentCardContainer
-              size="xs"
-              image={false}
-              assignments={dateAssignments}
-              onToggle={onToggle}
-              selectedChildId={selectedChildId}
-            />
-          </TimelineItem>
-        ))}
-      </Timeline>
+      {Object.entries(groupedByDate).map(([date, dateAssignments]) => (
+        <React.Fragment key={date}>
+          <h6>{date}</h6>
+          <AssignmentCardContainer
+            size="xs"
+            image={false}
+            assignments={dateAssignments}
+            onToggleAction={onToggleAction}
+            selectedChildId={selectedChildId}
+          />
+        </React.Fragment>
+      ))}
     </Suspense>
   )
 }

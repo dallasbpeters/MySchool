@@ -21,7 +21,7 @@ interface IProps {
 }
 
 export function ClientContainer({ view }: IProps) {
-  const { selectedDate, selectedUserId, events, users, visibleCalendarItems } = useCalendar()
+  const { selectedDate, events, visibleCalendarItems } = useCalendar()
 
   const filteredEvents = useMemo(() => {
     // Use the enhanced calendar items that include both events and assignments
@@ -176,7 +176,7 @@ export function ClientContainer({ view }: IProps) {
 
       return false
     })
-  }, [selectedDate, selectedUserId, events, view, users, visibleCalendarItems])
+  }, [selectedDate, events, view, visibleCalendarItems])
 
   const singleDayEvents = filteredEvents.filter((event) => {
     // All-day events are always single day for display purposes

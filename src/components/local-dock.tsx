@@ -2,7 +2,7 @@ import { NotebookText, BookA, History, ThumbsUp } from 'lucide-react'
 
 import { Dock, DockIcon, DockItem, DockLabel } from '@/components/ui/dock'
 
-export type TabValue = 'assignments' | 'timeline' | 'notes'
+export type TabValue = 'assignments' | 'timeline' | 'notes' | 'recommendations'
 
 const data = [
   {

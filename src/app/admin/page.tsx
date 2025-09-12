@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
-import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -11,7 +10,6 @@ import {
 } from '@/components/ui/card'
 import { Option } from '@/components/ui/multiselect'
 import { AssignmentForm } from '@/components/assignment-form'
-import { Plus } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import PageGrid from '@/components/page-grid'
@@ -40,7 +38,7 @@ interface Assignment {
   is_recurring?: boolean
   recurrence_pattern?: {
     days: string[]
-    frequency?: 'weekly' | 'daily'
+    frequency: 'weekly' | 'daily'
   }
   recurrence_end_date?: string
   next_due_date?: string
@@ -107,8 +105,8 @@ export default function AdminDashboard() {
         await fetchAllFamilies() // Make sure families are loaded before enabling edit
         fetchCategories()
       }
-    } catch (error) {
-      console.error('Failed to check admin access:', error)
+    } catch {
+      // Error handled silently
     } finally {
     }
   }, [])
@@ -124,7 +122,7 @@ export default function AdminDashboard() {
       const response = await fetch('/api/admin/assignments')
 
       if (!response.ok) {
-        console.error('Failed to fetch assignments:', response.status)
+        // Error handled silently
         return
       }
 
@@ -133,8 +131,8 @@ export default function AdminDashboard() {
       if (data.assignments) {
         setAssignments(data.assignments)
       }
-    } catch (error) {
-      console.error('Failed to fetch assignments:', error)
+    } catch {
+      // Error handled silently
     }
   }
 
@@ -143,7 +141,7 @@ export default function AdminDashboard() {
       const response = await fetch('/api/admin/families')
 
       if (!response.ok) {
-        console.error('Failed to fetch families:', response.status)
+        // Error handled silently
         return
       }
 
@@ -152,8 +150,8 @@ export default function AdminDashboard() {
       if (data.families) {
         setFamilies(data.families)
       }
-    } catch (error) {
-      console.error('Failed to fetch families:', error)
+    } catch {
+      // Error handled silently
     }
   }
 
@@ -162,7 +160,7 @@ export default function AdminDashboard() {
       const response = await fetch('/api/assignments')
 
       if (!response.ok) {
-        console.error('Failed to fetch categories:', response.status)
+        // Error handled silently
         return
       }
 
@@ -180,8 +178,8 @@ export default function AdminDashboard() {
           uniqueCategories.map((cat: string) => ({ label: cat, value: cat })),
         )
       }
-    } catch (error) {
-      console.error('Failed to fetch assignments:', error)
+    } catch {
+      // Error handled silently
     }
   }
 

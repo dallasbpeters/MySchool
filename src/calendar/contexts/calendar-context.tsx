@@ -374,7 +374,7 @@ export function CalendarProvider({
         
         setCalendarItems(mergedItems)
       }
-    } catch (error) {
+    } catch {
       // Silent error handling for sync
     }
   }

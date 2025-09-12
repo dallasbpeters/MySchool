@@ -5,7 +5,7 @@
 
 import { IUser } from '@/calendar/interfaces'
 
-export type TEventColor = 'red' | 'yellow' | 'green' | 'gray' | 'blue'
+export type TEventColor = 'blue' | 'green' | 'red' | 'yellow' | 'purple' | 'orange' | 'gray'
 
 /**
  * Unified calendar item interface that handles both events and assignments
@@ -19,10 +19,10 @@ export interface CalendarItem {
   isAllDay: boolean
   color: TEventColor
   description?: string
-  
+
   // Event-specific fields
   user?: IUser
-  
+
   // Assignment-specific fields
   isAssignment?: boolean
   assignedStudents?: StudentInitial[]
@@ -90,10 +90,10 @@ export interface RolePermissions {
   canEditAssignments: boolean
   canEditOwnEvents: boolean
   canEditAllEvents: boolean
-  
+
   // Student-specific
   studentIds?: string[] // For parent role
-  
+
   // Filtering
   visibleAssignments: string[]
   visibleEvents: string[]
@@ -129,12 +129,12 @@ export interface CalendarState {
   allItems: CalendarItem[] // Merged and filtered
   loading: boolean
   error?: string
-  
+
   // View state
   selectedDate: Date
   viewMode: 'day' | 'week' | 'month' | 'year' | 'agenda'
   selectedUserId: string | 'all'
-  
+
   // Permissions
   userPermissions: RolePermissions
 }
@@ -188,6 +188,7 @@ export interface StudentInitialsResponse {
 export interface AssignmentToggleRequest {
   completed: boolean
   instanceDate?: string // For recurring assignments
+  studentId?: string // For parent/admin users toggling assignments for children
 }
 
 /**

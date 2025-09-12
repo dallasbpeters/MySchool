@@ -55,7 +55,7 @@ interface IProps {
 }
 
 export function EditEventDialog({ children, event }: IProps) {
-  const { isOpen, onClose, onToggle } = useDisclosure()
+  const { isOpen, onClose, onToggleAction } = useDisclosure()
   const [isDeleting, setIsDeleting] = useState(false)
 
   const { users } = useCalendar()
@@ -145,7 +145,7 @@ export function EditEventDialog({ children, event }: IProps) {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onToggle}>
+    <Dialog open={isOpen} onOpenChange={onToggleAction}>
       <DialogTrigger asChild>{children}</DialogTrigger>
 
       <DialogContent>

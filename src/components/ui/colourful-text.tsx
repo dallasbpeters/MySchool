@@ -2,7 +2,7 @@
 import React from 'react'
 import { motion } from 'motion/react'
 
-export default function ColourfulText({ text }: { text: string }) {
+export default function ColourfulText({ text, className }: { text: string, className?: string }) {
   const colors = React.useMemo(
     () => [
       'var(--chart-1)',

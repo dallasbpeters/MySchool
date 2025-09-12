@@ -35,7 +35,7 @@ function SingleDayPicker({
   value,
   ...props
 }: TProps) {
-  const { isOpen, onClose, onToggle } = useDisclosure()
+  const { isOpen, onClose, onToggleAction } = useDisclosure()
 
   const handleSelect = (date: Date | undefined) => {
     onSelect(date)
@@ -43,7 +43,7 @@ function SingleDayPicker({
   }
 
   return (
-    <Popover open={isOpen} onOpenChange={onToggle} modal>
+    <Popover open={isOpen} onOpenChange={onToggleAction} modal>
       <PopoverTrigger asChild>
         <Button
           id={id}

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { validateAuth } from '@/lib/auth/session-middleware'
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,16 +8,11 @@ export async function GET(request: NextRequest) {
     const category = url.searchParams.get('category')
     const studentId = url.searchParams.get('studentId') // Allow specifying student ID
 
-    const supabase = await createClient()
-
-    // Get the current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
-      return NextResponse.json({ notes: [], error: 'No user found' })
+    // Use session-based authentication
+    const { user, error: authError } = await validateAuth(request)
+    
+    if (authError || !user) {
+      return NextResponse.json({ notes: [], error: 'Authentication failed' })
     }
 
     // Determine which student's notes to fetch
@@ -24,29 +20,28 @@ export async function GET(request: NextRequest) {
 
     // If studentId is provided, verify the user has access to view that student's notes
     if (studentId && studentId !== user.id) {
-      // Get user profile to check role
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
+      if (user.role === 'parent') {
+        // Verify this child belongs to the parent - check if parent_id matches
+        if (user.parent_id !== user.id) {
+          const supabase = await createClient()
+          // Verify this child belongs to the parent
+          const { data: child } = await supabase
+            .from('profiles')
+            .select('parent_id')
+            .eq('id', studentId)
+            .single()
 
-      if (profile?.role === 'parent') {
-        // Verify this child belongs to the parent
-        const { data: child } = await supabase
-          .from('profiles')
-          .select('parent_id')
-          .eq('id', studentId)
-          .single()
-
-        if (!child || child.parent_id !== user.id) {
-          return NextResponse.json({ notes: [], error: 'Access denied' })
+          if (!child || child.parent_id !== user.id) {
+            return NextResponse.json({ notes: [], error: 'Access denied' })
+          }
         }
-      } else if (profile?.role !== 'admin') {
+      } else if (user.role !== 'admin') {
         // Only admins and parents can view other students' notes
         return NextResponse.json({ notes: [], error: 'Access denied' })
       }
     }
+
+    const supabase = await createClient()
 
     let query = supabase
       .from('assignment_notes')

@@ -6,9 +6,11 @@ import {
   CardContent,
   CardTitle,
   CardFooter,
+} from '@/components/ui/card'
+import {
   MotionCard,
   MotionCardHeader,
-} from '@/components/ui/card'
+} from '@/components/ui/motion-card'
 import { Button } from '@/components/ui/button'
 import { Link as LinkIcon, BookOpen, Plus, Check, X } from 'lucide-react'
 import { format } from 'date-fns'
@@ -33,7 +35,7 @@ interface Assignment {
   is_recurring?: boolean
   recurrence_pattern?: {
     days: string[]
-    frequency?: 'weekly' | 'daily'
+    frequency: 'weekly' | 'daily'
   }
   layoutID?: string
   recurrence_end_date?: string
@@ -64,13 +66,13 @@ interface TimelineCardProps {
   showDate: boolean
   assignment: Assignment
   layoutID?: string
-  onToggle: (id: string, instanceDate?: string) => void
+  onToggleAction: (id: string, instanceDate?: string) => void
   getDateLabel: (date: string, completed?: boolean) => string
   getDateColor: (date: string, completed?: boolean) => string
   cardIndex?: number
   expandedCardId: string | null
   setExpandedCardId: (id: string | null) => void
-  onNoteCreated?: () => void
+  onNoteCreatedAction?: () => void
   assignmentNotes?: Note[]
   selectedInstanceDate?: string
 }
@@ -94,14 +96,14 @@ function NoteContent({ content }: { content: string | null }) {
 
 export const images = [
   '/gemma-evans-swmWhdbcb6M-unsplash.svg',
-  '/wildan-kurniawan-fKdoeUJBh_o-unsplash.svg',
-  '/getty-images-F1sG0MZT_Ro-unsplash.svg',
+  // '/wildan-kurniawan-fKdoeUJBh_o-unsplash.svg', // Large file (23KB) - temporarily removed
+  // '/getty-images-F1sG0MZT_Ro-unsplash.svg', // Large file (378KB) - removed to fix webpack caching performance
   '/melanie-villette-Somqo53jwzE-unsplash.svg',
   '/eva-corbisier-6QxDZxUaScw-unsplash.svg',
   '/risky-ming-fFa5xAoT8ms-unsplash.svg',
   '/gemma-evans-qVzRlSDe8OU-unsplash.svg',
   '/risky-ming--AsW_zqKQ9E-unsplash.svg',
-  '/getty-images-pnkJbt9HVBA-unsplash.svg',
+  // '/getty-images-pnkJbt9HVBA-unsplash.svg', // Large file (438KB) - removed to fix webpack caching performance
   '/lorenzo-mercanti-aKdXUkOY5ek-unsplash.svg',
   '/amanda-sala-oHHc3UsNrqs-unsplash.svg',
   '/melanie-villette-lQDNr81EW0w-unsplash.svg',
@@ -112,10 +114,10 @@ export const images = [
 export default function TimelineCard({
   id,
   assignment,
-  onToggle,
+  onToggleAction,
   expandedCardId,
   setExpandedCardId,
-  onNoteCreated,
+  onNoteCreatedAction,
   assignmentNotes = [],
   selectedInstanceDate,
 }: TimelineCardProps) {
@@ -185,8 +187,8 @@ export default function TimelineCard({
         })
         setNewNote({ title: '', content: null })
         setIsCreatingNote(false)
-        if (onNoteCreated) {
-          onNoteCreated()
+        if (onNoteCreatedAction) {
+          onNoteCreatedAction()
         }
       } else {
         toast({
@@ -211,7 +213,7 @@ export default function TimelineCard({
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none',
+        class: 'prose prose-md max-w-none',
       },
     },
   })
@@ -400,7 +402,7 @@ export default function TimelineCard({
                       }
                     }
 
-                    onToggle(assignment.id, instanceDate)
+                    onToggleAction(assignment.id, instanceDate)
                   }}
                 >
                   <Check className="h-4 w-4" />

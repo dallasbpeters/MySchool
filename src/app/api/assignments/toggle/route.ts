@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     let supabase
     try {
       supabase = await createClient()
-    } catch (clientError) {
+    } catch {
       return NextResponse.json(
         { error: 'Service temporarily unavailable' },
         { status: 503 },

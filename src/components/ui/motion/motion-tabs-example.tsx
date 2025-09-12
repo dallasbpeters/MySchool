@@ -1,4 +1,4 @@
-import MotionTabs from './motion/motion-tabs'
+import MotionTabs from './motion-tabs'
 
 export default function MotionTabsExample() {
   const tabs = [
@@ -10,7 +10,7 @@ export default function MotionTabsExample() {
           <h3>Overview Content</h3>
           <p>This is the overview tab content.</p>
         </div>
-      )
+      ),
     },
     {
       id: 'settings',
@@ -20,7 +20,7 @@ export default function MotionTabsExample() {
           <h3>Settings Content</h3>
           <p>Configure your preferences here.</p>
         </div>
-      )
+      ),
     },
     {
       id: 'help',
@@ -30,8 +30,8 @@ export default function MotionTabsExample() {
           <h3>Help Content</h3>
           <p>Get help and support information.</p>
         </div>
-      )
-    }
+      ),
+    },
   ]
 
   const handleTabChange = (tabId: string) => {
@@ -60,7 +60,7 @@ export default function MotionTabsExample() {
       <div className="mt-8">
         <h3>Tabs Only (No Content)</h3>
         <MotionTabs
-          tabs={tabs.map(tab => ({ ...tab, content: undefined }))}
+          tabs={tabs.map((tab) => ({ ...tab, content: undefined }))}
           showContent={false}
           onTabChange={handleTabChange}
         />

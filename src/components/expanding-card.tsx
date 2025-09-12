@@ -1,16 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import { motion } from 'framer-motion'
-import SplitTextComponent from '@/components/ui/motion/splittext'
+import { motion, LayoutGroup } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import {
-  Calendar,
-  CheckCircle2,
-  BookOpen,
-  Plus,
-  Check,
-} from 'lucide-react'
+import { Calendar, CheckCircle2, BookOpen, Plus, Check } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -20,16 +13,18 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { AnimatePresence } from 'motion/react'
 import { Toggle } from '@/components/ui/toggle'
+import { MultiStateBadge } from '@/components/multi-state-badge'
 import { AssignmentService } from '@/services/assignment-service'
 import { Assignment } from '@/types'
 import { images } from '@/components/images'
+import Layout from '@/app/calendar/layout'
 
 // Union type to handle both assignments and recommendations
 type AssignmentOrRecommendation =
   | (ExtendedAssignment & { type: 'assignment' })
   | (Recommendation & { type: 'recommendation' })
 
-// Extend Assignment with additional properties for the ExpandingCard component  
+// Extend Assignment with additional properties for the ExpandingCard component
 interface ExtendedAssignment extends Assignment {
   type?: 'assignment'
   image?: string
@@ -52,13 +47,13 @@ interface AssignmentCardProps {
   showDate: boolean
   assignment: AssignmentOrRecommendation
   size: 'small' | 'xs'
-  onToggle: (id: string, instanceDate?: string) => void
+  onToggleAction: (id: string, instanceDate?: string) => void
   getDateLabel: (date: string, completed?: boolean) => string
   getDateColor: (date: string, completed?: boolean) => string
   imageIndex?: number
   expandedCardId: string | null
   setExpandedCardId: (id: string | null) => void
-  onNoteCreated?: () => void
+  onNoteCreatedAction?: () => void
   assignmentNotes?: Note[]
   selectedInstanceDate?: string
   selectedChildId?: string | null
@@ -90,13 +85,13 @@ const globalAssignmentImageMap = new Map<string, number>()
 function AssignmentCard({
   assignment,
   size,
-  onToggle: _onToggle,
+  onToggleAction: _onToggleAction,
   getDateLabel,
   getDateColor,
   imageIndex = 0,
   image: _image,
   showDate,
-  onNoteCreated: _onNoteCreated,
+  onNoteCreatedAction: _onNoteCreatedAction,
   assignmentNotes: _assignmentNotes = [],
   selectedInstanceDate,
   expandedCardId: _expandedCardId,
@@ -106,6 +101,7 @@ function AssignmentCard({
 }: AssignmentCardProps & { groupId?: string; onClick?: () => void }) {
   return (
     <motion.div
+      layout
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       exit={{
@@ -122,14 +118,6 @@ function AssignmentCard({
         className="card-image-container"
         layoutId={`assignment-image-container-${assignment.id}-${groupId || 'default'}`}
       >
-        {assignment.category && (
-          <motion.div
-            className="category"
-            layoutId={`category-${assignment.id}-${groupId || 'default'}`}
-          >
-            {assignment.category}
-          </motion.div>
-        )}
         <motion.div
           className="card-image"
           style={{
@@ -148,7 +136,7 @@ function AssignmentCard({
         {assignment.category && (
           <span className="category">{assignment.category}</span>
         )}
-        <motion.h2>{assignment.title}</motion.h2>
+        <h2>{assignment.title}</h2>
       </motion.div>
       {showDate && (
         <div
@@ -182,13 +170,13 @@ function AssignmentCard({
 function AssignmentCardExpanded({
   id: _id,
   assignment,
-  onToggle: _onToggle,
+  onToggleAction: _onToggleAction,
   getDateLabel: _getDateLabel,
   getDateColor: _getDateColor,
   imageIndex,
   image: _image,
   showDate: _showDate,
-  onNoteCreated: _onNoteCreated,
+  onNoteCreatedAction: _onNoteCreatedAction,
   assignmentNotes: _assignmentNotes = [],
   selectedInstanceDate,
   selectedChildId,
@@ -197,13 +185,13 @@ function AssignmentCardExpanded({
 }: {
   id: string
   assignment: AssignmentOrRecommendation
-  onToggle: (id: string, instanceDate?: string) => void
+  onToggleAction: (id: string, instanceDate?: string) => void
   getDateLabel: (date: string, completed?: boolean) => string
   getDateColor: (date: string, completed?: boolean) => string
   imageIndex: number
   image: boolean
   showDate: boolean
-  onNoteCreated?: () => void
+  onNoteCreatedAction?: () => void
   assignmentNotes?: Note[]
   selectedInstanceDate?: string
   selectedChildId?: string | null
@@ -212,6 +200,7 @@ function AssignmentCardExpanded({
 }) {
   const [isCreatingNote, setIsCreatingNote] = useState(false)
   const [isToggling, setIsToggling] = useState(false)
+  const [localAssignment, setLocalAssignment] = useState(assignment)
   const [newNote, setNewNote] = useState<{
     title: string
     content: string | null
@@ -293,8 +282,8 @@ function AssignmentCardExpanded({
         })
         setNewNote({ title: '', content: null })
         setIsCreatingNote(false)
-        if (_onNoteCreated) {
-          _onNoteCreated()
+        if (_onNoteCreatedAction) {
+          _onNoteCreatedAction()
         }
       } else {
         console.error('Note creation failed:', data)
@@ -309,6 +298,86 @@ function AssignmentCardExpanded({
         title: 'Error',
         description: 'Failed to create note',
       })
+    }
+  }
+
+  const handleToggleAssignment = async () => {
+    if (isToggling || assignment.type !== 'assignment') return
+
+    setIsToggling(true)
+
+    try {
+      let instanceDate: string | undefined = undefined
+      if (assignment.is_recurring) {
+        instanceDate = selectedInstanceDate
+        if (!instanceDate) {
+          instanceDate = format(new Date(), 'yyyy-MM-dd')
+        }
+      }
+
+      // Determine the new completion state based on current local state
+      const currentCompleted = assignment.type === 'assignment' ? (localAssignment as ExtendedAssignment).completed : false
+      const newCompletedState = assignment.type === 'assignment' ? !currentCompleted : false
+
+      const requestPayload = {
+        completed: newCompletedState,
+        instanceDate,
+        ...(selectedChildId && { studentId: selectedChildId })
+      }
+
+      const response = await fetch(`/api/assignments/${assignment.id}/toggle`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestPayload),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Update local state immediately for better UX
+        if (assignment.type === 'assignment') {
+          setLocalAssignment(prev => ({
+            ...prev,
+            completed: newCompletedState
+          }))
+        }
+
+        toast({
+          title: 'Success',
+          description: data.message || `Assignment ${newCompletedState ? 'completed' : 'reopened'} successfully`,
+        })
+
+        // Call the parent's toggle action to update the list
+        _onToggleAction(assignment.id, instanceDate)
+
+        // Close the modal after successful toggle
+        setTimeout(() => {
+          if (onClose) {
+            onClose()
+          }
+        }, 50)
+      } else {
+        console.error('Assignment toggle failed:', data)
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to update assignment status',
+          variant: 'destructive',
+        })
+      }
+    } catch (error) {
+      console.error('Assignment toggle error:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update assignment status',
+        variant: 'destructive',
+      })
+    } finally {
+      // Add a small delay to show the processing state
+      setTimeout(() => {
+        setIsToggling(false)
+      }, 500)
     }
   }
 
@@ -362,14 +431,6 @@ function AssignmentCardExpanded({
             className="card-image-container"
             layoutId={`assignment-image-container-${assignment.id}-${groupId || 'default'}`}
           >
-            {assignment.category && (
-              <motion.div
-                className="category"
-                layoutId={`category-${assignment.id}-${groupId || 'default'}`}
-              >
-                {assignment.category}
-              </motion.div>
-            )}
             <motion.div
               className="card-image expanded"
               style={{
@@ -388,8 +449,7 @@ function AssignmentCardExpanded({
             {assignment.category && (
               <span className="category">{assignment.category}</span>
             )}
-            <SplitTextComponent text={assignment.title} as="h2" />
-
+            <h2>{assignment.title}</h2>
           </motion.div>
           <AnimatePresence>
             {!isCreatingNote && (
@@ -415,39 +475,41 @@ function AssignmentCardExpanded({
                   </div>
                 )}
                 {/* Display related notes - only for assignments */}
-                {assignment.type === 'assignment' && !isCreatingNote && relatedNotes.length > 0 && (
-                  <div className="my-4 pt-4 border-t border-border">
-                    <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                      <BookOpen className="h-4 w-4" />
-                      Notes ({relatedNotes.length})
-                    </h4>
-                    <div className="space-y-2">
-                      <AnimatePresence mode="sync">
-                        {relatedNotes.map((note) => (
-                          <motion.div
-                            layout
-                            key={note.id}
-                            className="border border-border rounded-md p-4"
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <h5 className="text-sm font-medium text-foreground-muted">
-                                {note.title}
-                              </h5>
-                              <span className="text-sm font-medium text-gray-500">
-                                {format(new Date(note.created_at), 'MMM dd')}
-                              </span>
-                            </div>
-                            {note.content && (
-                              <div className="text-sm text-foreground-muted">
-                                <NoteContent content={note.content} />
+                {assignment.type === 'assignment' &&
+                  !isCreatingNote &&
+                  relatedNotes.length > 0 && (
+                    <div className="my-4 pt-4 border-t border-border">
+                      <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                        <BookOpen className="h-4 w-4" />
+                        Notes ({relatedNotes.length})
+                      </h4>
+                      <div className="space-y-2">
+                        <AnimatePresence mode="sync">
+                          {relatedNotes.map((note) => (
+                            <motion.div
+                              layout
+                              key={note.id}
+                              className="border border-border rounded-md p-4"
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <h5 className="text-sm font-medium text-foreground-muted">
+                                  {note.title}
+                                </h5>
+                                <span className="text-sm font-medium text-gray-500">
+                                  {format(new Date(note.created_at), 'MMM dd')}
+                                </span>
                               </div>
-                            )}
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
+                              {note.content && (
+                                <div className="text-sm text-foreground-muted">
+                                  <NoteContent content={note.content} />
+                                </div>
+                              )}
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -473,89 +535,12 @@ function AssignmentCardExpanded({
                 </AnimatePresence>
 
                 {!isCreatingNote && (
-                  <Toggle
-                    disabled={isToggling}
-                    className={(() => {
-                      if (!assignment.is_recurring) {
-                        return assignment.completed
-                          ? 'bg-green-500 text-white w-full h-12 transition-colors cursor-pointer'
-                          : 'ring-inset ring-1 ring-green-500 text-foreground hover:bg-green-500 hover:text-white w-full h-12 transition-colors cursor-pointer'
-                      }
-
-                      let dateToCheck = selectedInstanceDate
-                      if (!dateToCheck) {
-                        const todayStr = format(new Date(), 'yyyy-MM-dd')
-                        dateToCheck = todayStr
-                      }
-
-                      const isCompleted = assignment.completed || false
-                      return isCompleted
-                        ? 'bg-green-500 text-white w-full h-12 transition-colors cursor-pointer'
-                        : 'ring-1 ring-green-500 hover:bg-green-500 hover:text-white text-muted-foreground w-full h-12 transition-colors cursor-pointer'
-                    })()}
-                    data-state={(() => {
-                      if (!assignment.is_recurring) {
-                        return assignment.completed ? 'checked' : 'unchecked'
-                      }
-
-                      return assignment.completed ? 'checked' : 'unchecked'
-                    })()}
-                    pressed={(() => {
-                      if (!assignment.is_recurring) {
-                        return assignment.completed || false
-                      }
-
-                      return assignment.completed || false
-                    })()}
-                    onPressedChange={async () => {
-                      if (isToggling) return
-
-
-                      setIsToggling(true)
-
-                      let instanceDate: string | undefined = undefined
-
-                      if (assignment.is_recurring) {
-                        instanceDate = selectedInstanceDate
-
-                        // If no instance date is selected, use today's date for today's assignments
-                        if (!instanceDate) {
-                          instanceDate = format(new Date(), 'yyyy-MM-dd')
-                        }
-                      }
-
-                      try {
-                        // Toggle the assignment
-                        _onToggle(assignment.id, instanceDate)
-
-                        // Close the modal after the toggle completes and any animations finish
-                        if (onClose) {
-                          // Delay to allow the card to animate back to its position before closing
-                          setTimeout(() => {
-                            onClose()
-                          }, 600) // Increased delay for smoother UX
-                        }
-                      } finally {
-                        setIsToggling(false)
-                      }
-                    }}
-                  >
-                    {isToggling ? (
-                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                    ) : (
-                      <Check className="h-4 w-4" />
-                    )}
-                    {(() => {
-                      if (isToggling) {
-                        return 'Updating...'
-                      }
-                      if (!assignment.is_recurring) {
-                        return assignment.completed ? 'Done' : "I'm Done"
-                      }
-
-                      return assignment.completed ? 'Done' : "I'm Done"
-                    })()}
-                  </Toggle>
+                  <MultiStateBadge
+                    isCompleted={localAssignment.type === 'assignment' ? (localAssignment as ExtendedAssignment).completed || false : false}
+                    isRecurring={assignment.is_recurring || false}
+                    isToggling={isToggling}
+                    onToggle={handleToggleAssignment}
+                  />
                 )}
               </div>
 
@@ -617,22 +602,22 @@ function AssignmentCardExpanded({
 export function AssignmentCardList({
   assignments,
   image,
-  onCardClick,
+  onCardClickAction,
   groupId,
   size = 'small',
   assignmentNotes = [],
-  onNoteCreated,
-  onToggle,
+  onNoteCreatedAction,
+  onToggleAction,
   recommendations,
 }: {
   assignments: Assignment[]
   image: boolean
-  onCardClick: (assignmentId: string) => void
+  onCardClickAction: (assignmentId: string) => void
   groupId?: string
   size?: 'small' | 'xs'
   assignmentNotes?: Note[]
-  onNoteCreated?: () => void
-  onToggle?: (id: string, instanceDate?: string) => void
+  onNoteCreatedAction?: () => void
+  onToggleAction?: (id: string, instanceDate?: string) => void
   recommendations?: Recommendation[]
 }) {
   // Combine assignments and recommendations into a single list
@@ -672,7 +657,7 @@ export function AssignmentCardList({
               size={size}
               key={item.id}
               assignment={item}
-              onToggle={onToggle || (() => { })}
+              onToggleAction={onToggleAction || (() => { })}
               getDateLabel={(date, _completed) =>
                 isAssignment
                   ? AssignmentService.getDateLabel(item as Assignment)
@@ -686,13 +671,13 @@ export function AssignmentCardList({
               imageIndex={currentImageIndex}
               image={image}
               showDate={isAssignment}
-              onNoteCreated={onNoteCreated}
+              onNoteCreatedAction={onNoteCreatedAction}
               assignmentNotes={assignmentNotes}
               expandedCardId={null}
               setExpandedCardId={() => { }}
               selectedInstanceDate={undefined}
               groupId={groupId}
-              onClick={() => onCardClick(item.id)}
+              onClick={() => onCardClickAction(item.id)}
             />
           )
         })}
@@ -707,8 +692,8 @@ function AssignmentCardGroup({
   groupId,
   size = 'small',
   assignmentNotes = [],
-  onNoteCreated,
-  onToggle,
+  onNoteCreatedAction,
+  onToggleAction,
   recommendations,
   selectedChildId,
 }: {
@@ -717,8 +702,8 @@ function AssignmentCardGroup({
   groupId?: string
   size?: 'small' | 'xs'
   assignmentNotes?: Note[]
-  onNoteCreated?: () => void
-  onToggle?: (id: string, instanceDate?: string) => void
+  onNoteCreatedAction?: () => void
+  onToggleAction?: (id: string, instanceDate?: string) => void
   recommendations?: Recommendation[]
   selectedChildId?: string | null
 }) {
@@ -742,12 +727,12 @@ function AssignmentCardGroup({
       <AssignmentCardList
         assignments={assignments}
         image={image}
-        onCardClick={openCard}
+        onCardClickAction={openCard}
         groupId={groupId}
         size={size}
         assignmentNotes={assignmentNotes}
-        onNoteCreated={onNoteCreated}
-        onToggle={onToggle}
+        onNoteCreatedAction={onNoteCreatedAction}
+        onToggleAction={onToggleAction}
         recommendations={recommendations}
       />
       <AnimatePresence>
@@ -761,7 +746,7 @@ function AssignmentCardGroup({
                 type: 'assignment' as const,
               }
             }
-            onToggle={onToggle || (() => { })}
+            onToggleAction={onToggleAction || (() => { })}
             getDateLabel={(_date, _completed) => {
               const foundItem = allItems.find((item) => item.id === openId)
               const isItemAssignment = foundItem?.type === 'assignment'
@@ -781,7 +766,7 @@ function AssignmentCardGroup({
             showDate={
               allItems.find((item) => item.id === openId)?.type === 'assignment'
             }
-            onNoteCreated={onNoteCreated}
+            onNoteCreatedAction={onNoteCreatedAction}
             assignmentNotes={assignmentNotes}
             selectedChildId={selectedChildId}
             groupId={groupId}
@@ -813,8 +798,8 @@ export default function AssignmentCardContainer({
   groupId,
   size = 'small',
   assignmentNotes = [],
-  onNoteCreated,
-  onToggle,
+  onNoteCreatedAction,
+  onToggleAction,
   recommendations,
   selectedChildId,
 }: {
@@ -823,8 +808,8 @@ export default function AssignmentCardContainer({
   groupId?: string
   size?: 'small' | 'xs'
   assignmentNotes?: Note[]
-  onNoteCreated?: () => void
-  onToggle?: (id: string, instanceDate?: string) => void
+  onNoteCreatedAction?: () => void
+  onToggleAction?: (id: string, instanceDate?: string) => void
   recommendations?: Recommendation[]
   selectedChildId?: string | null
 }) {
@@ -832,17 +817,19 @@ export default function AssignmentCardContainer({
 
   return (
     <div id="expanding-card">
-      <AssignmentCardGroup
-        assignments={assignments}
-        image={image}
-        groupId={groupId}
-        size={size}
-        assignmentNotes={assignmentNotes}
-        onNoteCreated={onNoteCreated}
-        onToggle={onToggle}
-        recommendations={recommendations}
-        selectedChildId={selectedChildId}
-      />
+      <LayoutGroup>
+        <AssignmentCardGroup
+          assignments={assignments}
+          image={image}
+          groupId={groupId}
+          size={size}
+          assignmentNotes={assignmentNotes}
+          onNoteCreatedAction={onNoteCreatedAction}
+          onToggleAction={onToggleAction}
+          recommendations={recommendations}
+          selectedChildId={selectedChildId}
+        />
+      </LayoutGroup>
     </div>
   )
 }

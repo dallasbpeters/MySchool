@@ -14,7 +14,7 @@ export interface SessionPayload {
 }
 
 export async function encrypt(payload: SessionPayload): Promise<string> {
-  return await new SignJWT(payload)
+  return await new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('4h')
@@ -35,7 +35,7 @@ export async function decrypt(token: string | undefined): Promise<SessionPayload
       return null
     }
     
-    return payload as SessionPayload
+    return payload as unknown as SessionPayload
   } catch (error) {
     console.error('Session decryption failed:', error)
     return null

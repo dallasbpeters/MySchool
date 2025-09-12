@@ -105,7 +105,7 @@ export default function AdminDashboard() {
         await fetchAllFamilies() // Make sure families are loaded before enabling edit
         fetchCategories()
       }
-    } catch (error) {
+    } catch {
       // Error handled silently
     } finally {
     }
@@ -131,7 +131,7 @@ export default function AdminDashboard() {
       if (data.assignments) {
         setAssignments(data.assignments)
       }
-    } catch (error) {
+    } catch {
       // Error handled silently
     }
   }
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
       if (data.families) {
         setFamilies(data.families)
       }
-    } catch (error) {
+    } catch {
       // Error handled silently
     }
   }
@@ -178,7 +178,7 @@ export default function AdminDashboard() {
           uniqueCategories.map((cat: string) => ({ label: cat, value: cat })),
         )
       }
-    } catch (error) {
+    } catch {
       // Error handled silently
     }
   }

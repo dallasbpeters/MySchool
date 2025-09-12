@@ -45,7 +45,8 @@ export function generateCacheTags(key: string, data?: unknown): string[] {
     
     // Add date-specific tags
     if (dataObj.date || dataObj.dueDate) {
-      const date = new Date(dataObj.date || dataObj.dueDate)
+      const dateValue = dataObj.date || dataObj.dueDate
+      const date = new Date(dateValue as string | number | Date)
       tags.push(`date:${date.toISOString().split('T')[0]}`)
     }
     

@@ -17,8 +17,8 @@ export function useLoadingState(options: LoadingStateHookOptions = {}): LoadingS
 
   const [state, setState] = useState<LoadingStatus>(initialState)
   const [error, setError] = useState<string | undefined>()
-  const timeoutRef = useRef<NodeJS.Timeout>()
-  const delayRef = useRef<NodeJS.Timeout>()
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const delayRef = useRef<NodeJS.Timeout | null>(null)
 
   // Cleanup timeouts on unmount
   useEffect(() => {

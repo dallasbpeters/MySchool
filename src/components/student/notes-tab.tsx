@@ -33,7 +33,18 @@ interface NotesTabProps {
 }
 
 // Note content component
-function NoteContent({ content }: { content: string | any }) {
+interface NoteNode {
+  type: string
+  text?: string
+  content?: NoteNode[]
+}
+
+interface ProseMirrorDoc {
+  type: 'doc'
+  content: NoteNode[]
+}
+
+function NoteContent({ content }: { content: string | ProseMirrorDoc | unknown }) {
   // Handle case where content is already an object
   let parsedContent = content
 
@@ -48,26 +59,29 @@ function NoteContent({ content }: { content: string | any }) {
   }
 
   // If we have ProseMirror structure, extract text
-  if (parsedContent?.type === 'doc' && parsedContent?.content) {
-    // Extract text from ProseMirror JSON
-    const extractText = (node: any): string => {
-      if (!node || typeof node !== 'object') return ''
+  if (typeof parsedContent === 'object' && parsedContent !== null && 'type' in parsedContent && 'content' in parsedContent) {
+    const doc = parsedContent as ProseMirrorDoc
+    if (doc.type === 'doc' && doc.content) {
+      // Extract text from ProseMirror JSON
+      const extractText = (node: NoteNode): string => {
+        if (!node || typeof node !== 'object') return ''
 
-      if (node.type === 'text' && typeof node.text === 'string') {
-        return node.text
+        if (node.type === 'text' && typeof node.text === 'string') {
+          return node.text
+        }
+
+        if (Array.isArray(node.content)) {
+          return node.content.map((child: NoteNode) => extractText(child)).join('')
+        }
+
+        return ''
       }
 
-      if (Array.isArray(node.content)) {
-        return node.content.map((child: any) => extractText(child)).join('')
-      }
-
-      return ''
+      const text = Array.isArray(doc.content)
+        ? doc.content.map(extractText).join('\n').trim()
+        : ''
+      return <p className="whitespace-pre-wrap">{text || 'No content'}</p>
     }
-
-    const text = Array.isArray(parsedContent.content)
-      ? parsedContent.content.map(extractText).join('\n').trim()
-      : ''
-    return <p className="whitespace-pre-wrap">{text || 'No content'}</p>
   }
 
   // Fallback: convert to string

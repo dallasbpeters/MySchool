@@ -314,7 +314,7 @@ export function CalendarProvider({
       })
       window.dispatchEvent(event)
 
-    } catch {
+    } catch (error) {
       // Revert optimistic update on error
       setCalendarItems(currentItems => 
         currentItems.map(item => {

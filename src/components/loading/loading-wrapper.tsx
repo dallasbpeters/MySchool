@@ -21,8 +21,8 @@ const LoadingWrapper = React.forwardRef<HTMLDivElement, LoadingComponentProps>(
   }, ref) => {
     const [showLoading, setShowLoading] = useState(false)
     const [hasTimedOut, setHasTimedOut] = useState(false)
-    const delayTimeoutRef = useRef<NodeJS.Timeout>()
-    const mainTimeoutRef = useRef<NodeJS.Timeout>()
+    const delayTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const mainTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     // Handle delay before showing loading state
     useEffect(() => {

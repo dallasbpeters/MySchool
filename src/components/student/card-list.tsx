@@ -5,7 +5,7 @@ import type React from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { images } from '@/components/images'
-import { MotionButton } from '../ui/button'
+import { MotionButton } from '../ui/motion-button'
 
 interface Assignment {
   id: string

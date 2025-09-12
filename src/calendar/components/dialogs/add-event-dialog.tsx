@@ -61,7 +61,7 @@ interface IProps {
 export function AddEventDialog({ children, startDate, startTime }: IProps) {
   const { users } = useCalendar()
 
-  const { isOpen, onClose, onToggle } = useDisclosure()
+  const { isOpen, onClose, onToggleAction } = useDisclosure()
 
   const form = useForm<TEventFormData>({
     resolver: zodResolver(eventSchema),
@@ -109,7 +109,7 @@ export function AddEventDialog({ children, startDate, startTime }: IProps) {
   }, [isOpen, startDate, startTime, users, form])
 
   return (
-    <Dialog open={isOpen} onOpenChange={onToggle}>
+    <Dialog open={isOpen} onOpenChange={onToggleAction}>
       <DialogTrigger asChild>{children}</DialogTrigger>
 
       <DialogContent>

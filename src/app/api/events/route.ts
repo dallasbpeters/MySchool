@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateStudentInitials } from '@/utils/student-initials'
 import { assignmentToCalendarItem, calculateAssignmentStatus } from '@/utils/assignment-display'
 import { CalendarItem, StudentInfo, RolePermissions } from '@/types/calendar-integration'
+import { Assignment } from '@/types'
 
-interface Assignment {
+interface DatabaseAssignment {
   id: string
   title: string
   content?: string
@@ -215,7 +216,7 @@ export async function GET() {
           index === self.findIndex(a => a.id === assignment.id)
       )
 
-      assignmentsData = uniqueAssignments.map((assignment: Assignment) => ({
+      assignmentsData = uniqueAssignments.map((assignment: DatabaseAssignment) => ({
         ...assignment,
         assigned_students: [profile.name || 'Me'],
       }))
@@ -400,8 +401,13 @@ export async function GET() {
           }
 
           // Convert assignment to calendar item format with responsible party
+          const formattedAssignment: Assignment = {
+            ...assignment,
+            content: assignment.content || '',
+            links: assignment.links || []
+          }
           return assignmentToCalendarItem(
-            assignment,
+            formattedAssignment,
             studentInitials,
             completionStatus,
             responsibleParty

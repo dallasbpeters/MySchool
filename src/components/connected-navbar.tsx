@@ -46,7 +46,7 @@ export function ConnectedNavbar() {
   }
 
   useEffect(() => {
-    // Fast initial auth check using API route
+    // Single auth check using API route
     const checkAuth = async () => {
       try {
         const response = await fetch('/api/user')
@@ -64,44 +64,30 @@ export function ConnectedNavbar() {
           if (data.user.email === 'dallaspeters@gmail.com') {
             setUserRole('admin')
           } else {
-            // Get role from user metadata first, then fetch profile
+            // Get role from user metadata
             const metadataRole = data.user.user_metadata?.role
             if (metadataRole) {
               setUserRole(metadataRole)
             }
           }
 
-          // Fetch full profile and notifications in background
-          const fetchProfileAndNotifications = async () => {
-            try {
-              const profileResponse = await fetch('/api/user')
-              const profileData = await profileResponse.json()
-
-              if (
-                profileData.user?.user_metadata?.role &&
-                data.user.email !== 'dallaspeters@gmail.com'
-              ) {
-                setUserRole(profileData.user.user_metadata.role)
-              }
-
-              // Fetch notifications after we have the user
-              await fetchNotifications()
-            } catch {
-              // Keep defaults on error
-            }
-          }
-          fetchProfileAndNotifications()
+          // Fetch notifications after we have the user
+          await fetchNotifications()
         } else {
           setUser(null)
         }
-        setIsLoading(false)
-      } catch {
+      } catch (error) {
+        console.error('Auth check failed:', error)
+        setUser(null)
+      } finally {
         setIsLoading(false)
       }
     }
 
     checkAuth()
+  }, [])
 
+  useEffect(() => {
     // Listen for auth changes
     const supabase = createClient()
     const {
@@ -114,27 +100,13 @@ export function ConnectedNavbar() {
             session.user.email?.split('@')[0] ||
             'User',
         )
-        // Fetch role in background, but override for admin emails
-        try {
-          // Force admin role for Dallas
-          if (session.user.email === 'dallaspeters@gmail.com') {
-            setUserRole('admin')
-          }
-
-          const { data } = await supabase
-            .from('profiles')
-            .select('role, name')
-            .eq('id', session.user.id)
-            .single()
-
-          if (data?.role && session.user.email !== 'dallaspeters@gmail.com') {
-            setUserRole(data.role)
-          }
-          if (data?.name) setUserName(data.name)
-        } catch {
-          // If profile doesn't exist, keep defaults or admin for Dallas
-          if (session.user.email === 'dallaspeters@gmail.com') {
-            setUserRole('admin')
+        // Force admin role for Dallas, otherwise use metadata role
+        if (session.user.email === 'dallaspeters@gmail.com') {
+          setUserRole('admin')
+        } else {
+          const metadataRole = session.user.user_metadata?.role
+          if (metadataRole) {
+            setUserRole(metadataRole)
           }
         }
       } else {

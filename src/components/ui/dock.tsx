@@ -21,24 +21,37 @@ import {
 } from 'react'
 import { cn } from '@/lib/utils'
 
-const DOCK_HEIGHT = 128
-const DEFAULT_MAGNIFICATION = 80
-const DEFAULT_DISTANCE = 150
+const DOCK_HEIGHT = 130
+const DEFAULT_MAGNIFICATION = 70
+const DEFAULT_DISTANCE = 160
 const DEFAULT_PANEL_HEIGHT = 64
 
+export type DockItemContent = {
+  id: string
+  title: string
+  icon: React.ReactElement
+  content: React.ReactElement
+}
+
 export type DockProps = {
-  children: React.ReactNode
+  children?: React.ReactNode
   className?: string
   distance?: number
   panelHeight?: number
   magnification?: number
   spring?: SpringOptions
+  contentClassName?: string
+  showContent?: boolean
+  items?: DockItemContent[]
+  contentPosition?: 'above' | 'below'
+  onContentChange?: (itemId: string | null) => void
 }
 
 export type DockItemProps = {
   className?: string
   children: React.ReactNode
   onClick?: () => void
+  itemId?: string
 }
 
 export type DockLabelProps = {
@@ -84,9 +97,24 @@ function Dock({
   magnification = DEFAULT_MAGNIFICATION,
   distance = DEFAULT_DISTANCE,
   panelHeight = DEFAULT_PANEL_HEIGHT,
+  contentClassName = '',
+  showContent = true,
+  items,
+  contentPosition = 'below',
+  onContentChange,
 }: DockProps) {
   const mouseX = useMotionValue(Infinity)
   const isHovered = useMotionValue(0)
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(
+    items && items.length > 0 ? items[0].id : null,
+  )
+
+  const selectedItem = items?.find((item) => item.id === selectedItemId)
+
+  const handleItemClick = (itemId: string) => {
+    setSelectedItemId(itemId)
+    onContentChange?.(itemId)
+  }
 
   const maxHeight = useMemo(() => {
     return Math.max(DOCK_HEIGHT, magnification + magnification / 2 + 4)
@@ -95,13 +123,13 @@ function Dock({
   const heightRow = useTransform(isHovered, [0, 1], [panelHeight, maxHeight])
   const height = useSpring(heightRow, spring)
 
-  return (
+  const dockContent = (
     <motion.div
       style={{
         height: height,
         scrollbarWidth: 'none',
       }}
-      className="mx-2 flex max-w-full items-end overflow-x-auto"
+      className="mx-2 px-2 flex max-w-full items-end overflow-x-auto"
     >
       <motion.div
         onMouseMove={({ pageX }) => {
@@ -113,7 +141,7 @@ function Dock({
           mouseX.set(Infinity)
         }}
         className={cn(
-          'mx-auto flex w-fit gap-4 rounded-2xl bg-gray-50 px-4 dark:bg-neutral-900',
+          'mx-auto px-4 flex w-fit gap-2 rounded-full items-end pb-3 bg-foreground',
           className,
         )}
         style={{ height: panelHeight }}
@@ -121,14 +149,51 @@ function Dock({
         aria-label="Application dock"
       >
         <DockProvider value={{ mouseX, spring, distance, magnification }}>
-          {children}
+          {items
+            ? items.map((item) => (
+              <DockItem
+                key={item.id}
+                onClick={() => handleItemClick(item.id)}
+                className={`cursor-pointer aspect-square rounded-full transition-colors ${selectedItemId === item.id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-background text-foreground'
+                  }`}
+              >
+                <DockIcon>{item.icon}</DockIcon>
+                <DockLabel>{item.title}</DockLabel>
+              </DockItem>
+            ))
+            : children}
         </DockProvider>
       </motion.div>
     </motion.div>
   )
+
+  const contentElement = showContent && selectedItem?.content && (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={selectedItemId}
+        initial={{ opacity: 0, y: contentPosition === 'above' ? -10 : 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: contentPosition === 'above' ? -10 : 10 }}
+        transition={{ duration: 0.2 }}
+        className={cn('tab-content', contentClassName)}
+      >
+        {selectedItem.content}
+      </motion.div>
+    </AnimatePresence>
+  )
+
+  return (
+    <>
+      {contentPosition === 'above' && contentElement}
+      {dockContent}
+      {contentPosition === 'below' && contentElement}
+    </>
+  )
 }
 
-function DockItem({ children, className, onClick }: DockItemProps) {
+function DockItem({ children, className, onClick, itemId }: DockItemProps) {
   const ref = useRef<HTMLDivElement>(null)
 
   const { distance, magnification, mouseX, spring } = useDock()
@@ -197,7 +262,7 @@ function DockLabel({ children, className, ...rest }: DockLabelProps) {
           exit={{ opacity: 0, y: 0 }}
           transition={{ duration: 0.2 }}
           className={cn(
-            'absolute -top-6 left-1/2 w-fit whitespace-pre rounded-md border border-gray-200 bg-gray-100 px-2 py-0.5 text-xs text-neutral-700 dark:border-neutral-900 dark:bg-neutral-800 dark:text-white',
+            'absolute -top-6 left-1/2 w-fit whitespace-pre rounded-md border bg-black px-2 py-0.5 text-xs text-white',
             className,
           )}
           role="tooltip"

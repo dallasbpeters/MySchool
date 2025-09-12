@@ -65,13 +65,13 @@ interface AssignmentCardProps {
   showDate: boolean
   assignment: Assignment
   size: 'small' | 'xs'
-  onToggle: (id: string, instanceDate?: string) => void
+  onToggleAction: (id: string, instanceDate?: string) => void
   getDateLabel: (date: string, completed?: boolean) => string
   getDateColor: (date: string, completed?: boolean) => string
   imageIndex?: number
   expandedCardId: string | null
   setExpandedCardId: (id: string | null) => void
-  onNoteCreated?: () => void
+  onNoteCreatedAction?: () => void
   assignmentNotes?: Note[]
   selectedInstanceDate?: string
 }
@@ -102,13 +102,13 @@ const globalAssignmentImageMap = new Map<string, number>()
 function AssignmentCard({
   assignment,
   size,
-  onToggle: _onToggle,
+  onToggleAction: _onToggleAction,
   getDateLabel,
   getDateColor,
   imageIndex = 0,
   image: _image,
   showDate,
-  onNoteCreated: _onNoteCreated,
+  onNoteCreatedAction: _onNoteCreated,
   assignmentNotes: _assignmentNotes = [],
   selectedInstanceDate,
   expandedCardId: _expandedCardId,
@@ -179,13 +179,13 @@ function AssignmentCard({
 function AssignmentCardExpanded({
   id: _id,
   assignment,
-  onToggle: _onToggle,
+  onToggleAction: _onToggleAction,
   getDateLabel,
   getDateColor,
   imageIndex,
   image: _image,
   showDate,
-  onNoteCreated: _onNoteCreated,
+  onNoteCreatedAction: _onNoteCreated,
   assignmentNotes: _assignmentNotes = [],
   selectedInstanceDate,
   groupId,
@@ -193,13 +193,13 @@ function AssignmentCardExpanded({
 }: {
   id: string
   assignment: Assignment
-  onToggle: (id: string, instanceDate?: string) => void
+  onToggleAction: (id: string, instanceDate?: string) => void
   getDateLabel: (date: string, completed?: boolean) => string
   getDateColor: (date: string, completed?: boolean) => string
   imageIndex: number
   image: boolean
   showDate: boolean
-  onNoteCreated?: () => void
+  onNoteCreatedAction?: () => void
   assignmentNotes?: Note[]
   selectedInstanceDate?: string
   groupId?: string
@@ -574,7 +574,7 @@ function AssignmentCardExpanded({
                   }
                 }
 
-                _onToggle(assignment.id, instanceDate)
+                _onToggleAction(assignment.id, instanceDate)
               }}
             >
               <Check className="h-4 w-4" />
@@ -605,13 +605,13 @@ function AssignmentCardExpanded({
 export function AssignmentCardList({
   assignments,
   image,
-  onCardClick,
+  onCardClickAction,
   groupId,
   size = 'small',
 }: {
   assignments: Assignment[]
   image: boolean
-  onCardClick: (assignmentId: string) => void
+  onCardClickAction: (assignmentId: string) => void
   groupId?: string
   size?: 'small' | 'xs'
 }) {
@@ -638,7 +638,7 @@ export function AssignmentCardList({
             size={size}
             key={assignment.id}
             assignment={assignment}
-            onToggle={() => { }}
+            onToggleAction={() => {}}
             getDateLabel={(_date, _completed) =>
               AssignmentService.getDateLabel(assignment)
             }
@@ -648,13 +648,13 @@ export function AssignmentCardList({
             imageIndex={currentImageIndex}
             image={image}
             showDate={true}
-            onNoteCreated={() => { }}
+            onNoteCreatedAction={() => {}}
             assignmentNotes={[]}
             expandedCardId={null}
-            setExpandedCardId={() => { }}
+            setExpandedCardId={() => {}}
             selectedInstanceDate={undefined}
             groupId={groupId}
-            onClick={() => onCardClick(assignment.id)}
+            onClick={() => onCardClickAction(assignment.id)}
           />
         )
       })}
@@ -682,7 +682,7 @@ function AssignmentCardGroup({
       <AssignmentCardList
         assignments={assignments}
         image={image}
-        onCardClick={openCard}
+        onCardClickAction={openCard}
         groupId={groupId}
         size={size}
       />
@@ -692,7 +692,7 @@ function AssignmentCardGroup({
             id={openId}
             key="card-item"
             assignment={assignments.find((a) => a.id === openId)!}
-            onToggle={() => { }}
+            onToggleAction={() => {}}
             getDateLabel={(_date, _completed) =>
               AssignmentService.getDateLabel(
                 assignments.find((a) => a.id === openId)!,
@@ -706,7 +706,7 @@ function AssignmentCardGroup({
             imageIndex={globalAssignmentImageMap.get(openId) || 0}
             image={image}
             showDate={true}
-            onNoteCreated={() => { }}
+            onNoteCreatedAction={() => {}}
             assignmentNotes={[]}
             groupId={groupId}
             onClose={closeCard}

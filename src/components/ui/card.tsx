@@ -1,7 +1,6 @@
 import * as React from 'react'
 
 import { cn } from '@/lib/utils'
-import { motion } from 'framer-motion'
 
 const Card = ({
   className,
@@ -109,12 +108,3 @@ export {
   CardDescription,
   CardContent,
 }
-
-export const MotionCard = motion.create(Card)
-export const MotionCardMedia = motion.create(CardMedia)
-export const MotionCardHeader = motion.create(CardHeader)
-export const MotionCardFooter = motion.create(CardFooter)
-export const MotionCardTitle = motion.create(CardTitle)
-export const MotionCardAction = motion.create(CardAction)
-export const MotionCardDescription = motion.create(CardDescription)
-export const MotionCardContent = motion.create(CardContent)

@@ -1,14 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, Suspense, lazy } from 'react'
-import {
-  fetchAssignmentsCached,
-  fetchChildrenCached,
-  fetchCategoriesCached,
-  fetchRecommendationsCached,
-  fetchRecommendationCategoriesCached,
-  refreshAssignments,
-} from '@/lib/cache-utils'
+import { refreshAssignments } from '@/lib/cache-utils'
 import { WysiwygEditor } from '@/components/editor/wysiwyg-editor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -147,8 +140,8 @@ export default function ParentDashboard() {
     () =>
       userRole === 'admin' && selectedParent !== 'all'
         ? assignments.filter(
-          (assignment) => assignment.parent_name === selectedParent,
-        )
+            (assignment) => assignment.parent_name === selectedParent,
+          )
         : assignments,
     [userRole, selectedParent, assignments],
   )
@@ -156,41 +149,30 @@ export default function ParentDashboard() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load data in parallel for better performance
-        const [
-          assignmentsData,
-          childrenData,
-          categoriesData,
-          recommendationsData,
-          recommendationCategoriesData,
-        ] = await Promise.all([
-          fetchAssignmentsCached(),
-          fetchChildrenCached(),
-          fetchCategoriesCached(),
-          fetchRecommendationsCached(),
-          fetchRecommendationCategoriesCached(),
-        ])
+        // Single consolidated API call
+        const response = await fetch('/api/dashboard')
+        const data = await response.json()
 
-        // Process assignments data
-        const role = assignmentsData.profile?.role
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch dashboard data')
+        }
+
+        // Set user data
+        const role = data.user?.role || ''
         setUserRole(role)
 
-        let assignmentsDataArray = []
+        // Process assignments and get parent names
+        const assignmentsDataArray = data.assignments || []
         const parentNames = new Set<string>()
 
         if (role === 'admin') {
-          assignmentsDataArray = assignmentsData.assignments || []
-          assignmentsData.assignments?.forEach((assignment: Assignment) => {
+          assignmentsDataArray.forEach((assignment: Assignment) => {
             if (assignment.parent_name) {
               parentNames.add(assignment.parent_name)
             }
           })
-        } else {
-          assignmentsDataArray = assignmentsData.assignments || []
-        }
 
-        // Update available parents for admin filter
-        if (role === 'admin') {
+          // Update available parents for admin filter
           const parentOptions = Array.from(parentNames)
             .map((name) => ({ label: name, value: name }))
             .sort((a, b) => a.label.localeCompare(b.label))
@@ -202,34 +184,28 @@ export default function ParentDashboard() {
 
         setAssignments(assignmentsDataArray)
 
-        // Process children data
-        if (childrenData.children) {
-          setChildren(childrenData.children)
-        }
+        // Set children data
+        setChildren(data.children || [])
 
-        // Process categories data
-        if (categoriesData.assignments) {
-          const uniqueCategories = [
-            ...new Set(
-              categoriesData.assignments
-                .map((a: Assignment) => a.category)
-                .filter((c: string) => c && c.trim()),
-            ),
-          ]
-          setCategories(
-            uniqueCategories.map((cat: string) => ({ label: cat, value: cat })),
-          )
-        }
+        // Process categories from assignments
+        const uniqueCategories = [
+          ...new Set(
+            assignmentsDataArray
+              .map((a: Assignment) => a.category)
+              .filter((c: string) => c && c.trim()),
+          ),
+        ]
+        setCategories(
+          uniqueCategories.map((cat: string) => ({ label: cat, value: cat })),
+        )
 
-        // Process recommendations data
-        if (recommendationsData.recommendations) {
-          setRecommendations(recommendationsData.recommendations)
-        }
+        // Set recommendations
+        setRecommendations(data.recommendations || [])
 
-        // Process recommendation categories data
-        if (recommendationCategoriesData.categories) {
+        // Set recommendation categories from dashboard response
+        if (data.recommendationCategories) {
           setRecommendationCategories(
-            recommendationCategoriesData.categories.map((cat: string) => ({
+            data.recommendationCategories.map((cat: string) => ({
               label: cat,
               value: cat,
             })),
@@ -237,12 +213,16 @@ export default function ParentDashboard() {
         }
       } catch (error) {
         console.error('Error loading data:', error)
-        // Handle error silently
+        toast({
+          title: 'Loading Error',
+          description: 'Failed to load dashboard data. Please try refreshing.',
+          variant: 'destructive',
+        })
       }
     }
 
     loadData()
-  }, [])
+  }, [toast])
 
   // Note: Date synchronization is now handled in AssignmentForm component
 
@@ -314,7 +294,7 @@ export default function ParentDashboard() {
       if (!response.ok) {
         throw new Error(
           data.error ||
-          `Assignment ${isEditing ? 'update' : 'creation'} failed`,
+            `Assignment ${isEditing ? 'update' : 'creation'} failed`,
         )
       }
 
@@ -464,16 +444,16 @@ export default function ParentDashboard() {
   const handleKanbanAssignmentEdit = (assignment: Assignment) => {
     // This handler opens the edit dialog
     setEditingAssignment(assignment)
-    
+
     // Convert assignment data to form format
     const categoryOptions = assignment.category
       ? [{ label: assignment.category, value: assignment.category }]
       : []
-    
+
     const childOptions = assignment.assigned_children
-      ? assignment.assigned_children.map(childName => {
-          const child = children.find(c => c.name === childName)
-          return child 
+      ? assignment.assigned_children.map((childName) => {
+          const child = children.find((c) => c.name === childName)
+          return child
             ? { label: `${child.name} (${child.email})`, value: child.id }
             : { label: childName, value: childName }
         })
@@ -493,10 +473,10 @@ export default function ParentDashboard() {
       },
       recurrence_end_date: assignment.recurrence_end_date || '',
     })
-    
+
     // Set the selected date for the calendar
     setSelectedCalendarDate(new Date(assignment.due_date))
-    
+
     // Open the edit dialog
     setIsCreating(true)
   }
@@ -553,7 +533,7 @@ export default function ParentDashboard() {
         : '/api/recommendations'
       const method = isEditing ? 'PUT' : 'POST'
 
-      const response = await fetch(url, {
+      const recResponse = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -569,12 +549,12 @@ export default function ParentDashboard() {
         }),
       })
 
-      const data = await response.json()
+      const recData = await recResponse.json()
 
-      if (!response.ok) {
+      if (!recResponse.ok) {
         throw new Error(
-          data.error ||
-          `Recommendation ${isEditing ? 'update' : 'creation'} failed`,
+          recData.error ||
+            `Recommendation ${isEditing ? 'update' : 'creation'} failed`,
         )
       }
 
@@ -582,14 +562,15 @@ export default function ParentDashboard() {
       toast({
         title: 'Success',
         description:
-          data.message ||
+          recData.message ||
           `Recommendation ${isEditing ? 'updated' : 'created'} successfully`,
       })
 
       resetRecommendationForm()
-      const recommendationsData = await fetchRecommendationsCached()
-      if (recommendationsData.recommendations) {
-        setRecommendations(recommendationsData.recommendations)
+      const refreshResponse = await fetch('/api/recommendations')
+      const refreshData = await refreshResponse.json()
+      if (refreshData.recommendations) {
+        setRecommendations(refreshData.recommendations)
       }
     } catch (error: unknown) {
       const errorMessage =
@@ -623,10 +604,8 @@ export default function ParentDashboard() {
         description: data.message || 'Recommendation deleted successfully',
       })
 
-      const recommendationsData = await fetchRecommendationsCached()
-      if (recommendationsData.recommendations) {
-        setRecommendations(recommendationsData.recommendations)
-      }
+      // Remove from local state instead of refetching
+      setRecommendations((prev) => prev.filter((rec) => rec.id !== id))
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error
@@ -967,10 +946,11 @@ export default function ParentDashboard() {
                             </Label>
                             <div className="grid grid-cols-2 gap-3">
                               <div
-                                className={`p-3 border rounded-lg cursor-pointer transition-all ${!newAssignment.is_recurring
-                                  ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                                  : 'border-border hover:border-primary/50'
-                                  }`}
+                                className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                                  !newAssignment.is_recurring
+                                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                    : 'border-border hover:border-primary/50'
+                                }`}
                                 onClick={() =>
                                   setNewAssignment({
                                     ...newAssignment,
@@ -990,10 +970,11 @@ export default function ParentDashboard() {
                               </div>
 
                               <div
-                                className={`p-3 border rounded-lg cursor-pointer transition-all ${newAssignment.is_recurring
-                                  ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                                  : 'border-border hover:border-primary/50'
-                                  }`}
+                                className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                                  newAssignment.is_recurring
+                                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                    : 'border-border hover:border-primary/50'
+                                }`}
                                 onClick={() =>
                                   setNewAssignment({
                                     ...newAssignment,
@@ -1095,13 +1076,13 @@ export default function ParentDashboard() {
                                               day,
                                             )
                                               ? newAssignment.recurrence_pattern.days.filter(
-                                                (d) => d !== day,
-                                              )
+                                                  (d) => d !== day,
+                                                )
                                               : [
-                                                ...newAssignment
-                                                  .recurrence_pattern.days,
-                                                day,
-                                              ]
+                                                  ...newAssignment
+                                                    .recurrence_pattern.days,
+                                                  day,
+                                                ]
 
                                           setNewAssignment({
                                             ...newAssignment,

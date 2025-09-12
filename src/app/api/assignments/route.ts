@@ -403,14 +403,6 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Get user profile to check if admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-
     // First, check if the assignment exists
     const { data: existingAssignment, error: checkError } = await supabase
       .from('assignments')

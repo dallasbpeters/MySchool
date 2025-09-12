@@ -21,6 +21,8 @@ const config = {
     './components/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
     './src/**/*.{ts,tsx}',
+    './globals.css',
+    './src/app/globals.css',
   ],
   plugins: [
     // eslint-disable-next-line @typescript-eslint/no-require-imports

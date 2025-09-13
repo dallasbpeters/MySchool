@@ -422,7 +422,7 @@ export default function StudentDashboard() {
 
   return (
     <React.Fragment>
-      <div className="z-3 py-10 px-4 relative container mx-auto flex flex-col max-w-screen-xl">
+      <div className="z-2 p-4 relative mx-auto flex flex-col max-w-screen">
         <StudentHeader
           userRole={userRole}
           selectedChildId={selectedChildId}
@@ -432,7 +432,7 @@ export default function StudentDashboard() {
         />
         <Dock
           items={dockItems}
-          className="z-50 isolate fixed bottom-5 left-1/2 max-w-full -translate-x-1/2"
+          className="fixed bottom-5 left-1/2 max-w-full -translate-x-1/2"
           showContent={true}
           contentPosition="above"
           contentClassName="z-1 w-full mx-auto mb-8"

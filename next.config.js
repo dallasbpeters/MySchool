@@ -14,6 +14,9 @@ const nextConfig = {
     // Allow production builds to successfully complete even if TypeScript fails
     ignoreBuildErrors: false,
   },
+  turbopack: {
+    //...
+  },
   webpack: (config, { isServer }) => {
     // Optimize SVG handling to prevent large files from impacting webpack cache performance
     config.module.rules.push({
@@ -42,7 +45,6 @@ const nextConfig = {
                 'removeEditorsNSData',
                 'cleanupAttrs',
                 'cleanupNumericValues',
-                'convertColors',
                 'removeUnknownsAndDefaults',
                 'removeNonInheritableGroupAttrs',
                 'removeUselessStrokeAndFill',
@@ -78,4 +80,4 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+export default nextConfig

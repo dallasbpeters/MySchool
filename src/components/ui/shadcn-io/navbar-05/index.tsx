@@ -268,7 +268,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
       const checkWidth = () => {
         if (containerRef.current) {
           const width = containerRef.current.offsetWidth
-          setIsMobile(width < 768) // 768px is md breakpoint
+          setIsMobile(width < 1000) // 768px is md breakpoint
         }
       }
 
@@ -301,12 +301,12 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
       <header
         ref={combinedRef}
         className={cn(
-          'sticky top-0 z-5 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6 [&_*]:no-underline',
+          'sticky top-0 z-5 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 px-4 md:px-6 [&_*]:no-underline',
           className,
         )}
         {...props}
       >
-        <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between gap-4">
+        <div className="container mx-auto flex h-16 items-center justify-between gap-4">
           {/* Left side */}
           <div className="flex items-center gap-2">
             {/* Mobile menu trigger */}
@@ -375,8 +375,8 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
                                 onNavItemClick(link.href)
                             }}
                             className={cn(
-                              "py-1.5 font-medium transition-colors cursor-pointer group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 text-sm focus:outline-none disabled:pointer-events-none disabled:opacity-50",
-                              "text-foreground hover:text-primary data-[active=true]:text-primary"
+                              "py-1.5 font-medium transition-colors cursor-pointer group inline-flex h-10 w-max items-center justify-center px-4 text-sm focus:outline-none border-b-2 border-transparent",
+                              "text-foreground hover:border-b-primary data-[active=true]:border-b-primary"
                             )}
                           >
                             {link.label}

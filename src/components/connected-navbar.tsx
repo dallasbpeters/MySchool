@@ -42,7 +42,7 @@ export function ConnectedNavbar() {
         setNotifications(data.notifications)
         setNotificationCount(data.count)
       }
-    } catch {}
+    } catch { }
   }
 
   useEffect(() => {
@@ -56,8 +56,8 @@ export function ConnectedNavbar() {
           setUser(data.user)
           setUserName(
             data.user.user_metadata?.full_name ||
-              data.user.email?.split('@')[0] ||
-              'User',
+            data.user.email?.split('@')[0] ||
+            'User',
           )
 
           // Force admin role for Dallas
@@ -97,8 +97,8 @@ export function ConnectedNavbar() {
         setUser(session.user)
         setUserName(
           session.user.user_metadata?.full_name ||
-            session.user.email?.split('@')[0] ||
-            'User',
+          session.user.email?.split('@')[0] ||
+          'User',
         )
         // Force admin role for Dallas, otherwise use metadata role
         if (session.user.email === 'dallaspeters@gmail.com') {
@@ -328,6 +328,7 @@ export function ConnectedNavbar() {
       userAvatar={user.user_metadata?.picture || user.user_metadata?.avatar_url}
       notificationCount={notificationCount}
       notifications={notifications}
+      activeHref={pathname}
       onNavItemClick={handleNavItemClick}
       onNotificationItemClick={handleNotificationItemClick}
       onUserItemClick={handleUserItemClick}

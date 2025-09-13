@@ -6,6 +6,7 @@
       "esnext"
     ],
     "types": [
+      "node",
       "jest",
       "@testing-library/jest-dom"
     ],

@@ -12,12 +12,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { AnimatePresence } from 'motion/react'
-import { Toggle } from '@/components/ui/toggle'
 import { MultiStateBadge } from '@/components/multi-state-badge'
 import { AssignmentService } from '@/services/assignment-service'
 import { Assignment } from '@/types'
 import { images } from '@/components/images'
-import Layout from '@/app/calendar/layout'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
 
 // Union type to handle both assignments and recommendations
 type AssignmentOrRecommendation =
@@ -102,7 +102,10 @@ function AssignmentCard({
   return (
     <motion.div
       layout
-      whileHover={{ scale: 1.02 }}
+      whileHover={{
+        scale: 1.02,
+        transition: { ease: ["easeIn", "easeOut"] }
+      }}
       whileTap={{ scale: 0.98 }}
       exit={{
         opacity: 0,
@@ -121,7 +124,7 @@ function AssignmentCard({
         <motion.div
           className="card-image"
           style={{
-            backgroundImage: `url(${images[imageIndex % images.length]})`,
+            backgroundImage: `url(${images[imageIndex % images.length].url})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center center',
           }}
@@ -136,7 +139,7 @@ function AssignmentCard({
         {assignment.category && (
           <span className="category">{assignment.category}</span>
         )}
-        <h2>{assignment.title}</h2>
+        <h2 style={{ color: images[imageIndex % images.length].color }}>{assignment.title}</h2>
       </motion.div>
       {showDate && (
         <div
@@ -223,7 +226,7 @@ function AssignmentCardExpanded({
   })
 
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [StarterKit, TaskList, TaskItem],
     content: assignment.content,
     editable: false,
     immediatelyRender: false,
@@ -387,7 +390,7 @@ function AssignmentCardExpanded({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.3, delay: 0.1 }}
+        transition={{ duration: 0.2, delay: 0.1 }}
         style={{ pointerEvents: 'auto' }}
         className="card-overlay"
       />
@@ -434,8 +437,8 @@ function AssignmentCardExpanded({
             <motion.div
               className="card-image expanded"
               style={{
-                backgroundImage: `url(${images[imageIndex % images.length]})`,
-                backgroundSize: '105%',
+                backgroundImage: `url(${images[imageIndex % images.length].url})`,
+                backgroundSize: '120%',
                 backgroundPosition: 'center',
               }}
               layoutId={`assignment-image-${assignment.id}-${groupId || 'default'}`}
@@ -449,7 +452,7 @@ function AssignmentCardExpanded({
             {assignment.category && (
               <span className="category">{assignment.category}</span>
             )}
-            <h2>{assignment.title}</h2>
+            <h2 style={{ color: images[imageIndex % images.length].color }}>{assignment.title}</h2>
           </motion.div>
           <AnimatePresence>
             {!isCreatingNote && (

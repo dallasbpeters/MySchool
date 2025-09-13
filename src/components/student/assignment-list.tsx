@@ -56,7 +56,7 @@ const AssignmentListComponent: React.FC<AssignmentListProps> = ({
     <Suspense>
       {overdue.length > 0 && (
         <motion.div layout>
-          <h6 className="text-red-500">Overdue</h6>
+          <motion.h5 className="card-list-title text-red-500">Overdue</motion.h5>
           <AssignmentCardContainer
             image={true}
             assignments={overdue}
@@ -71,9 +71,9 @@ const AssignmentListComponent: React.FC<AssignmentListProps> = ({
 
       {today.length > 0 && (
         <motion.div layout>
-          <h6>
+          <motion.h5 className="card-list-title">
             Today&apos;s Assignments
-          </h6>
+          </motion.h5>
           <AssignmentCardContainer
             image={true}
             assignments={today}
@@ -88,7 +88,7 @@ const AssignmentListComponent: React.FC<AssignmentListProps> = ({
 
       {upcoming.length > 0 && (
         <motion.div layout>
-          <h6>Upcoming</h6>
+          <motion.h5 className="card-list-title">Upcoming</motion.h5>
           <AssignmentCardContainer
             size="small"
             image={true}

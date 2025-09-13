@@ -35,7 +35,7 @@ function MultiStateBadge({ isCompleted, isRecurring, isToggling, onToggle }: Mul
           if (!isToggling) onToggle()
         }}
         disabled={isToggling}
-        style={{ opacity: isToggling ? 0.7 : 1, cursor: isToggling ? 'not-allowed' : 'pointer', background: 'none', border: 'none', padding: 0 }}
+        style={{ opacity: isToggling ? 0.7 : 1, cursor: isToggling ? 'not-allowed' : 'pointer', background: 'none', border: 'none', padding: 0, width: '100%', alignItems: 'center', justifyContent: 'center' }}
       >
         <Badge state={badgeState} />
       </button>
@@ -233,7 +233,6 @@ function X() {
 
 const Label = ({ state }: { state: keyof typeof STATES }) => {
   const [labelWidth, setLabelWidth] = useState(0)
-  const [backgroundColor, setBackgroundColor] = useState(COLORS[state])
 
   const measureRef = useRef<HTMLDivElement>(null)
 
@@ -314,9 +313,11 @@ type Styles = {
 const styles = {
   container: {
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    width: "100%",
+    flex: "1 1 100%",
   },
   badge: {
     backgroundColor: "var(--color-green-500)",
@@ -325,9 +326,11 @@ const styles = {
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    padding: "12px 20px",
+    padding: "9px 20px",
     borderRadius: 'var(--radius)',
     willChange: "transform, filter",
+    width: "100%",
+    flex: "1 0 100%",
   },
   iconContainer: {
     height: 20,
@@ -354,7 +357,7 @@ const STATES = {
 } as const
 
 const COLORS = {
-  incomplete: "var(--color-gray-500)",
+  incomplete: "var(--color-gray-700)",
   processing: "var(--color-blue-500)",
   success: "var(--color-green-500)",
   error: "var(--color-red-500)",

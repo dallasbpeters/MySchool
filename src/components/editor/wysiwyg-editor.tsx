@@ -4,6 +4,8 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
 import Highlight from '@tiptap/extension-highlight'
@@ -26,6 +28,7 @@ import {
   Code,
   Undo,
   Redo,
+  ListTodo,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -35,6 +38,8 @@ interface WysiwygEditorProps {
   placeholder?: string
   className?: string
 }
+
+// TaskItem configuration is handled by the extension itself
 
 export function WysiwygEditor({
   content,
@@ -60,6 +65,8 @@ export function WysiwygEditor({
       Placeholder.configure({
         placeholder,
       }),
+      TaskList,
+      TaskItem,
       Underline,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
@@ -92,7 +99,14 @@ export function WysiwygEditor({
           '[&_strong]:font-semibold',
           '[&_em]:italic',
           '[&_u]:underline',
+          // Task list styles - using simpler selectors to avoid CSS parsing issues
+          '[&_ul[data-type="taskList"]]:list-none [&_ul[data-type="taskList"]]:ml-0 [&_ul[data-type="taskList"]]:p-0 [&_ul[data-type="taskList"]]:my-4',
+          '[&_ul[data-type="taskList"]>li]:flex [&_ul[data-type="taskList"]>li]:items-center [&_ul[data-type="taskList"]>li]:mb-0',
+          '[&_ul[data-type="taskList"]>li>label]:flex-none [&_ul[data-type="taskList"]>li>label]:mr-2 [&_ul[data-type="taskList"]>li>label]:select-none',
+          '[&_ul[data-type="taskList"]>li>div]:flex-1',
+          '[&_ul[data-type="taskList"]_input[type="checkbox"]]:cursor-pointer',
           '[&_.ProseMirror-placeholder]:text-muted-foreground [&_.ProseMirror-placeholder]:opacity-50',
+          '[&_ul[data-type="taskList"]>li>div>p]:my-0 text-sm leading-tight',
           className,
         ),
       },
@@ -158,6 +172,19 @@ export function WysiwygEditor({
             )}
           >
             <Highlighter className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+            className={cn(
+              'h-8 w-8 p-0',
+              editor.isActive('taskList') && 'bg-muted',
+            )}
+          >
+
+            <ListTodo className="h-4 w-4" />
           </Button>
         </div>
 

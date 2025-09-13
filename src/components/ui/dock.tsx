@@ -129,7 +129,7 @@ function Dock({
         height: height,
         scrollbarWidth: 'none',
       }}
-      className="mx-2 px-2 flex max-w-full items-end overflow-x-auto"
+      className="dock z-50 isolate mx-2 px-2 flex max-w-full items-end overflow-x-auto"
     >
       <motion.div
         onMouseMove={({ pageX }) => {
@@ -141,7 +141,7 @@ function Dock({
           mouseX.set(Infinity)
         }}
         className={cn(
-          'mx-auto px-4 flex w-fit gap-2 rounded-full items-end pb-3 bg-foreground',
+          'mx-auto p-4 flex w-fit gap-2 rounded-full items-center hover:items-end bg-foreground',
           className,
         )}
         style={{ height: panelHeight }}
@@ -262,7 +262,7 @@ function DockLabel({ children, className, ...rest }: DockLabelProps) {
           exit={{ opacity: 0, y: 0 }}
           transition={{ duration: 0.2 }}
           className={cn(
-            'absolute -top-6 left-1/2 w-fit whitespace-pre rounded-md border bg-black px-2 py-0.5 text-xs text-white',
+            'absolute -top-6 left-1/2 w-fit whitespace-pre rounded-md bg-black px-2 py-0.5 text-sm text-white',
             className,
           )}
           role="tooltip"

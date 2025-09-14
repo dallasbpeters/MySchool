@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { motion, LayoutGroup } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { Calendar, CheckCircle2, BookOpen, Plus, Check } from 'lucide-react'
+import { Calendar, CheckCircle2, BookOpen, Plus } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'

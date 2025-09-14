@@ -136,11 +136,11 @@ function AssignmentCard({
         )}
         <motion.img
           className="card-image"
-          src={images[imageIndex % images.length]}
+          src={images[imageIndex % images.length].url}
           alt=""
           layoutId={`assignment-image-${assignment.id}-${groupId || 'default'}`}
           style={{
-            backgroundImage: `url(${images[imageIndex % images.length]})`,
+            backgroundImage: `url(${images[imageIndex % images.length].url})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
@@ -350,7 +350,7 @@ function AssignmentCardExpanded({
             )}
             <motion.img
               className="card-image expanded"
-              src={images[imageIndex % images.length]}
+              src={images[imageIndex % images.length].url}
               alt=""
               layoutId={`assignment-image-${assignment.id}-${groupId || 'default'}`}
               style={{

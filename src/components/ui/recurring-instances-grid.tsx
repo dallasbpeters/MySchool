@@ -3,7 +3,7 @@
 import { format } from 'date-fns'
 import { Card, CardHeader, CardTitle, CardMedia } from '@/components/ui/card'
 import Image from 'next/image'
-import { images as defaultImages } from '@/components/images'
+import { images as defaultImages, ImageData } from '@/components/images'
 import { motion } from 'framer-motion'
 
 interface Assignment {
@@ -19,7 +19,7 @@ interface Assignment {
 
 interface RecurringInstancesGridProps {
   assignment: Assignment
-  images?: string[]
+  images?: string[] | ImageData[]
   imageIndex: number
   showImages?: boolean
   daysAhead?: number
@@ -144,7 +144,11 @@ export const RecurringInstancesGrid = ({
                 {showImages && (
                   <CardMedia className="-mt-0 md:-mt-0 mb-0">
                     <Image
-                      src={imageArray[imageIndex % imageArray.length]}
+                      src={
+                        typeof imageArray[imageIndex % imageArray.length] === 'string'
+                          ? imageArray[imageIndex % imageArray.length] as string
+                          : (imageArray[imageIndex % imageArray.length] as ImageData).url
+                      }
                       alt={assignment.title}
                       width={1200}
                       height={1200}

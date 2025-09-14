@@ -75,7 +75,7 @@ function Card({ id, title, category, open, imageIndex, theme }: CardProps) {
         >
           <motion.img
             className="card-image"
-            src={images[imageIndex % images.length]}
+            src={images[imageIndex % images.length].url}
             alt=""
             style={{ backgroundSize: '100%', backgroundPosition: 'top' }}
             layoutId={`card-image-${id}`}
@@ -173,7 +173,7 @@ function Item({
           >
             <motion.img
               className="card-image"
-              src={images[imageIndex % images.length]}
+              src={images[imageIndex % images.length].url}
               alt=""
               style={{ backgroundSize: 'cover', backgroundPosition: 'center' }}
               layoutId={`card-image-${id}`}

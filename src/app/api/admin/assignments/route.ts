@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     // Use session-based authentication
     const { user, error: authError } = await validateAuth(request)
-    
+
     if (authError || !user) {
       return NextResponse.json({ assignments: [], error: 'Authentication failed' })
     }
@@ -130,6 +130,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const requestBody = await request.json()
     const {
       title,
       content,
@@ -137,10 +138,13 @@ export async function POST(request: NextRequest) {
       due_date,
       category,
       selectedChildren,
+      selectedParent,
       is_recurring,
       recurrence_pattern,
       recurrence_end_date,
-    } = await request.json()
+    } = requestBody
+
+    console.log('API received assignment data:', { selectedParent, title, selectedChildren })
 
     if (!title?.trim()) {
       return NextResponse.json(
@@ -169,7 +173,7 @@ export async function POST(request: NextRequest) {
 
     // Use session-based authentication
     const { user, error: authError } = await validateAuth(request)
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'You must be logged in to create assignments' },
@@ -193,10 +197,13 @@ export async function POST(request: NextRequest) {
         ? new Date(recurrence_end_date).toISOString().split('T')[0]
         : null
 
+    const parentIdToUse = selectedParent || user.id
+    console.log('Setting parent_id to:', parentIdToUse, 'selectedParent was:', selectedParent, 'user.id is:', user.id)
+
     const { data: assignmentData, error: assignmentError } = await supabase
       .from('assignments')
       .insert({
-        parent_id: user.id, // Admin creates assignments
+        parent_id: parentIdToUse, // Use selected parent or admin as fallback
         title: title.trim(),
         content: content,
         links: links || [],
@@ -271,6 +278,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    const requestBody = await request.json()
     const {
       title,
       content,
@@ -278,10 +286,13 @@ export async function PUT(request: NextRequest) {
       due_date,
       category,
       selectedChildren,
+      selectedParent,
       is_recurring,
       recurrence_pattern,
       recurrence_end_date,
-    } = await request.json()
+    } = requestBody
+
+    console.log('PUT API received assignment data:', { selectedParent, title, selectedChildren })
 
     if (!title?.trim()) {
       return NextResponse.json(
@@ -303,7 +314,7 @@ export async function PUT(request: NextRequest) {
 
     // Use session-based authentication
     const { user, error: authError } = await validateAuth(request)
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'You must be logged in to update assignments' },
@@ -328,8 +339,12 @@ export async function PUT(request: NextRequest) {
         ? new Date(recurrence_end_date).toISOString().split('T')[0]
         : null
 
+    const parentIdToUse = selectedParent || user.id
+    console.log('PUT: Setting parent_id to:', parentIdToUse, 'selectedParent was:', selectedParent)
+
     const rpcParams = {
       assignment_id: assignmentId,
+      assignment_parent_id: parentIdToUse,
       assignment_title: title.trim(),
       assignment_content: content,
       assignment_links: links || [],
@@ -446,7 +461,7 @@ export async function DELETE(request: NextRequest) {
 
     // Use session-based authentication
     const { user, error: authError } = await validateAuth(request)
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'You must be logged in to delete assignments' },

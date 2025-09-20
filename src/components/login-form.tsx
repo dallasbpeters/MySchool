@@ -248,6 +248,7 @@ export function LoginForm({
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
+                className="h-14"
               />
             </div>
 
@@ -276,11 +277,11 @@ export function LoginForm({
               <>
                 <div className="grid gap-2">
                   <Label>Are you a parent or student?</Label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 max-w-full">
                     <Button
                       type="button"
                       variant={role === 'parent' ? 'default' : 'outline'}
-                      className="w-full"
+                      className="w-1/2"
                       onClick={() => setRole('parent')}
                     >
                       Parent
@@ -288,7 +289,7 @@ export function LoginForm({
                     <Button
                       type="button"
                       variant={role === 'student' ? 'default' : 'outline'}
-                      className="w-full"
+                      className="w-1/2"
                       onClick={() => setRole('student')}
                     >
                       Student

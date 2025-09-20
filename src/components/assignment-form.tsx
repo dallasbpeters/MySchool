@@ -61,6 +61,7 @@ interface AssignmentFormData {
   due_date: string
   category: Option[]
   selectedChildren: Option[]
+  selectedParent: Option | null
   is_recurring: boolean
   recurrence_pattern: {
     days: string[]
@@ -80,6 +81,8 @@ interface AssignmentFormProps {
   isSaving: boolean
   categories: Option[]
   childrenOptions: Option[]
+  parentOptions?: Option[]
+  userRole?: string
   selectedCalendarDate: Date | undefined
   onCalendarDateChange: (date: Date | undefined) => void
 }
@@ -95,9 +98,33 @@ export function AssignmentForm({
   isSaving,
   categories,
   childrenOptions,
+  parentOptions = [],
+  userRole,
   selectedCalendarDate,
   onCalendarDateChange,
 }: AssignmentFormProps) {
+  // Debug logging
+  console.log('AssignmentForm props:', { userRole, parentOptionsLength: parentOptions.length, parentOptions })
+
+  // Track the previous selected parent to detect changes
+  const prevSelectedParentRef = React.useRef(assignmentData.selectedParent?.value)
+
+  // Clear selected children when parent changes
+  React.useEffect(() => {
+    const currentParentId = assignmentData.selectedParent?.value
+    const prevParentId = prevSelectedParentRef.current
+
+    if (currentParentId !== prevParentId && prevParentId !== undefined) {
+      // Parent changed, clear selected children
+      onAssignmentDataChange({
+        ...assignmentData,
+        selectedChildren: [],
+      })
+    }
+
+    prevSelectedParentRef.current = currentParentId
+  }, [assignmentData.selectedParent?.value, assignmentData, onAssignmentDataChange])
+
   const [newLink, setNewLink] = useState({
     title: '',
     url: '',
@@ -134,7 +161,7 @@ export function AssignmentForm({
       <SheetContent className="w-full sm:w-[700px] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
-            {editingAssignment ? 'Edit Assignment' : 'Create New Assignment'}
+            {editingAssignment ? 'Change Assignment' : 'Create New Assignment'}
           </SheetTitle>
           <SheetDescription>
             Use the WYSIWYG editor to create rich content assignments
@@ -174,16 +201,34 @@ export function AssignmentForm({
             />
           </div>
 
+          {/* Parent Selection - Show for admin users */}
+          {userRole === 'admin' && (
+            <div className="space-y-2">
+              <Label htmlFor="parent">Assign to Parent ({parentOptions.length} available)</Label>
+              <MultipleSelector
+                value={assignmentData.selectedParent ? [assignmentData.selectedParent] : []}
+                onChange={(selected) =>
+                  onAssignmentDataChange({
+                    ...assignmentData,
+                    selectedParent: selected.length > 0 ? selected[0] : null,
+                  })
+                }
+                options={parentOptions}
+                placeholder={parentOptions.length > 0 ? "Select a parent to assign this assignment to..." : "Loading parents..."}
+                maxSelected={1}
+              />
+            </div>
+          )}
+
           <div className="space-y-4">
             <div className="space-y-3">
               <Label className="text-sm font-medium">Assignment Type</Label>
               <div className="grid grid-cols-2 gap-3">
                 <div
-                  className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                    !assignmentData.is_recurring
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                      : 'border-border hover:border-primary/50'
-                  }`}
+                  className={`p-3 border rounded-lg cursor-pointer transition-all ${!assignmentData.is_recurring
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                    : 'border-border hover:border-primary/50'
+                    }`}
                   onClick={() =>
                     onAssignmentDataChange({
                       ...assignmentData,
@@ -203,11 +248,10 @@ export function AssignmentForm({
                 </div>
 
                 <div
-                  className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                    assignmentData.is_recurring
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                      : 'border-border hover:border-primary/50'
-                  }`}
+                  className={`p-3 border rounded-lg cursor-pointer transition-all ${assignmentData.is_recurring
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                    : 'border-border hover:border-primary/50'
+                    }`}
                   onClick={() =>
                     onAssignmentDataChange({
                       ...assignmentData,
@@ -301,12 +345,12 @@ export function AssignmentForm({
                                 day,
                               )
                                 ? assignmentData.recurrence_pattern.days.filter(
-                                    (d) => d !== day,
-                                  )
+                                  (d) => d !== day,
+                                )
                                 : [
-                                    ...assignmentData.recurrence_pattern.days,
-                                    day,
-                                  ]
+                                  ...assignmentData.recurrence_pattern.days,
+                                  day,
+                                ]
 
                             onAssignmentDataChange({
                               ...assignmentData,

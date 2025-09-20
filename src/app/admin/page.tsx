@@ -35,6 +35,7 @@ interface Assignment {
   due_date: string
   created_at: string
   category?: string
+  parent_id?: string
   is_recurring?: boolean
   recurrence_pattern?: {
     days: string[]
@@ -69,11 +70,12 @@ export default function AdminDashboard() {
   )
   const [newAssignment, setNewAssignment] = useState({
     title: '',
-    content: null,
+    content: null as string | null,
     links: [] as Link[],
     due_date: format(new Date(), 'yyyy-MM-dd'),
     category: [] as Option[],
     selectedChildren: [] as Option[],
+    selectedParent: null as Option | null,
     is_recurring: false,
     recurrence_pattern: {
       days: [] as string[],
@@ -184,6 +186,7 @@ export default function AdminDashboard() {
   }
 
   const createOrUpdateAssignment = async () => {
+    console.log('createOrUpdateAssignment called with:', newAssignment)
     setIsSaving(true)
 
     // Validation
@@ -228,32 +231,37 @@ export default function AdminDashboard() {
         : '/api/admin/assignments'
       const method = isEditing ? 'PUT' : 'POST'
 
+      const requestBody = {
+        title: newAssignment.title,
+        content: newAssignment.content,
+        links: newAssignment.links,
+        due_date: newAssignment.due_date,
+        category:
+          newAssignment.category.length > 0
+            ? newAssignment.category[0].value
+            : '',
+        selectedChildren: newAssignment.selectedChildren.map(
+          (child) => child.value,
+        ),
+        selectedParent: newAssignment.selectedParent?.value || null,
+        is_recurring: newAssignment.is_recurring,
+        recurrence_pattern: newAssignment.is_recurring
+          ? newAssignment.recurrence_pattern
+          : null,
+        recurrence_end_date:
+          newAssignment.is_recurring && newAssignment.recurrence_end_date
+            ? newAssignment.recurrence_end_date
+            : null,
+      }
+
+      console.log('Sending assignment data:', requestBody)
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          title: newAssignment.title,
-          content: newAssignment.content,
-          links: newAssignment.links,
-          due_date: newAssignment.due_date,
-          category:
-            newAssignment.category.length > 0
-              ? newAssignment.category[0].value
-              : '',
-          selectedChildren: newAssignment.selectedChildren.map(
-            (child) => child.value,
-          ),
-          is_recurring: newAssignment.is_recurring,
-          recurrence_pattern: newAssignment.is_recurring
-            ? newAssignment.recurrence_pattern
-            : null,
-          recurrence_end_date:
-            newAssignment.is_recurring && newAssignment.recurrence_end_date
-              ? newAssignment.recurrence_end_date
-              : null,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       // Always read the body to inspect partial-success responses (e.g., 207)
@@ -372,6 +380,11 @@ export default function AdminDashboard() {
       ? [{ label: assignment.category, value: assignment.category }]
       : []
 
+    // Find the parent option for this assignment
+    const parentOption = assignment.parent_id
+      ? parentOptions.find(p => p.value === assignment.parent_id) || null
+      : null
+
     setNewAssignment({
       title: assignment.title,
       content: assignment.content,
@@ -379,6 +392,7 @@ export default function AdminDashboard() {
       due_date: assignment.due_date,
       category: categoryOptions,
       selectedChildren: assignedChildOptions,
+      selectedParent: parentOption,
       is_recurring: assignment.is_recurring || false,
       recurrence_pattern: {
         days: assignment.recurrence_pattern?.days || [],
@@ -399,11 +413,12 @@ export default function AdminDashboard() {
     const today = new Date()
     setNewAssignment({
       title: '',
-      content: null,
+      content: null as string | null,
       links: [] as Link[],
       due_date: format(today, 'yyyy-MM-dd'),
       category: [] as Option[],
       selectedChildren: [] as Option[],
+      selectedParent: null as Option | null,
       is_recurring: false,
       recurrence_pattern: {
         days: [] as string[],
@@ -489,24 +504,42 @@ export default function AdminDashboard() {
     setIsCreating(true)
   }
 
-  // Get all children options for assignment (deduplicated by ID)
-  const allChildrenOptions = Array.from(
-    new Map(
-      families.flatMap((family) =>
-        family.children.map((child) => [
-          child.id, // Use ID as key for deduplication
-          {
-            label: `${child.name} (${family.parent_name})`,
-            value: child.id,
-          },
-        ]),
-      ),
-    ).values(),
-  ).filter(
-    (option, index, array) =>
-      // Additional safety check to ensure no duplicates
-      array.findIndex((o) => o.value === option.value) === index,
-  )
+  // Get children options filtered by selected parent
+  const getChildrenOptionsForParent = (selectedParentId: string | null) => {
+    if (!selectedParentId) {
+      // If no parent selected, show all children
+      return Array.from(
+        new Map(
+          families.flatMap((family) =>
+            family.children.map((child) => [
+              child.id, // Use ID as key for deduplication
+              {
+                label: `${child.name} (${family.parent_name})`,
+                value: child.id,
+              },
+            ]),
+          ),
+        ).values(),
+      )
+    }
+
+    // Filter children by selected parent
+    const selectedFamily = families.find((family) => family.parent_id === selectedParentId)
+    if (!selectedFamily) return []
+
+    return selectedFamily.children.map((child) => ({
+      label: child.name, // No need to show parent name since we know which parent
+      value: child.id,
+    }))
+  }
+
+  const childrenOptions = getChildrenOptionsForParent(newAssignment.selectedParent?.value || null)
+
+  // Get all parent options for assignment
+  const parentOptions = families.map((family) => ({
+    label: family.parent_name,
+    value: family.parent_id,
+  }))
 
   return (
     <>
@@ -641,7 +674,9 @@ export default function AdminDashboard() {
         onCancel={resetForm}
         isSaving={isSaving}
         categories={categories}
-        childrenOptions={allChildrenOptions}
+        childrenOptions={childrenOptions}
+        parentOptions={parentOptions}
+        userRole="admin"
         selectedCalendarDate={selectedCalendarDate}
         onCalendarDateChange={(date) => {
           setSelectedCalendarDate(date)

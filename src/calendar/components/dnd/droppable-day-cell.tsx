@@ -38,9 +38,13 @@ export function DroppableDayCell({ cell, children }: DroppableDayCellProps) {
       )
 
       try {
-        // TODO: We need an updateAssignment function for this
-        // For now, just show a message that assignments can't be moved via drag/drop
-        return { moved: false, error: 'Assignment drag and drop not yet implemented' }
+        // Use the existing updateEvent function which handles assignment updates
+        await updateEvent({
+          ...droppedEvent,
+          startDate: newDueDate.toISOString(),
+          endDate: newDueDate.toISOString(), // For assignments, start and end are the same
+        })
+        return { moved: true }
       } catch (error) {
         console.error('Failed to move assignment:', error)
         return { moved: false, error: error }

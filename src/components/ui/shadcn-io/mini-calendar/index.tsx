@@ -203,28 +203,44 @@ export const MiniCalendarDay = ({
   const isSelected = selectedDate && isSameDay(date, selectedDate)
   const isTodayDate = isToday(date)
 
+  // Determine variant based on state
+  const getVariant = () => {
+    if (isSelected) return 'default'
+    if (isTodayDate) return 'secondary' // Use secondary variant for today
+    return 'ghost'
+  }
+
   return (
     <Button
       className={cn(
         'h-auto min-w-[3rem] flex-col gap-0 p-2 text-xs',
-        isTodayDate && !isSelected && 'bg-primary',
+        // Add ring for today when not selected for better visibility
+        isTodayDate && !isSelected && 'ring-1 ring-border ring-offset-1 bg-accent/50',
         className,
       )}
       onClick={() => onDateSelect(date)}
       size="sm"
       type="button"
-      variant={isSelected ? 'default' : 'ghost'}
+      variant={getVariant()}
       {...props}
     >
       <span
         className={cn(
           'font-medium text-[10px] text-muted-foreground',
           isSelected && 'text-primary-foreground/70',
+          isTodayDate && !isSelected && 'text-secondary-foreground',
         )}
       >
         {month}
       </span>
-      <span className="font-semibold text-sm">{day}</span>
+      <span
+        className={cn(
+          'font-semibold text-sm',
+          isTodayDate && !isSelected && 'text-secondary-foreground'
+        )}
+      >
+        {day}
+      </span>
     </Button>
   )
 }

@@ -3,12 +3,12 @@
  * Utilities for formatting and displaying assignments in calendar context
  */
 
-import { 
-  CalendarItem, 
-  AssignmentDisplay, 
-  AssignmentStatus, 
-  StudentInitial, 
-  TEventColor 
+import {
+  CalendarItem,
+  AssignmentDisplay,
+  AssignmentStatus,
+  StudentInitial,
+  TEventColor
 } from '@/types/calendar-integration'
 import { Assignment } from '@/types'
 
@@ -18,7 +18,7 @@ import { Assignment } from '@/types'
 // Helper function to extract text from structured content (like ProseMirror JSON)
 function extractTextContent(content?: string | null): string {
   if (!content) return ''
-  
+
   // If it's already a string, check if it might be JSON
   if (typeof content === 'string') {
     try {
@@ -38,14 +38,14 @@ function extractTextContent(content?: string | null): string {
           }
           return ''
         }
-        
+
         return parsedContent.content.map(extractText).join('\n').trim()
       }
     } catch {
       // If parsing fails, return the content as-is (it's probably plain text)
     }
   }
-  
+
   // Ensure we always return a string
   return typeof content === 'string' ? content : String(content)
 }
@@ -58,7 +58,7 @@ export function assignmentToCalendarItem(
 ): CalendarItem {
   const isOverdue = isAssignmentOverdue(assignment.due_date)
   const color = getAssignmentColor(completionStatus, isOverdue)
-  
+
   return {
     id: `assignment-${assignment.id}`,
     type: 'assignment',
@@ -93,19 +93,19 @@ export function getAssignmentColor(
   if (completionStatus.allCompleted) {
     return 'gray'
   }
-  
+
   // None completed and overdue
   if (completionStatus.completedCount === 0 && isOverdue) {
     return 'red'
   }
-  
+
   // Partially completed (mixed status)
   if (completionStatus.completedCount > 0 && completionStatus.completedCount < completionStatus.totalCount) {
-    return 'yellow' // Could be orange if available
+    return 'blue' // Could be orange if available
   }
-  
+
   // None completed but not overdue (upcoming)
-  return 'yellow'
+  return 'blue'
 }
 
 /**
@@ -114,11 +114,11 @@ export function getAssignmentColor(
 export function isAssignmentOverdue(dueDate: string): boolean {
   const due = new Date(dueDate)
   const now = new Date()
-  
+
   // Set time to start of day for fair comparison
   due.setHours(23, 59, 59, 999) // End of due date
   now.setHours(0, 0, 0, 0) // Start of current day
-  
+
   return due < now
 }
 
@@ -144,14 +144,14 @@ export function formatAssignmentDisplayText(
       overflowCount: 0
     }
   }
-  
+
   const displayed = assignment.assignedStudents.slice(0, maxInitials)
   const hasOverflow = assignment.assignedStudents.length > maxInitials
   const overflowCount = Math.max(0, assignment.assignedStudents.length - maxInitials)
-  
-  const initialsText = displayed.map(s => s.initials).join(', ') + 
+
+  const initialsText = displayed.map(s => s.initials).join(', ') +
     (hasOverflow ? ` +${overflowCount}` : '')
-  
+
   return {
     title: assignment.title,
     subtitle: formatDueDate(assignment.dueDate || assignment.startDate),
@@ -167,26 +167,26 @@ export function formatAssignmentDisplayText(
 export function formatDueDate(dueDate: string): string {
   const date = new Date(dueDate)
   const now = new Date()
-  
+
   // Check if it's today
   if (isSameDay(date, now)) {
     return 'Due Today'
   }
-  
+
   // Check if it's tomorrow
   const tomorrow = new Date(now)
   tomorrow.setDate(tomorrow.getDate() + 1)
   if (isSameDay(date, tomorrow)) {
     return 'Due Tomorrow'
   }
-  
+
   // Check if it's yesterday (overdue)
   const yesterday = new Date(now)
   yesterday.setDate(yesterday.getDate() - 1)
   if (isSameDay(date, yesterday)) {
     return 'Due Yesterday'
   }
-  
+
   // Format as date only (no time)
   return date.toLocaleDateString('en-US', {
     month: 'short',
@@ -200,8 +200,8 @@ export function formatDueDate(dueDate: string): string {
  */
 function isSameDay(date1: Date, date2: Date): boolean {
   return date1.getFullYear() === date2.getFullYear() &&
-         date1.getMonth() === date2.getMonth() &&
-         date1.getDate() === date2.getDate()
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
 }
 
 /**
@@ -216,7 +216,7 @@ export function calculateAssignmentStatus(
 ): AssignmentStatus {
   const completedCount = studentAssignments.filter(sa => sa.completed).length
   const totalCount = studentAssignments.length
-  
+
   return {
     allCompleted: completedCount === totalCount,
     completedCount,
@@ -239,12 +239,12 @@ export function getAssignmentStatusText(
   if (completionStatus.allCompleted) {
     return `All ${completionStatus.totalCount} students completed`
   }
-  
+
   if (completionStatus.completedCount === 0) {
     const studentNames = assignedStudents.map(s => s.displayName).join(', ')
     return `Assigned to ${studentNames} - not yet completed`
   }
-  
+
   return `${completionStatus.completedCount} of ${completionStatus.totalCount} students completed`
 }
 
@@ -261,17 +261,17 @@ export function filterAssignmentsForUser(
     if (userRole === 'admin') {
       return true // Admins see everything
     }
-    
+
     if (userRole === 'student') {
       // Students only see assignments assigned to them
       return assignment.assignedStudents?.some(s => s.studentId === userId) || false
     }
-    
+
     if (userRole === 'parent' && studentIds) {
       // Parents see assignments for their children
       return assignment.assignedStudents?.some(s => studentIds.includes(s.studentId)) || false
     }
-    
+
     return false
   })
 }
@@ -283,15 +283,15 @@ export function sortAssignmentsByPriority(assignments: CalendarItem[]): Calendar
   return [...assignments].sort((a, b) => {
     const aOverdue = isAssignmentOverdue(a.dueDate || a.startDate)
     const bOverdue = isAssignmentOverdue(b.dueDate || b.startDate)
-    
+
     // Overdue assignments first
     if (aOverdue && !bOverdue) return -1
     if (!aOverdue && bOverdue) return 1
-    
+
     // Then sort by due date
     const aDate = new Date(a.dueDate || a.startDate)
     const bDate = new Date(b.dueDate || b.startDate)
-    
+
     return aDate.getTime() - bDate.getTime()
   })
 }

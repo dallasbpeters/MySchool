@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { motion, LayoutGroup } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { Calendar, CheckCircle2, BookOpen, Plus } from 'lucide-react'
+import { Calendar, CheckCircle2, BookOpen, Plus, RefreshCw } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -23,6 +23,7 @@ import TaskItem from '@tiptap/extension-task-item'
 type AssignmentOrRecommendation =
   | (ExtendedAssignment & { type: 'assignment' })
   | (Recommendation & { type: 'recommendation' })
+  | (RecurringAssignment & { type: 'assignment' })
 
 // Extend Assignment with additional properties for the ExpandingCard component
 interface ExtendedAssignment extends Assignment {
@@ -57,6 +58,7 @@ interface AssignmentCardProps {
   assignmentNotes?: Note[]
   selectedInstanceDate?: string
   selectedChildId?: string | null
+  is_recurring?: boolean
 }
 
 // Separate component for rendering note content to avoid hook rule violations
@@ -84,6 +86,7 @@ const globalAssignmentImageMap = new Map<string, number>()
 
 function AssignmentCard({
   assignment,
+  is_recurring,
   size,
   onToggleAction: _onToggleAction,
   getDateLabel,
@@ -139,7 +142,12 @@ function AssignmentCard({
         {assignment.category && (
           <span className="category">{assignment.category}</span>
         )}
-        <h2 style={{ color: images[imageIndex % images.length].color }}>{assignment.title}</h2>
+        <motion.h2 layoutId={`assignment-title-${assignment.id}}`} style={{ color: images[imageIndex % images.length].color }}>
+          {assignment.title}
+          {assignment.type === 'assignment' && assignment.is_recurring && (
+            <RefreshCw className="size-inherit inline text-inherit ml-2" />
+          )}
+        </motion.h2>
       </motion.div>
       {showDate && (
         <div
@@ -452,7 +460,11 @@ function AssignmentCardExpanded({
             {assignment.category && (
               <span className="category">{assignment.category}</span>
             )}
-            <h2 style={{ color: images[imageIndex % images.length].color }}>{assignment.title}</h2>
+            <motion.h2 layoutId={`assignment-title-${assignment.id}}`} style={{ color: images[imageIndex % images.length].color }}>{assignment.title}
+              {assignment.type === 'assignment' && assignment.is_recurring && (
+                <RefreshCw className="size-inherit inline text-inherit ml-2" />
+              )}
+            </motion.h2>
           </motion.div>
           <AnimatePresence>
             {!isCreatingNote && (
@@ -782,6 +794,10 @@ function AssignmentCardGroup({
 }
 
 export { AssignmentCard }
+
+interface RecurringAssignment extends Assignment {
+  is_recurring: boolean
+}
 
 interface Recommendation {
   id: string

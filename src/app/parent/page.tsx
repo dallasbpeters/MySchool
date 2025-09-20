@@ -140,8 +140,8 @@ export default function ParentDashboard() {
     () =>
       userRole === 'admin' && selectedParent !== 'all'
         ? assignments.filter(
-            (assignment) => assignment.parent_name === selectedParent,
-          )
+          (assignment) => assignment.parent_name === selectedParent,
+        )
         : assignments,
     [userRole, selectedParent, assignments],
   )
@@ -294,7 +294,7 @@ export default function ParentDashboard() {
       if (!response.ok) {
         throw new Error(
           data.error ||
-            `Assignment ${isEditing ? 'update' : 'creation'} failed`,
+          `Assignment ${isEditing ? 'update' : 'creation'} failed`,
         )
       }
 
@@ -452,11 +452,11 @@ export default function ParentDashboard() {
 
     const childOptions = assignment.assigned_children
       ? assignment.assigned_children.map((childName) => {
-          const child = children.find((c) => c.name === childName)
-          return child
-            ? { label: `${child.name} (${child.email})`, value: child.id }
-            : { label: childName, value: childName }
-        })
+        const child = children.find((c) => c.name === childName)
+        return child
+          ? { label: `${child.name} (${child.email})`, value: child.id }
+          : { label: childName, value: childName }
+      })
       : []
 
     setNewAssignment({
@@ -554,7 +554,7 @@ export default function ParentDashboard() {
       if (!recResponse.ok) {
         throw new Error(
           recData.error ||
-            `Recommendation ${isEditing ? 'update' : 'creation'} failed`,
+          `Recommendation ${isEditing ? 'update' : 'creation'} failed`,
         )
       }
 
@@ -946,11 +946,10 @@ export default function ParentDashboard() {
                             </Label>
                             <div className="grid grid-cols-2 gap-3">
                               <div
-                                className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                                  !newAssignment.is_recurring
+                                className={`p-3 border rounded-lg cursor-pointer transition-all ${!newAssignment.is_recurring
                                     ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                                     : 'border-border hover:border-primary/50'
-                                }`}
+                                  }`}
                                 onClick={() =>
                                   setNewAssignment({
                                     ...newAssignment,
@@ -970,11 +969,10 @@ export default function ParentDashboard() {
                               </div>
 
                               <div
-                                className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                                  newAssignment.is_recurring
+                                className={`p-3 border rounded-lg cursor-pointer transition-all ${newAssignment.is_recurring
                                     ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                                     : 'border-border hover:border-primary/50'
-                                }`}
+                                  }`}
                                 onClick={() =>
                                   setNewAssignment({
                                     ...newAssignment,
@@ -1076,13 +1074,13 @@ export default function ParentDashboard() {
                                               day,
                                             )
                                               ? newAssignment.recurrence_pattern.days.filter(
-                                                  (d) => d !== day,
-                                                )
+                                                (d) => d !== day,
+                                              )
                                               : [
-                                                  ...newAssignment
-                                                    .recurrence_pattern.days,
-                                                  day,
-                                                ]
+                                                ...newAssignment
+                                                  .recurrence_pattern.days,
+                                                day,
+                                              ]
 
                                           setNewAssignment({
                                             ...newAssignment,
@@ -1184,7 +1182,7 @@ export default function ParentDashboard() {
                             {newAssignment.links.map((link, index) => (
                               <div
                                 key={index}
-                                className="flex items-center gap-2 p-2 bg-muted rounded"
+                                className="flex items-center gap-2 py-2  px-3 bg-muted rounded"
                               >
                                 {link.type === 'video' ? (
                                   <Video className="h-4 w-4 text-red-500" />

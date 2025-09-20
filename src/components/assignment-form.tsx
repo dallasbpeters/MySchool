@@ -443,7 +443,7 @@ export function AssignmentForm({
               {assignmentData.links.map((link, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-2 p-2 bg-muted rounded"
+                  className="flex items-center gap-2 py-2 px-3 bg-muted rounded"
                 >
                   {link.type === 'video' ? (
                     <Video className="h-4 w-4 text-red-500" />

@@ -82,24 +82,9 @@ export function useUpdateEvent() {
 
         const _data = await response.json()
 
-        // 🎨 FORCE COLOR UPDATE: Always refresh for assignments to ensure colors are correct
-        console.log('Assignment due date updated, refreshing calendar to update colors...')
-        try {
-          const eventsResponse = await fetch('/api/events')
-          if (eventsResponse.ok) {
-            const eventsData = await eventsResponse.json()
-            if (eventsData.events) {
-              console.log('Calendar refreshed with updated assignment colors')
-              setLocalEvents(eventsData.events)
-              // Also update calendar items to ensure both systems are in sync
-              setCalendarItems(eventsData.events)
-              return
-            }
-          }
-          console.warn('Failed to refresh calendar: Invalid response')
-        } catch (refreshError) {
-          console.error('Failed to refresh calendar:', refreshError)
-        }
+        // ✅ SUCCESS: Assignment updated successfully
+        // The optimistic update already happened above, so no need to refresh the entire calendar
+        console.log('Assignment due date updated successfully - using optimistic update')
       } catch (error) {
         console.error('Assignment update failed:', error)
 

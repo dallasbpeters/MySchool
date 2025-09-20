@@ -124,17 +124,11 @@ export async function GET(request: NextRequest) {
             .eq('student_id', childId)
             .order('created_at', { ascending: false }),
 
-          // Recommendations logic based on user role
-          user.role === 'parent'
-            ? supabase
-              .from('recommendations')
-              .select('*')
-              .eq('created_by', user.id)
-              .order('created_at', { ascending: false })
-            : supabase
-              .from('recommendations')
-              .select('*')
-              .order('created_at', { ascending: false }),
+          // Show all recommendations globally (no filtering by creator)
+          supabase
+            .from('recommendations')
+            .select('*')
+            .order('created_at', { ascending: false }),
         ])
 
       if (

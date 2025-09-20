@@ -253,10 +253,10 @@ export async function GET(request: NextRequest) {
                 .eq('student_id', targetChildId)
                 .order('created_at', { ascending: false }),
 
+              // For parent dashboard, show all recommendations (global)
               supabase
                 .from('recommendations')
                 .select('*')
-                .eq('created_by', user.id)
                 .order('created_at', { ascending: false }),
             ])
 

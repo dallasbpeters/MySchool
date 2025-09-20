@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     // Use session-based authentication
     const { user, error: authError } = await validateAuth(request)
-    
+
     if (authError || !user) {
       return NextResponse.json({ recommendations: [], error: 'Authentication failed' })
     }
@@ -24,40 +24,21 @@ export async function GET(request: NextRequest) {
 
     let recommendations = []
 
-    if (user.role === 'admin') {
-      // Admin: fetch all recommendations with parent names
-      const { data, error } = await supabase
-        .from('recommendations')
-        .select('*')
-        .order('created_at', { ascending: false })
+    // Fetch all recommendations globally for all users
+    const { data, error } = await supabase
+      .from('recommendations')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-      if (error) {
-        console.error('Error fetching recommendations:', error)
-        return NextResponse.json({
-          recommendations: [],
-          error: 'Failed to fetch recommendations',
-        })
-      }
-
-      recommendations = data || []
-    } else {
-      // Parent: fetch only their recommendations
-      const { data, error } = await supabase
-        .from('recommendations')
-        .select('*')
-        .eq('created_by', user.id)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error fetching recommendations:', error)
-        return NextResponse.json({
-          recommendations: [],
-          error: 'Failed to fetch recommendations',
-        })
-      }
-
-      recommendations = data || []
+    if (error) {
+      console.error('Error fetching recommendations:', error)
+      return NextResponse.json({
+        recommendations: [],
+        error: 'Failed to fetch recommendations',
+      })
     }
+
+    recommendations = data || []
 
     return NextResponse.json(
       {
@@ -86,7 +67,7 @@ export async function POST(request: NextRequest) {
   try {
     // Use session-based authentication
     const { user, error: authError } = await validateAuth(request)
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -152,7 +133,7 @@ export async function PUT(request: NextRequest) {
   try {
     // Use session-based authentication
     const { user, error: authError } = await validateAuth(request)
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -227,7 +208,7 @@ export async function DELETE(request: NextRequest) {
   try {
     // Use session-based authentication
     const { user, error: authError } = await validateAuth(request)
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Authentication required' },

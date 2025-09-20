@@ -6,11 +6,23 @@ export function useUpdateEvent() {
   const { setLocalEvents, setCalendarItems } = useCalendar()
 
   const updateEvent = async (event: IEvent) => {
-
-    const newEvent: IEvent = event
-
+    const newEvent: IEvent = { ...event }
     newEvent.startDate = new Date(event.startDate).toISOString()
     newEvent.endDate = new Date(event.endDate).toISOString()
+
+    // For assignments, recalculate color based on new due date
+    if (event.type === 'assignment' && event.completionStatus) {
+      const isOverdue = new Date(newEvent.startDate) < new Date()
+      // Import the color calculation function
+      const { getAssignmentColor } = await import('@/utils/assignment-display')
+      newEvent.color = getAssignmentColor(event.completionStatus, isOverdue)
+      console.log('Recalculated assignment color:', {
+        oldColor: event.color,
+        newColor: newEvent.color,
+        isOverdue,
+        newDueDate: newEvent.startDate
+      })
+    }
 
 
     // 🚀 OPTIMISTIC UPDATE: Update UI immediately for snappy feel
@@ -71,15 +83,20 @@ export function useUpdateEvent() {
         const _data = await response.json()
 
         // 🎨 FORCE COLOR UPDATE: Always refresh for assignments to ensure colors are correct
+        console.log('Assignment due date updated, refreshing calendar to update colors...')
         try {
           const eventsResponse = await fetch('/api/events')
           if (eventsResponse.ok) {
             const eventsData = await eventsResponse.json()
             if (eventsData.events) {
+              console.log('Calendar refreshed with updated assignment colors')
               setLocalEvents(eventsData.events)
+              // Also update calendar items to ensure both systems are in sync
+              setCalendarItems(eventsData.events)
               return
             }
           }
+          console.warn('Failed to refresh calendar: Invalid response')
         } catch (refreshError) {
           console.error('Failed to refresh calendar:', refreshError)
         }

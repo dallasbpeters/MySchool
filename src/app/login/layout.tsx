@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { Hanken_Grotesk } from 'next/font/google'
+import { Readex_Pro } from 'next/font/google'
 import '../globals.css'
 import { Toaster } from '@/components/ui/toaster'
 import { ConnectedNavbar } from '@/components/connected-navbar'
 import { ThemeProvider } from '@/components/theme-provider'
 
-const font = Hanken_Grotesk({ subsets: ['latin'] })
+const font = Readex_Pro({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'MySchool',

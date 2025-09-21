@@ -3,10 +3,10 @@ import type { Config } from 'tailwindcss'
 const config = {
   theme: {
     fontSize: {
-      'sm': '0.64rem',
+      'sm': '0.8rem',
       'tiny': '0.8rem',
       'base': '1rem',
-      'lg': '1.25rem',
+      'lg': '1.5rem',
       'xl': '1.56rem',
       '2xl': '1.95rem',
       '3xl': '2.44rem',

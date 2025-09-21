@@ -7,7 +7,7 @@ import { buttonVariants } from '@/components/ui/button'
 
 import { cn } from '@/lib/utils'
 
-import type { DayPickerSingleProps } from 'react-day-picker'
+import type { PropsSingle } from 'react-day-picker'
 
 function SingleCalendar({
   className,
@@ -15,7 +15,7 @@ function SingleCalendar({
   showOutsideDays = true,
   selected,
   ...props
-}: DayPickerSingleProps & {
+}: PropsSingle & {
   className?: string
   classNames?: Record<string, string>
   showOutsideDays?: boolean
@@ -33,7 +33,7 @@ function SingleCalendar({
       onMonthChange={setCurrentMonth}
       className={cn('p-3', className)}
       classNames={{
-        months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
+        months: 'flex flex-col space-y-4 sm:space-x-4 sm:space-y-0',
         month: 'space-y-4',
         caption: 'flex justify-center pt-1 relative items-center',
         caption_label: 'text-sm font-medium',

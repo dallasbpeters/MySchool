@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 import { useDisclosure } from '@/hooks/use-disclosure'
 
 import { Button } from '@/components/ui/button'
-import { SingleCalendar } from '@/components/ui/single-calendar'
+import { Calendar } from '@/components/ui/calendar'
 import {
   Popover,
   PopoverContent,
@@ -62,11 +62,10 @@ function SingleDayPicker({
       </PopoverTrigger>
 
       <PopoverContent align="center" className="w-fit p-0">
-        <SingleCalendar
+        <Calendar
           mode="single"
           selected={value}
           onSelect={handleSelect}
-          initialFocus
         />
       </PopoverContent>
     </Popover>

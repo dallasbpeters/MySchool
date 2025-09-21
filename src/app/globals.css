@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #f6f8fb;
+  --background: hsl(1, 0%, 98%);
   --foreground: oklch(0.198 0.0592 267.7403);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.198 0.0592 267.7403);
@@ -13,11 +13,11 @@
   --secondary-foreground: oklch(1 0 0);
   --muted: oklch(0.946 0.007 268.5463);
   --muted-foreground: oklch(0.5477 0.0436 270.5);
-  --accent: #00ff84;
+  --accent: #e5ff00;
   --accent-foreground: oklch(0.198 0.0592 267.7403);
   --destructive: oklch(0.671 0.2168 29.1942);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.9335 0.0087 264.5206);
+  --border: oklch(92.219% 0.00144 285.286);
   --input: oklch(0.946 0.007 268.5463);
   --ring: oklch(0.7121 0.1657 241.3616);
   --chart-1: oklch(0.7121 0.1657 241.3616);
@@ -168,6 +168,13 @@
   --font-sans: Geist, ui-sans-serif, sans-serif, system-ui;
   --font-mono: monospace;
   --font-serif: serif;
+  --text-sm: var(--text-size-90);
+  --text-base: var(--text-size-110);
+  --text-lg: var(--text-size-120);
+  --text-xl: var(--text-size-140);
+  --text-2xl: var(--text-size-160);
+  --text-3xl: var(--text-size-180);
+  --text-4xl: var(--text-size-200);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -458,6 +465,7 @@ body {
   /* Close Button */
   .close-button {
     position: absolute;
+    isolation: isolate;
     top: 20px;
     right: 20px;
     width: 44px;

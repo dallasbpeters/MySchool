@@ -86,7 +86,6 @@ const globalAssignmentImageMap = new Map<string, number>()
 
 function AssignmentCard({
   assignment,
-  is_recurring,
   size,
   onToggleAction: _onToggleAction,
   getDateLabel,
@@ -414,7 +413,7 @@ function AssignmentCardExpanded({
               e.stopPropagation()
               onClose?.()
             }}
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.3 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.2, delay: 0.15 }}

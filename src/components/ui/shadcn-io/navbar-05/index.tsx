@@ -170,7 +170,7 @@ const UserMenu = ({
     <DropdownMenuTrigger asChild>
       <Button
         variant="ghost"
-        className="h-9 px-2 py-0 hover:bg-accent hover:text-accent-foreground"
+        className="h-12 px-2 py-0 hover:bg-accent hover:text-accent-foreground"
       >
         <Avatar className="h-9 w-9">
           <AvatarImage src={userAvatar} alt={userName} />
@@ -306,7 +306,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
         )}
         {...props}
       >
-        <div className="container mx-auto flex h-16 items-center justify-between gap-4">
+        <div className=" mx-auto flex h-16 items-center justify-between gap-4">
           {/* Left side */}
           <div className="flex items-center gap-2">
             {/* Mobile menu trigger */}
@@ -315,7 +315,7 @@ export const Navbar05 = React.forwardRef<HTMLElement, Navbar05Props>(
                 <PopoverTrigger asChild>
                   <Button
                     className="group h-9 w-9 hover:bg-accent hover:text-accent-foreground"
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                   >
                     <HamburgerIcon />
